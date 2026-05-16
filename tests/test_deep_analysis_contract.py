@@ -13,6 +13,20 @@ class DeepAnalysisContractTests(unittest.TestCase):
             "company_score_components",
             "company_score_methodology",
             "company_score_sensitivity",
+            "model_benchmark_match_audit",
+            "direct_model_price_performance",
+            "vendor_frontier_scores",
+            "vendor_score_components",
+            "source_coverage_diagnostics",
+            "family_coverage_matrix",
+            "frontier_score_bootstrap",
+            "rank_stability_intervals",
+            "claim_failure_modes",
+            "underobserved_family_audit",
+            "business_domain_ai_pressure",
+            "domain_workflow_examples",
+            "release_cadence_by_family",
+            "release_cadence_by_vendor",
             "company_next_frontier_probabilities",
             "leadership_model_audit",
             "open_closed_gap_by_category",
@@ -69,6 +83,56 @@ class DeepAnalysisContractTests(unittest.TestCase):
         self.assertIn("open_closed_best_gap", gap.columns)
         self.assertIn("comparison_note", gap.columns)
         self.assertGreaterEqual(len(gap), 3)
+
+    def test_direct_model_matching_vendor_and_coverage_contracts(self):
+        match_audit = pd.read_csv(ROOT / "data" / "analysis" / "model_benchmark_match_audit.csv")
+        self.assertTrue({"exact", "normalized_exact", "alias_match", "family_only", "unmatched"}.issuperset(set(match_audit["match_confidence"])))
+        self.assertTrue(match_audit["direct_model_match"].isin([True, False]).all())
+        self.assertGreater(match_audit["direct_model_match"].astype(bool).sum(), 50)
+        direct = pd.read_csv(ROOT / "data" / "analysis" / "direct_model_price_performance.csv")
+        self.assertIn("direct_lmarena_rating", direct.columns)
+        self.assertIn("quality_proxy_level", direct.columns)
+        self.assertGreater(len(direct), 10)
+        self.assertFalse(direct["quality_proxy_level"].eq("family_level_proxy").any())
+        vendors = pd.read_csv(ROOT / "data" / "analysis" / "vendor_frontier_scores.csv")
+        self.assertIn("vendor_frontier_portfolio_score", vendors.columns)
+        self.assertIn("OpenAI", set(vendors["vendor"]))
+        self.assertIn("Google", set(vendors["vendor"]))
+        self.assertTrue(vendors["vendor_frontier_portfolio_score"].between(0, 100).all())
+        coverage = pd.read_csv(ROOT / "data" / "analysis" / "family_coverage_matrix.csv")
+        self.assertIn("coverage_score", coverage.columns)
+        self.assertIn("direct_benchmark_match_count", coverage.columns)
+        self.assertTrue(coverage["coverage_score"].between(0, 100).all())
+        self.assertGreaterEqual(len(coverage), 8)
+
+    def test_uncertainty_limits_domains_and_cadence_contracts(self):
+        intervals = pd.read_csv(ROOT / "data" / "analysis" / "rank_stability_intervals.csv")
+        self.assertIn("rank_stability_label", intervals.columns)
+        self.assertTrue(set(intervals["rank_stability_label"]).issubset({"stable", "moderate", "unstable"}))
+        self.assertTrue((intervals["best_rank"] <= intervals["worst_rank"]).all())
+        bootstrap = pd.read_csv(ROOT / "data" / "analysis" / "frontier_score_bootstrap.csv")
+        self.assertGreaterEqual(bootstrap["draw"].nunique(), 500)
+        failures = pd.read_csv(ROOT / "data" / "analysis" / "claim_failure_modes.csv")
+        self.assertIn("failure_mode", failures.columns)
+        self.assertGreaterEqual(len(failures), 5)
+        domains = pd.read_csv(ROOT / "data" / "analysis" / "business_domain_ai_pressure.csv")
+        expected_domains = {
+            "software_engineering",
+            "customer_support",
+            "legal_compliance",
+            "marketing_content",
+            "finance_analysis",
+            "healthcare_administration",
+            "education",
+            "operations_back_office",
+        }
+        self.assertEqual(set(domains["business_domain"]), expected_domains)
+        self.assertTrue(domains["disruption_index"].between(0, 100).all())
+        workflows = pd.read_csv(ROOT / "data" / "analysis" / "domain_workflow_examples.csv")
+        self.assertEqual(set(workflows["business_domain"]), expected_domains)
+        cadence = pd.read_csv(ROOT / "data" / "analysis" / "release_cadence_by_family.csv")
+        self.assertIn("cadence_label", cadence.columns)
+        self.assertGreaterEqual(len(cadence), 8)
 
     def test_job_exposure_scores_are_task_grounded(self):
         df = pd.read_csv(ROOT / "data" / "analysis" / "job_exposure_scores.csv")
@@ -130,6 +194,16 @@ class DeepAnalysisContractTests(unittest.TestCase):
             "open_closed_category_levels.png",
             "price_performance_frontier.png",
             "price_context_rating_map.png",
+            "direct_vs_proxy_price_performance.png",
+            "vendor_frontier_scores.png",
+            "family_vs_vendor_rank_shift.png",
+            "source_coverage_dashboard.png",
+            "family_signal_coverage_heatmap.png",
+            "frontier_rank_uncertainty.png",
+            "forecast_uncertainty_bands.png",
+            "business_domain_pressure_matrix.png",
+            "release_cadence_timeline.png",
+            "recent_release_velocity.png",
             "labor_cluster_profiles.png",
             "labor_outcome_mix.png",
             "job_replacement_feasibility.png",

@@ -32,10 +32,20 @@ class ReportContractTests(unittest.TestCase):
         self.assertIn("How To Read This Report", text)
         self.assertIn("company_score_component_stack.png", text)
         self.assertIn("forecast_scenario_dashboard.png", text)
+        self.assertIn("Direct Model Evidence vs Family Proxy", text)
+        self.assertIn("Family Ranking vs Vendor Portfolio Ranking", text)
+        self.assertIn("Data Freshness And Coverage", text)
+        self.assertIn("Uncertainty And Rank Stability", text)
+        self.assertIn("Where This Analysis Is Weak", text)
+        self.assertIn("Business Domain Implications", text)
+        self.assertIn("Release Velocity And Product Cadence", text)
+        self.assertIn("direct_model_price_performance.csv", text)
+        self.assertIn("rank_stability_intervals.csv", text)
         self.assertIn("simulation_win_share", text)
+        self.assertIn("not calibrated confidence intervals", text)
         self.assertNotIn("Company Frontier Score", text)
         self.assertNotIn("win_probability", text)
-        self.assertNotIn(" nan", text.lower())
+        self.assertNotIn("| nan", text.lower())
 
     def test_deep_html_report_has_premium_layout(self):
         report = ROOT / "report" / "deep_frontier_ai_forecast.html"
@@ -49,12 +59,22 @@ class ReportContractTests(unittest.TestCase):
             "class='meta-grid'",
             "class='figure-panel'",
             "class='table-wrap'",
+            "data-sortable='true'",
+            "data-lightbox='figure'",
+            "class='sticky-summary'",
+            "class='evidence-badges'",
+            "class='methodology-block'",
+            "Download table index",
+            "assets/report.js",
+            "assets/report.css",
             "Back to top",
         ]:
             self.assertIn(marker, text)
         self.assertGreaterEqual(text.count("class='figure-panel'"), 15)
         self.assertGreaterEqual(text.count("class='table-wrap'"), 10)
         self.assertNotIn("win_probability", text)
+        self.assertTrue((ROOT / "report" / "assets" / "report.js").exists())
+        self.assertTrue((ROOT / "report" / "assets" / "report.css").exists())
 
 
 if __name__ == "__main__":

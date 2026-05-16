@@ -1,7 +1,7 @@
 component,source_columns,transform,baseline_weight,rationale,analysis_captured_at
-performance_component,"LMArena, SWE-bench, Open LLM Leaderboard",min-max over benchmark fields,0.31,"Capability proxy; heuristic, not universal score.",2026-05-16T11:27:28+00:00
-release_velocity_component,OpenRouter and Epoch release dates,recent release counts,0.16,Measures visible product/model cadence.,2026-05-16T11:27:28+00:00
-ecosystem_component,"Hugging Face, GitHub, OpenAlex",log-scaled public ecosystem signals,0.17,Distribution/research pull proxy.,2026-05-16T11:27:28+00:00
-capability_surface_component,OpenRouter context/output and Epoch compute,log-scaled capability surface fields,0.17,Product surface and disclosed scale proxy.,2026-05-16T11:27:28+00:00
-cost_efficiency_component,OpenRouter output prices,inverted log-scaled minimum output price,0.11,"Cost signal, not quality adjusted.",2026-05-16T11:27:28+00:00
-openness_component,HF/Epoch/OpenRouter access labels,weighted open-weight share,0.08,Inspectability and distribution proxy.,2026-05-16T11:27:28+00:00
+performance_component,"LMArena, SWE-bench, Open LLM Leaderboard",min-max over benchmark fields,0.31,"Capability proxy; heuristic, not universal score.",2026-05-16T12:05:27+00:00
+release_velocity_component,OpenRouter and Epoch release dates,recent release counts,0.16,Measures visible product/model cadence.,2026-05-16T12:05:27+00:00
+ecosystem_component,"Hugging Face, GitHub, OpenAlex",log-scaled public ecosystem signals,0.17,Distribution/research pull proxy.,2026-05-16T12:05:27+00:00
+capability_surface_component,OpenRouter context/output and Epoch compute,log-scaled capability surface fields,0.17,Product surface and disclosed scale proxy.,2026-05-16T12:05:27+00:00
+cost_efficiency_component,OpenRouter output prices,inverted log-scaled minimum output price,0.11,"Cost signal, not quality adjusted.",2026-05-16T12:05:27+00:00
+openness_component,HF/Epoch/OpenRouter access labels,weighted open-weight share,0.08,Inspectability and distribution proxy.,2026-05-16T12:05:27+00:00

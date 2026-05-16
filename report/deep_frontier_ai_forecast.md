@@ -1,6 +1,6 @@
 # Deep Frontier AI Analysis
 
-Reference date: **2026-05-15**. Generated at: **2026-05-16T11:27:28+00:00**.
+Reference date: **2026-05-15**. Generated at: **2026-05-16T12:05:27+00:00**.
 
 This report is deliberately data-heavy. It uses the local rich frontier-model dataset plus the public Anthropic Economic Index release files for occupation exposure, task penetration, O*NET task text and BLS wage/employment companion fields. The goal is not to claim precision about the future; it is to make the assumptions inspectable enough that the forecast can be argued with.
 
@@ -14,6 +14,8 @@ The report is organized around three questions:
 
 Every chart should be read as an audit surface. If a conclusion depends on one metric, the report names that metric and shows the caveat near the visualization.
 
+Evidence badges used throughout the HTML view: `observed`, `direct_match`, `family_proxy`, `scenario`, `speculative`. They are labels for evidence strength, not decoration.
+
 ## Executive Takeaways
 
 1. **Near-term frontier-family leadership is concentrated, but not one-dimensional.** The highest heuristic index in this run is **Qwen** with a frontier momentum heuristic index of **79.2**. The strongest openness/cost/ecosystem signal is **Qwen**, which is not automatically the same thing as best closed frontier performance.
@@ -21,6 +23,46 @@ Every chart should be read as an audit surface. If a conclusion depends on one m
 3. **Open vs closed is category-specific.** Some LMArena categories show narrow gaps; others preserve a clear closed/API advantage. "Open source caught up" is too crude.
 4. **The job story is not "all jobs disappear."** The highest-risk roles are task bundles where language, analysis, clerical transformation and directive delegation are already exposed. Jobs with physical work, trust, regulation or face-to-face accountability keep meaningful bottlenecks.
 5. **The 10-year question is institutional, not only technical.** In the base scenario, AI materially touches a large share of occupational tasks by 2036, but the binding constraint becomes verification, liability, workflow redesign and who owns the interface to work.
+
+## Data Freshness And Coverage
+
+The report now exposes source coverage before leaning on rankings. This section records row counts, captured dates, latest source dates and missingness across release dates, prices, benchmark values, context windows and organization/vendor fields.
+
+| table                         |   rows | latest_source_date   |   release_date_coverage |   price_coverage |   benchmark_value_coverage |   organization_vendor_coverage |
+|:------------------------------|-------:|:---------------------|------------------------:|-----------------:|---------------------------:|-------------------------------:|
+| epoch_models_normalized       |   3525 | 2026-04-24           |                  0.9935 |                0 |                          0 |                         1      |
+| github_ai_repositories        |   1395 | 2026-05-15           |                  1      |                0 |                          0 |                         0      |
+| github_ai_repository_topics   |  13746 |                      |                  0      |                0 |                          0 |                         0      |
+| github_model_mentions         |    703 |                      |                  0      |                0 |                          0 |                         0      |
+| huggingface_model_files       |   5256 |                      |                  0      |                0 |                          0 |                         0      |
+| huggingface_model_rollups     |   2574 | 2026-05-15           |                  1      |                0 |                          0 |                         1      |
+| huggingface_model_tags        |  36737 |                      |                  0      |                0 |                          0 |                         0      |
+| huggingface_models            |   2574 | 2026-05-15           |                  1      |                0 |                          0 |                         1      |
+| livebench_judgments           |  60372 |                      |                  0      |                0 |                          1 |                         0      |
+| lmarena_full                  | 862027 | 2026-05-14           |                  1      |                0 |                          1 |                         0.9726 |
+| openalex_ai_paper_authorships |  22643 |                      |                  0      |                0 |                          0 |                         0      |
+| openalex_ai_paper_concepts    |  36079 |                      |                  0      |                0 |                          1 |                         0      |
+
+Family coverage matrix:
+
+| model_family   | vendor    |   coverage_score |   direct_benchmark_match_count |   family_proxy_benchmark_count |   source_gap_count |
+|:---------------|:----------|-----------------:|-------------------------------:|-------------------------------:|-------------------:|
+| Claude         | Anthropic |           100    |                             48 |                             30 |                  0 |
+| Gemini         | Google    |           100    |                             24 |                             32 |                  0 |
+| Phi            | Microsoft |           100    |                              6 |                              8 |                  0 |
+| Grok           | xAI       |           100    |                              3 |                             24 |                  0 |
+| Command        | Cohere    |           100    |                             12 |                              5 |                  0 |
+| GPT            | OpenAI    |            99.5  |                            120 |                             61 |                  0 |
+| Mistral        | Mistral   |            99.33 |                             56 |                             23 |                  0 |
+| Qwen           | Alibaba   |            99.3  |                             83 |                             52 |                  0 |
+| DeepSeek       | DeepSeek  |            98.89 |                             25 |                             20 |                  0 |
+| Llama          | Meta      |            98.08 |                             81 |                             25 |                  0 |
+| Gemma          | Google    |            96.3  |                             15 |                             14 |                  0 |
+| Cohere         | Cohere    |             0    |                              0 |                              0 |                  6 |
+
+![Source coverage dashboard](../figures/deep_analysis/source_coverage_dashboard.png)
+
+![Family signal coverage heatmap](../figures/deep_analysis/family_signal_coverage_heatmap.png)
 
 ## Model Family Frontier Score
 
@@ -50,6 +92,27 @@ The headline rank is only the entry point. The stacked component chart below sho
 The evidence-depth scatter is the reviewer sanity check. A family with high score and high evidence count is more defensible than a family with a high score from sparse rows. Bubble size is tied to API catalog breadth, while color shows openness.
 
 ![Score evidence scatter](../figures/deep_analysis/company_score_evidence_scatter.png)
+
+## Family Ranking vs Vendor Portfolio Ranking
+
+Reviewers often reason in terms of companies, but model families remain the cleaner technical unit. The vendor view is therefore a companion view: it blends the flagship family with the evidence-weighted portfolio mean and keeps the flagship family visible.
+
+|   rank | vendor    |   vendor_frontier_portfolio_score | flagship_family   |   family_count | portfolio_families   |   evidence_count |
+|-------:|:----------|----------------------------------:|:------------------|---------------:|:---------------------|-----------------:|
+|      1 | Alibaba   |                             79.16 | Qwen              |              1 | Qwen                 |            12932 |
+|      2 | OpenAI    |                             78.54 | GPT               |              1 | GPT                  |             1083 |
+|      3 | Mistral   |                             56.7  | Mistral           |              1 | Mistral              |             2394 |
+|      4 | Anthropic |                             55.27 | Claude            |              1 | Claude               |              424 |
+|      5 | Meta      |                             55.09 | Llama             |              1 | Llama                |             8569 |
+|      6 | DeepSeek  |                             55.01 | DeepSeek          |              1 | DeepSeek             |             1187 |
+|      7 | Google    |                             50.81 | Gemini            |              2 | Gemini,Gemma         |             2307 |
+|      8 | Microsoft |                             36.59 | Phi               |              1 | Phi                  |             1372 |
+|      9 | xAI       |                             28.67 | Grok              |              1 | Grok                 |               55 |
+|     10 | Cohere    |                             23.57 | Command           |              2 | Command,Cohere       |              236 |
+
+![Vendor frontier scores](../figures/deep_analysis/vendor_frontier_scores.png)
+
+![Family vs vendor rank shift](../figures/deep_analysis/family_vs_vendor_rank_shift.png)
 
 ## Who Builds The Next Best Model?
 
@@ -139,6 +202,37 @@ The context-price map keeps three product dimensions visible at once: context wi
 
 ![Context price rating map](../figures/deep_analysis/price_context_rating_map.png)
 
+## Direct Model Evidence vs Family Proxy
+
+The audit table matches OpenRouter model IDs/names to LMArena, SWE-bench, LiveBench and Open LLM Leaderboard rows. Direct model matches are separated from `family_only` evidence so the deployability screen does not quietly inherit model-level certainty it does not have.
+
+Match confidence audit:
+
+| match_confidence   |   rows |
+|:-------------------|-------:|
+| family_only        |    813 |
+| normalized_exact   |    516 |
+| unmatched          |     95 |
+
+Direct evidence price-performance rows:
+
+| canonical_model                | model_family   |   blended_price_usd_per_1m | direct_evidence_sources    |   direct_lmarena_rating | direct_lmarena_match_confidence   |   direct_price_performance_index | quality_proxy_level   |
+|:-------------------------------|:---------------|---------------------------:|:---------------------------|------------------------:|:----------------------------------|---------------------------------:|:----------------------|
+| OpenAI: GPT-4.1 Nano           | GPT            |                     0.295  | lmarena                    |                 1560.56 | normalized_exact                  |                            92.21 | direct_model_lmarena  |
+| OpenAI: GPT-4.1 Mini           | GPT            |                     1.18   | lmarena                    |                 1560.56 | normalized_exact                  |                            91.18 | direct_model_lmarena  |
+| OpenAI: o3 Mini High           | GPT            |                     3.245  | livebench,lmarena,swebench |                 1590.01 | normalized_exact                  |                            91.17 | direct_model_lmarena  |
+| OpenAI: o3 Mini                | GPT            |                     3.245  | livebench,lmarena,swebench |                 1590.01 | normalized_exact                  |                            91.17 | direct_model_lmarena  |
+| OpenAI: o3                     | GPT            |                     5.9    | livebench,lmarena,swebench |                 1590.01 | normalized_exact                  |                            90.21 | direct_model_lmarena  |
+| OpenAI: GPT-4.1                | GPT            |                     5.9    | lmarena                    |                 1560.56 | normalized_exact                  |                            88.9  | direct_model_lmarena  |
+| OpenAI: GPT-5.5                | GPT            |                    21.25   | lmarena                    |                 1567.64 | normalized_exact                  |                            87.52 | direct_model_lmarena  |
+| OpenAI: o3 Deep Research       | GPT            |                    29.5    | livebench,lmarena,swebench |                 1590.01 | normalized_exact                  |                            87.28 | direct_model_lmarena  |
+| Google: Gemini 3 Flash Preview | Gemini         |                     2.125  | lmarena                    |                 1535.16 | normalized_exact                  |                            87.13 | direct_model_lmarena  |
+| OpenAI: GPT-5.4 Nano           | GPT            |                     0.8825 | lmarena                    |                 1538.27 | normalized_exact                  |                            87.06 | direct_model_lmarena  |
+| Z.ai: GLM 5                    | Other          |                     1.458  | lmarena                    |                 1548.75 | normalized_exact                  |                            86.86 | direct_model_lmarena  |
+| MoonshotAI: Kimi K2.6          | Other          |                     2.524  | lmarena                    |                 1545.48 | normalized_exact                  |                            86.12 | direct_model_lmarena  |
+
+![Direct vs proxy price performance](../figures/deep_analysis/direct_vs_proxy_price_performance.png)
+
 ## Job Exposure And Labor Pressure
 
 The labor table joins Anthropic observed occupation exposure to wage/job companion data, task-level penetration, automation/augmentation mode shares, and keyword-derived task bottlenecks from O*NET text. The output is an occupation-level pressure index, not a prediction that a whole occupation vanishes.
@@ -209,6 +303,36 @@ The labor-weighted outcome mix below is the report's guardrail against overclaim
 
 ![Labor outcome mix](../figures/deep_analysis/labor_outcome_mix.png)
 
+## Business Domain Implications
+
+The domain layer translates occupation-level pressure into business language. It does not replace occupation evidence; each domain keeps example occupations and explicit human gates so a portfolio reviewer can see where the abstraction could fail.
+
+| business_domain           | pressure_label   |   disruption_index |   augmentation_index |   replacement_feasibility_index |   human_bottleneck_index | example_occupations                                                                                                                                                                                                      |
+|:--------------------------|:-----------------|-------------------:|---------------------:|--------------------------------:|-------------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| finance_analysis          | moderate         |              38.91 |                39.74 |                           15.46 |                     1.58 | Market Research Analysts and Marketing Specialists; Financial and Investment Analysts; Accountants and Auditors; Loan Officers                                                                                           |
+| marketing_content         | moderate         |              34.82 |                33.3  |                           12.93 |                     1.27 | Technical Writers; Public Relations Specialists; Real Estate Brokers; Real Estate Sales Agents                                                                                                                           |
+| software_engineering      | moderate         |              33.81 |                32.14 |                           12.44 |                     3.93 | Social Science Research Assistants; Secretaries and Administrative Assistants, Except Legal, Medical, and Executive; Interviewers, Except Eligibility and Loan; Office Clerks, General                                   |
+| customer_support          | moderate         |              32.76 |                29.95 |                           12.79 |                     2.79 | Sales Representatives, Wholesale and Manufacturing, Except Technical and Scientific Products; Receptionists and Information Clerks; Customer Service Representatives; Switchboard Operators, Including Answering Service |
+| legal_compliance          | moderate         |              31.26 |                28.01 |                            9.55 |                     3.1  | Paralegals and Legal Assistants; Administrative Law Judges, Adjudicators, and Hearing Officers; Judges, Magistrate Judges, and Magistrates; Property, Real Estate, and Community Association Managers                    |
+| operations_back_office    | moderate         |              30.2  |                24.04 |                           11.11 |                     3.28 | Data Entry Keyers; Statistical Assistants; Human Resources Assistants, Except Payroll and Timekeeping; Political Scientists                                                                                              |
+| education                 | moderate         |              28.91 |                23.28 |                            8.97 |                     3.74 | Mathematical Science Teachers, Postsecondary; Engineering Teachers, Postsecondary; English Language and Literature Teachers, Postsecondary; Health Specialties Teachers, Postsecondary                                   |
+| healthcare_administration | moderate         |              27.73 |                28.43 |                            4.35 |                     7.52 | Medical Transcriptionists; Nurse Practitioners; Medical Records Specialists; Magnetic Resonance Imaging Technologists                                                                                                    |
+
+Workflow examples:
+
+| business_domain           | workflow_example                                                         | likely_ai_role                               | human_gate                                            |
+|:--------------------------|:-------------------------------------------------------------------------|:---------------------------------------------|:------------------------------------------------------|
+| software_engineering      | Issue triage, code review, test generation and migration planning        | draft patches and review checklists          | senior engineer approval and production ownership     |
+| customer_support          | Ticket summarization, answer drafting and escalation routing             | suggest responses and detect repeated issues | human review for refunds, safety and account actions  |
+| legal_compliance          | Contract review, policy comparison and evidence packet preparation       | extract clauses and compare requirements     | licensed professional signoff                         |
+| marketing_content         | Campaign briefs, SEO drafts, localization and asset variants             | generate drafts and performance hypotheses   | brand, legal and factual review                       |
+| finance_analysis          | Variance explanations, spreadsheet checks and memo drafting              | surface anomalies and draft analysis         | accountability for assumptions and controls           |
+| healthcare_administration | Claims coding, prior authorization packets and patient-message drafts    | prepare structured documentation             | clinical and compliance review                        |
+| education                 | Lesson planning, tutoring support and feedback drafting                  | adapt materials and summarize progress       | teacher judgment and student relationship             |
+| operations_back_office    | Data entry cleanup, scheduling, reconciliation and process documentation | automate routine transformations             | exception handling and vendor/customer accountability |
+
+![Business domain pressure matrix](../figures/deep_analysis/business_domain_pressure_matrix.png)
+
 ## 2, 5 And 10 Year Forecasts
 
 Base scenario subset:
@@ -238,6 +362,70 @@ The dashboard puts four scenario families on one page: context scale, output pri
 
 ![Open closed catchup](../figures/deep_analysis/open_closed_catchup.png)
 
+## Uncertainty And Rank Stability
+
+The uncertainty view stress-tests component weights and evidence depth. These intervals are not calibrated confidence intervals; they are a visibility layer for how much the rank can move when public-source signals are perturbed.
+
+| model_family   |   current_rank |   score_p10 |   score_p50 |   score_p90 |   best_rank |   median_rank |   worst_rank | rank_stability_label   |
+|:---------------|---------------:|------------:|------------:|------------:|------------:|--------------:|-------------:|:-----------------------|
+| Qwen           |              1 |       77.1  |       79.09 |       81.06 |           1 |             1 |            2 | stable                 |
+| GPT            |              2 |       75.67 |       78.31 |       80.93 |           1 |             2 |            2 | stable                 |
+| Mistral        |              3 |       53.43 |       56.47 |       59.51 |           3 |             4 |            7 | moderate               |
+| DeepSeek       |              6 |       51.61 |       54.95 |       58.01 |           3 |             5 |            8 | moderate               |
+| Llama          |              5 |       50.89 |       55    |       58.58 |           3 |             5 |            8 | moderate               |
+| Claude         |              4 |       52.5  |       55.3  |       58.09 |           3 |             5 |            8 | moderate               |
+| Gemini         |              7 |       48.92 |       52.47 |       55.94 |           3 |             7 |            8 | moderate               |
+| Gemma          |              8 |       43.68 |       47.2  |       50.79 |           6 |             8 |            9 | stable                 |
+| Phi            |              9 |       32.82 |       36.51 |       40.17 |           9 |             9 |           11 | stable                 |
+| Grok           |             10 |       25.31 |       29.05 |       33.9  |           9 |            10 |           12 | stable                 |
+| Command        |             11 |       20.25 |       23.98 |       28.4  |          10 |            11 |           12 | stable                 |
+| Cohere         |             12 |        3.05 |       14.09 |       29.71 |           3 |            12 |           12 | stable                 |
+
+![Frontier rank uncertainty](../figures/deep_analysis/frontier_rank_uncertainty.png)
+
+The forecast band chart is a scenario envelope across conservative, base and aggressive cases. It should not be read as a statistical confidence band.
+
+![Forecast uncertainty bands](../figures/deep_analysis/forecast_uncertainty_bands.png)
+
+## Release Velocity And Product Cadence
+
+Release cadence separates visible public execution speed from benchmark quality. The cadence tables combine OpenRouter API catalog entries and Epoch metadata, deduplicated by family, vendor, product line and date.
+
+Family cadence:
+
+| model_family   | vendor    |   total_releases |   recent_releases_365d |   median_days_between_releases |   days_since_latest_release | cadence_label   |
+|:---------------|:----------|-----------------:|-----------------------:|-------------------------------:|----------------------------:|:----------------|
+| GPT            | OpenAI    |              162 |                     66 |                           16   |                          10 | fast            |
+| Qwen           | Alibaba   |              131 |                     64 |                            8   |                          18 | fast            |
+| Gemini         | Google    |               69 |                     31 |                           14   |                           8 | fast            |
+| Mistral        | Mistral   |               67 |                     30 |                           17   |                          15 | fast            |
+| Claude         | Anthropic |               37 |                     24 |                           37.5 |                           3 | fast            |
+| DeepSeek       | DeepSeek  |               52 |                     19 |                           26.5 |                          21 | fast            |
+| Grok           | xAI       |               22 |                     13 |                           40   |                          15 | fast            |
+| Gemma          | Google    |               31 |                      9 |                           18   |                          42 | fast            |
+| Llama          | Meta      |               92 |                      3 |                           13   |                         212 | fast            |
+| Command        | Cohere    |               11 |                      2 |                          104   |                         267 | steady          |
+| Phi            | Microsoft |               17 |                      1 |                           71   |                         210 | fast            |
+
+Vendor cadence:
+
+| vendor    | portfolio_families   |   total_releases |   recent_releases_365d |   median_days_between_releases | cadence_label   |
+|:----------|:---------------------|-----------------:|-----------------------:|-------------------------------:|:----------------|
+| OpenAI    | GPT                  |              162 |                     66 |                           16   | fast            |
+| Alibaba   | Qwen                 |              131 |                     64 |                            8   | fast            |
+| Google    | Gemini,Gemma         |              100 |                     40 |                           12   | fast            |
+| Mistral   | Mistral              |               67 |                     30 |                           17   | fast            |
+| Anthropic | Claude               |               37 |                     24 |                           37.5 | fast            |
+| DeepSeek  | DeepSeek             |               52 |                     19 |                           26.5 | fast            |
+| xAI       | Grok                 |               22 |                     13 |                           40   | fast            |
+| Meta      | Llama                |               92 |                      3 |                           13   | fast            |
+| Cohere    | Command              |               11 |                      2 |                          104   | steady          |
+| Microsoft | Phi                  |               17 |                      1 |                           71   | fast            |
+
+![Release cadence timeline](../figures/deep_analysis/release_cadence_timeline.png)
+
+![Recent release velocity](../figures/deep_analysis/recent_release_velocity.png)
+
 ## Historical Analogy
 
 AI looks less like a single prior wave and more like an uncomfortable hybrid: spreadsheet-style task rebundling, internet-style diffusion, cloud-style API economics, and electricity-style long-run production redesign.
@@ -259,24 +447,56 @@ AI looks less like a single prior wave and more like an uncomfortable hybrid: sp
 
 | claim_id                                | claim                                                                                                                                                                       | evidence                                                                                                                  | confidence   | analysis_captured_at      |
 |:----------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------|:-------------|:--------------------------|
-| company-next-best-model                 | Qwen has the strongest composite signal for near-term frontier leadership, but the top open-weight ecosystem score is not necessarily the same family.                      | Composite of LMArena, SWE-bench, OpenRouter, Epoch, Hugging Face, GitHub and OpenAlex indicators.                         | medium       | 2026-05-16T11:27:28+00:00 |
-| jobs-augmentation-not-total-replacement | The labor signal is broad task contact, not full-job deletion: high-exposure occupations still retain bottlenecks from trust, regulation, physical work and accountability. | Anthropic Economic Index occupation exposure joined to O*NET task text, task collaboration modes and wage/job metadata.   | medium-high  | 2026-05-16T11:27:28+00:00 |
-| open-source-catchup                     | Open-weight systems look structurally advantaged on ecosystem and cost but still need repeated frontier jumps to erase closed/API benchmark gaps.                           | OpenRouter price fields, Hugging Face downloads/files, LMArena access-class split and Epoch open-weight release metadata. | medium       | 2026-05-16T11:27:28+00:00 |
-| ten-year-forecast                       | The 10-year question is less whether AI touches most cognitive workflows and more whether institutions redesign jobs around verification, liability and human preference.   | Scenario table combines capability trend, price decline, observed task exposure and bottleneck scoring.                   | speculative  | 2026-05-16T11:27:28+00:00 |
+| company-next-best-model                 | Qwen has the strongest composite signal for near-term frontier leadership, but the top open-weight ecosystem score is not necessarily the same family.                      | Composite of LMArena, SWE-bench, OpenRouter, Epoch, Hugging Face, GitHub and OpenAlex indicators.                         | medium       | 2026-05-16T12:05:27+00:00 |
+| jobs-augmentation-not-total-replacement | The labor signal is broad task contact, not full-job deletion: high-exposure occupations still retain bottlenecks from trust, regulation, physical work and accountability. | Anthropic Economic Index occupation exposure joined to O*NET task text, task collaboration modes and wage/job metadata.   | medium-high  | 2026-05-16T12:05:27+00:00 |
+| open-source-catchup                     | Open-weight systems look structurally advantaged on ecosystem and cost but still need repeated frontier jumps to erase closed/API benchmark gaps.                           | OpenRouter price fields, Hugging Face downloads/files, LMArena access-class split and Epoch open-weight release metadata. | medium       | 2026-05-16T12:05:27+00:00 |
+| ten-year-forecast                       | The 10-year question is less whether AI touches most cognitive workflows and more whether institutions redesign jobs around verification, liability and human preference.   | Scenario table combines capability trend, price decline, observed task exposure and bottleneck scoring.                   | speculative  | 2026-05-16T12:05:27+00:00 |
 
 ## Counterintuitive Findings
 
 | finding                                                                               | evidence                                                                                                                                                        | why_it_is_interesting                                                                                                                    | artifact                                | analysis_captured_at      |
 |:--------------------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------|:----------------------------------------|:--------------------------|
-| Raw frontier leadership and open-distribution upside are different questions.         | In the 10-year frontier-quality scenario, GPT leads (52.7% of simulation draws); in the open-ecosystem-upside scenario, Qwen leads (74.1% of simulation draws). | The previous single 10-year number was misleading because it mixed best-model simulation share with adoption economics.                  | company_next_frontier_probabilities.csv | 2026-05-16T11:27:28+00:00 |
-| The open-vs-closed gap is not one gap.                                                | The largest measured LMArena category gap is text_to_image at 361.6 rating points.                                                                              | Open-source catchup can be true in one domain and false in another; a single headline benchmark hides where closed labs still have moat. | open_closed_gap_by_category.csv         | 2026-05-16T11:27:28+00:00 |
-| Cheap models can sit on the efficient frontier without being the raw best model.      | Efficient frontier examples include OpenAI: gpt-oss-20b; inclusionAI: Ling-2.6-flash.                                                                           | Enterprise adoption often follows sufficient capability per dollar, not absolute leaderboard rank.                                       | price_performance_frontier.csv          | 2026-05-16T11:27:28+00:00 |
-| The top whole-job automation candidates are narrower than the top task-exposure jobs. | The highest replacement-feasibility occupation is Market Research Analysts and Marketing Specialists with feasibility index 39.0.                               | A job can be heavily touched by AI but still mostly redesigned around human review rather than deleted.                                  | job_replacement_feasibility.csv         | 2026-05-16T11:27:28+00:00 |
-| Augmentation can be a larger labor-weighted mode than replacement.                    | Available labor-weight proxy: augmentation-first=75,414,668, replacement-candidate=796,776.                                                                     | This pushes the labor forecast toward workflow redesign, wage compression and productivity dispersion before mass full automation.       | labor_market_exposure_summary.csv       | 2026-05-16T11:27:28+00:00 |
+| Raw frontier leadership and open-distribution upside are different questions.         | In the 10-year frontier-quality scenario, GPT leads (52.7% of simulation draws); in the open-ecosystem-upside scenario, Qwen leads (74.1% of simulation draws). | The previous single 10-year number was misleading because it mixed best-model simulation share with adoption economics.                  | company_next_frontier_probabilities.csv | 2026-05-16T12:05:27+00:00 |
+| The open-vs-closed gap is not one gap.                                                | The largest measured LMArena category gap is text_to_image at 361.6 rating points.                                                                              | Open-source catchup can be true in one domain and false in another; a single headline benchmark hides where closed labs still have moat. | open_closed_gap_by_category.csv         | 2026-05-16T12:05:27+00:00 |
+| Cheap models can sit on the efficient frontier without being the raw best model.      | Efficient frontier examples include OpenAI: gpt-oss-20b; inclusionAI: Ling-2.6-flash.                                                                           | Enterprise adoption often follows sufficient capability per dollar, not absolute leaderboard rank.                                       | price_performance_frontier.csv          | 2026-05-16T12:05:27+00:00 |
+| The top whole-job automation candidates are narrower than the top task-exposure jobs. | The highest replacement-feasibility occupation is Market Research Analysts and Marketing Specialists with feasibility index 39.0.                               | A job can be heavily touched by AI but still mostly redesigned around human review rather than deleted.                                  | job_replacement_feasibility.csv         | 2026-05-16T12:05:27+00:00 |
+| Augmentation can be a larger labor-weighted mode than replacement.                    | Available labor-weight proxy: augmentation-first=75,414,668, replacement-candidate=796,776.                                                                     | This pushes the labor forecast toward workflow redesign, wage compression and productivity dispersion before mass full automation.       | labor_market_exposure_summary.csv       | 2026-05-16T12:05:27+00:00 |
+
+## Where This Analysis Is Weak
+
+The skeptical section names assumptions that could break the analysis. It is meant to make the work easier to challenge, not to protect it with broad caveats.
+
+| claim_id                 | assumption                                                                              | failure_mode                                                                                                  | mitigation                                                                                | severity   |
+|:-------------------------|:----------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------|:------------------------------------------------------------------------------------------|:-----------|
+| family-frontier-ranking  | Benchmark, release, ecosystem, cost and openness signals are directionally informative. | A private model or undisclosed benchmark result changes the frontier without appearing in public data.        | Keep heuristic label, show sensitivity, and refresh source snapshots before external use. | high       |
+| direct-model-evidence    | Normalized names and curated aliases correctly identify equivalent model rows.          | Vendor naming drift or hidden routing makes same-looking model IDs non-equivalent.                            | Expose match confidence and keep unmatched/family-only rows in the audit table.           | high       |
+| vendor-portfolio-ranking | Flagship plus evidence-weighted portfolio mean is a reasonable vendor aggregation.      | A vendor has one dominant model family and several weak rows that should not affect portfolio interpretation. | Report flagship family, family count and components beside the vendor score.              | medium     |
+| labor-domain-pressure    | Keyword domain mapping is sufficient for a portfolio-level translation layer.           | Occupation titles hide domain-specific workflows or regulated subdomains.                                     | Keep occupation examples and human gates visible for each domain.                         | medium     |
+| forecast-envelope        | Conservative/base/aggressive scenarios bound the intended stress test.                  | A structural market break makes historical slopes irrelevant.                                                 | Label forecast bands as non-calibrated scenario envelopes.                                | high       |
+
+Under-observed family audit:
+
+| model_family   | vendor    |   direct_benchmark_match_count |   coverage_score | underobserved   | underobserved_reasons                                                    |
+|:---------------|:----------|-------------------------------:|-----------------:|:----------------|:-------------------------------------------------------------------------|
+| Cohere         | Cohere    |                              0 |             0    | True            | few_direct_model_matches,low_source_coverage,below_median_evidence_depth |
+| GPT            | OpenAI    |                            120 |            99.5  | True            | below_median_evidence_depth                                              |
+| Claude         | Anthropic |                             48 |           100    | True            | below_median_evidence_depth                                              |
+| Gemini         | Google    |                             24 |           100    | True            | below_median_evidence_depth                                              |
+| Grok           | xAI       |                              3 |           100    | True            | below_median_evidence_depth                                              |
+| Command        | Cohere    |                             12 |           100    | True            | below_median_evidence_depth                                              |
+| Gemma          | Google    |                             15 |            96.3  | False           | none                                                                     |
+| Llama          | Meta      |                             81 |            98.08 | False           | none                                                                     |
+| DeepSeek       | DeepSeek  |                             25 |            98.89 | False           | none                                                                     |
+| Qwen           | Alibaba   |                             83 |            99.3  | False           | none                                                                     |
+| Mistral        | Mistral   |                             56 |            99.33 | False           | none                                                                     |
+| Phi            | Microsoft |                              6 |           100    | False           | none                                                                     |
 
 ## Method Notes
 
 - Model-family scoring uses `data/dataset/`: LMArena full leaderboard rows, SWE-bench submissions, Open LLM Leaderboard metrics, OpenRouter prices/context, Epoch model metadata, Hugging Face rollups, GitHub model mentions and OpenAlex paper mentions.
+- Direct model evidence uses conservative name matching across exact, normalized exact, alias, family-only and unmatched classes. Family-only rows are audit evidence, not direct model proof.
+- Vendor scoring maps model families to legal vendors and combines flagship-family signal with evidence-weighted portfolio breadth.
+- Rank stability and forecast bands are stress tests and scenario envelopes. They are not calibrated confidence intervals.
 - Labor scoring uses Anthropic Economic Index files from Hugging Face, including occupation exposure, task penetration, task automation/augmentation labels, O*NET task mappings/statements, and BLS wage/employment companion data.
 - Scenario forecasts are not forecasts from a proprietary model. They are transparent transforms of observed slopes and pressure scores. Every scenario row includes a method field and the input diagnostics include caps/fallback policy.
 - Leadership simulation shares are stochastic sensitivity analyses over explicit score components, not calibrated market probabilities.
@@ -288,6 +508,20 @@ AI looks less like a single prior wave and more like an uncomfortable hybrid: sp
 - `data/analysis/company_frontier_scores.csv`
 - `data/analysis/company_score_methodology.csv`
 - `data/analysis/company_score_sensitivity.csv`
+- `data/analysis/model_benchmark_match_audit.csv`
+- `data/analysis/direct_model_price_performance.csv`
+- `data/analysis/vendor_frontier_scores.csv`
+- `data/analysis/vendor_score_components.csv`
+- `data/analysis/source_coverage_diagnostics.csv`
+- `data/analysis/family_coverage_matrix.csv`
+- `data/analysis/frontier_score_bootstrap.csv`
+- `data/analysis/rank_stability_intervals.csv`
+- `data/analysis/claim_failure_modes.csv`
+- `data/analysis/underobserved_family_audit.csv`
+- `data/analysis/business_domain_ai_pressure.csv`
+- `data/analysis/domain_workflow_examples.csv`
+- `data/analysis/release_cadence_by_family.csv`
+- `data/analysis/release_cadence_by_vendor.csv`
 - `data/analysis/job_exposure_scores.csv`
 - `data/analysis/capability_forecasts.csv`
 - `data/analysis/forecast_input_diagnostics.csv`
@@ -308,4 +542,14 @@ AI looks less like a single prior wave and more like an uncomfortable hybrid: sp
 - `figures/deep_analysis/price_context_rating_map.png`
 - `figures/deep_analysis/labor_outcome_mix.png`
 - `figures/deep_analysis/forecast_scenario_dashboard.png`
+- `figures/deep_analysis/direct_vs_proxy_price_performance.png`
+- `figures/deep_analysis/vendor_frontier_scores.png`
+- `figures/deep_analysis/family_vs_vendor_rank_shift.png`
+- `figures/deep_analysis/source_coverage_dashboard.png`
+- `figures/deep_analysis/family_signal_coverage_heatmap.png`
+- `figures/deep_analysis/frontier_rank_uncertainty.png`
+- `figures/deep_analysis/forecast_uncertainty_bands.png`
+- `figures/deep_analysis/business_domain_pressure_matrix.png`
+- `figures/deep_analysis/release_cadence_timeline.png`
+- `figures/deep_analysis/recent_release_velocity.png`
 - `figures/deep_analysis/*.png`

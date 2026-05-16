@@ -1,9 +1,9 @@
 wave,period,speed,cost_decline,generality,labor_scope,capital_intensity,network_effects,regulatory_friction,ai_similarity_score,interpretation,analysis_captured_at
-cloud_saas,2006-2022,72,79,71,58,69,78,25,99.17,Best analogy for enterprise adoption lags and API-first business-model shift.,2026-05-16T11:27:28+00:00
-internet,1993-2010,82,76,86,73,55,94,31,98.86,"Best analogy for general-purpose diffusion, platform creation and strange second-order labor demand.",2026-05-16T11:27:28+00:00
-smartphones,2007-2020,88,54,76,48,73,91,34,97.44,"Best analogy for consumer pull, app ecosystems and fast behavioral rewiring.",2026-05-16T11:27:28+00:00
-containerization,1956-1990,43,88,56,63,86,79,41,97.23,Best analogy for cost shock in a hidden infrastructure layer.,2026-05-16T11:27:28+00:00
-search_ads,1998-2015,83,83,62,42,61,96,22,96.53,Best analogy for advertising-funded discovery and winner-take-most information layers.,2026-05-16T11:27:28+00:00
-electricity,1882-1930,31,71,94,88,96,83,58,96.22,"Best analogy for long-run production reorganization, not near-term speed.",2026-05-16T11:27:28+00:00
-spreadsheets,1979-1995,78,62,68,74,28,46,18,95.85,Best analogy for occupational task rebundling and sudden knowledge-worker productivity jumps.,2026-05-16T11:27:28+00:00
-industrial_robotics,1961-2020,38,51,29,44,90,22,47,89.11,Useful negative analogy: physical deployment is slower and more capital-locked than software AI.,2026-05-16T11:27:28+00:00
+cloud_saas,2006-2022,72,79,71,58,69,78,25,99.17,Best analogy for enterprise adoption lags and API-first business-model shift.,2026-05-16T12:05:27+00:00
+internet,1993-2010,82,76,86,73,55,94,31,98.86,"Best analogy for general-purpose diffusion, platform creation and strange second-order labor demand.",2026-05-16T12:05:27+00:00
+smartphones,2007-2020,88,54,76,48,73,91,34,97.44,"Best analogy for consumer pull, app ecosystems and fast behavioral rewiring.",2026-05-16T12:05:27+00:00
+containerization,1956-1990,43,88,56,63,86,79,41,97.23,Best analogy for cost shock in a hidden infrastructure layer.,2026-05-16T12:05:27+00:00
+search_ads,1998-2015,83,83,62,42,61,96,22,96.53,Best analogy for advertising-funded discovery and winner-take-most information layers.,2026-05-16T12:05:27+00:00
+electricity,1882-1930,31,71,94,88,96,83,58,96.22,"Best analogy for long-run production reorganization, not near-term speed.",2026-05-16T12:05:27+00:00
+spreadsheets,1979-1995,78,62,68,74,28,46,18,95.85,Best analogy for occupational task rebundling and sudden knowledge-worker productivity jumps.,2026-05-16T12:05:27+00:00
+industrial_robotics,1961-2020,38,51,29,44,90,22,47,89.11,Useful negative analogy: physical deployment is slower and more capital-locked than software AI.,2026-05-16T12:05:27+00:00

@@ -1,55 +1,55 @@
 scenario,horizon_years,target_year,metric,value,unit,method,analysis_captured_at
-conservative,2,2028,frontier_training_compute_multiplier,4.02,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=4.02x capped=False,2026-05-16T11:27:28+00:00
-conservative,2,2028,frontier_context_window_multiplier,2.28,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=2.28x capped=False,2026-05-16T11:27:28+00:00
-conservative,2,2028,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T11:27:28+00:00
-conservative,2,2028,open_weight_lmarena_gap_remaining,62.9,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T11:27:28+00:00
-conservative,2,2028,share_of_us_occupation_tasks_materially_touched,0.057,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T11:27:28+00:00
-conservative,2,2028,leading_lab_concentration,0.783,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T11:27:28+00:00
-conservative,5,2031,frontier_training_compute_multiplier,32.39,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=32.39x capped=False,2026-05-16T11:27:28+00:00
-conservative,5,2031,frontier_context_window_multiplier,7.82,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=7.82x capped=False,2026-05-16T11:27:28+00:00
-conservative,5,2031,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T11:27:28+00:00
-conservative,5,2031,open_weight_lmarena_gap_remaining,51.5,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T11:27:28+00:00
-conservative,5,2031,share_of_us_occupation_tasks_materially_touched,0.101,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T11:27:28+00:00
-conservative,5,2031,leading_lab_concentration,0.769,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T11:27:28+00:00
-conservative,10,2036,frontier_training_compute_multiplier,80.0,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=1048.93x capped=True,2026-05-16T11:27:28+00:00
-conservative,10,2036,frontier_context_window_multiplier,16.0,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=61.22x capped=True,2026-05-16T11:27:28+00:00
-conservative,10,2036,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T11:27:28+00:00
-conservative,10,2036,open_weight_lmarena_gap_remaining,32.5,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T11:27:28+00:00
-conservative,10,2036,share_of_us_occupation_tasks_materially_touched,0.155,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T11:27:28+00:00
-conservative,10,2036,leading_lab_concentration,0.747,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T11:27:28+00:00
-base,2,2028,frontier_training_compute_multiplier,12.54,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=12.54x capped=False,2026-05-16T11:27:28+00:00
-base,2,2028,frontier_context_window_multiplier,6.23,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=6.23x capped=False,2026-05-16T11:27:28+00:00
-base,2,2028,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T11:27:28+00:00
-base,2,2028,open_weight_lmarena_gap_remaining,53.6,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T11:27:28+00:00
-base,2,2028,share_of_us_occupation_tasks_materially_touched,0.104,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T11:27:28+00:00
-base,2,2028,leading_lab_concentration,0.81,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T11:27:28+00:00
-base,5,2031,frontier_training_compute_multiplier,400.0,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=557.35x capped=True,2026-05-16T11:27:28+00:00
-base,5,2031,frontier_context_window_multiplier,64.0,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=96.70x capped=True,2026-05-16T11:27:28+00:00
-base,5,2031,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T11:27:28+00:00
-base,5,2031,open_weight_lmarena_gap_remaining,28.2,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T11:27:28+00:00
-base,5,2031,share_of_us_occupation_tasks_materially_touched,0.183,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T11:27:28+00:00
-base,5,2031,leading_lab_concentration,0.837,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T11:27:28+00:00
-base,10,2036,frontier_training_compute_multiplier,400.0,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=310644.15x capped=True,2026-05-16T11:27:28+00:00
-base,10,2036,frontier_context_window_multiplier,64.0,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=9351.33x capped=True,2026-05-16T11:27:28+00:00
-base,10,2036,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T11:27:28+00:00
-base,10,2036,open_weight_lmarena_gap_remaining,5.6,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T11:27:28+00:00
-base,10,2036,share_of_us_occupation_tasks_materially_touched,0.281,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T11:27:28+00:00
-base,10,2036,leading_lab_concentration,0.882,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T11:27:28+00:00
-aggressive,2,2028,frontier_training_compute_multiplier,39.15,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=39.15x capped=False,2026-05-16T11:27:28+00:00
-aggressive,2,2028,frontier_context_window_multiplier,15.53,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=15.53x capped=False,2026-05-16T11:27:28+00:00
-aggressive,2,2028,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T11:27:28+00:00
-aggressive,2,2028,open_weight_lmarena_gap_remaining,47.7,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T11:27:28+00:00
-aggressive,2,2028,share_of_us_occupation_tasks_materially_touched,0.161,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T11:27:28+00:00
-aggressive,2,2028,leading_lab_concentration,0.837,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T11:27:28+00:00
-aggressive,5,2031,frontier_training_compute_multiplier,1200.0,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=9591.59x capped=True,2026-05-16T11:27:28+00:00
-aggressive,5,2031,frontier_context_window_multiplier,128.0,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=950.94x capped=True,2026-05-16T11:27:28+00:00
-aggressive,5,2031,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T11:27:28+00:00
-aggressive,5,2031,open_weight_lmarena_gap_remaining,13.4,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T11:27:28+00:00
-aggressive,5,2031,share_of_us_occupation_tasks_materially_touched,0.283,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T11:27:28+00:00
-aggressive,5,2031,leading_lab_concentration,0.904,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T11:27:28+00:00
-aggressive,10,2036,frontier_training_compute_multiplier,1200.0,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=91998682.76x capped=True,2026-05-16T11:27:28+00:00
-aggressive,10,2036,frontier_context_window_multiplier,128.0,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=904295.44x capped=True,2026-05-16T11:27:28+00:00
-aggressive,10,2036,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T11:27:28+00:00
-aggressive,10,2036,open_weight_lmarena_gap_remaining,5.6,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T11:27:28+00:00
-aggressive,10,2036,share_of_us_occupation_tasks_materially_touched,0.435,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T11:27:28+00:00
-aggressive,10,2036,leading_lab_concentration,0.95,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T11:27:28+00:00
+conservative,2,2028,frontier_training_compute_multiplier,4.02,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=4.02x capped=False,2026-05-16T12:05:27+00:00
+conservative,2,2028,frontier_context_window_multiplier,2.28,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=2.28x capped=False,2026-05-16T12:05:27+00:00
+conservative,2,2028,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T12:05:27+00:00
+conservative,2,2028,open_weight_lmarena_gap_remaining,62.9,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T12:05:27+00:00
+conservative,2,2028,share_of_us_occupation_tasks_materially_touched,0.057,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T12:05:27+00:00
+conservative,2,2028,leading_lab_concentration,0.783,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T12:05:27+00:00
+conservative,5,2031,frontier_training_compute_multiplier,32.39,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=32.39x capped=False,2026-05-16T12:05:27+00:00
+conservative,5,2031,frontier_context_window_multiplier,7.82,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=7.82x capped=False,2026-05-16T12:05:27+00:00
+conservative,5,2031,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T12:05:27+00:00
+conservative,5,2031,open_weight_lmarena_gap_remaining,51.5,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T12:05:27+00:00
+conservative,5,2031,share_of_us_occupation_tasks_materially_touched,0.101,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T12:05:27+00:00
+conservative,5,2031,leading_lab_concentration,0.769,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T12:05:27+00:00
+conservative,10,2036,frontier_training_compute_multiplier,80.0,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=1048.93x capped=True,2026-05-16T12:05:27+00:00
+conservative,10,2036,frontier_context_window_multiplier,16.0,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=61.22x capped=True,2026-05-16T12:05:27+00:00
+conservative,10,2036,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T12:05:27+00:00
+conservative,10,2036,open_weight_lmarena_gap_remaining,32.5,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T12:05:27+00:00
+conservative,10,2036,share_of_us_occupation_tasks_materially_touched,0.155,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T12:05:27+00:00
+conservative,10,2036,leading_lab_concentration,0.747,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T12:05:27+00:00
+base,2,2028,frontier_training_compute_multiplier,12.54,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=12.54x capped=False,2026-05-16T12:05:27+00:00
+base,2,2028,frontier_context_window_multiplier,6.23,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=6.23x capped=False,2026-05-16T12:05:27+00:00
+base,2,2028,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T12:05:27+00:00
+base,2,2028,open_weight_lmarena_gap_remaining,53.6,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T12:05:27+00:00
+base,2,2028,share_of_us_occupation_tasks_materially_touched,0.104,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T12:05:27+00:00
+base,2,2028,leading_lab_concentration,0.81,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T12:05:27+00:00
+base,5,2031,frontier_training_compute_multiplier,400.0,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=557.35x capped=True,2026-05-16T12:05:27+00:00
+base,5,2031,frontier_context_window_multiplier,64.0,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=96.70x capped=True,2026-05-16T12:05:27+00:00
+base,5,2031,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T12:05:27+00:00
+base,5,2031,open_weight_lmarena_gap_remaining,28.2,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T12:05:27+00:00
+base,5,2031,share_of_us_occupation_tasks_materially_touched,0.183,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T12:05:27+00:00
+base,5,2031,leading_lab_concentration,0.837,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T12:05:27+00:00
+base,10,2036,frontier_training_compute_multiplier,400.0,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=310644.15x capped=True,2026-05-16T12:05:27+00:00
+base,10,2036,frontier_context_window_multiplier,64.0,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=9351.33x capped=True,2026-05-16T12:05:27+00:00
+base,10,2036,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T12:05:27+00:00
+base,10,2036,open_weight_lmarena_gap_remaining,5.6,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T12:05:27+00:00
+base,10,2036,share_of_us_occupation_tasks_materially_touched,0.281,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T12:05:27+00:00
+base,10,2036,leading_lab_concentration,0.882,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T12:05:27+00:00
+aggressive,2,2028,frontier_training_compute_multiplier,39.15,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=39.15x capped=False,2026-05-16T12:05:27+00:00
+aggressive,2,2028,frontier_context_window_multiplier,15.53,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=15.53x capped=False,2026-05-16T12:05:27+00:00
+aggressive,2,2028,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T12:05:27+00:00
+aggressive,2,2028,open_weight_lmarena_gap_remaining,47.7,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T12:05:27+00:00
+aggressive,2,2028,share_of_us_occupation_tasks_materially_touched,0.161,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T12:05:27+00:00
+aggressive,2,2028,leading_lab_concentration,0.837,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T12:05:27+00:00
+aggressive,5,2031,frontier_training_compute_multiplier,1200.0,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=9591.59x capped=True,2026-05-16T12:05:27+00:00
+aggressive,5,2031,frontier_context_window_multiplier,128.0,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=950.94x capped=True,2026-05-16T12:05:27+00:00
+aggressive,5,2031,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T12:05:27+00:00
+aggressive,5,2031,open_weight_lmarena_gap_remaining,13.4,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T12:05:27+00:00
+aggressive,5,2031,share_of_us_occupation_tasks_materially_touched,0.283,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T12:05:27+00:00
+aggressive,5,2031,leading_lab_concentration,0.904,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T12:05:27+00:00
+aggressive,10,2036,frontier_training_compute_multiplier,1200.0,x current frontier trend,capped scenario from Epoch upper-tail slope; raw=91998682.76x capped=True,2026-05-16T12:05:27+00:00
+aggressive,10,2036,frontier_context_window_multiplier,128.0,x current API catalog trend,capped scenario from OpenRouter upper-tail slope; raw=904295.44x capped=True,2026-05-16T12:05:27+00:00
+aggressive,10,2036,frontier_output_price_factor,1.0,fraction of current low-price frontier API output cost,"OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000",2026-05-16T12:05:27+00:00
+aggressive,10,2036,open_weight_lmarena_gap_remaining,5.6,arena rating points,current open vs closed LMArena gap with scenario-specific closure speed,2026-05-16T12:05:27+00:00
+aggressive,10,2036,share_of_us_occupation_tasks_materially_touched,0.435,share of task-weighted occupation activity,"Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",2026-05-16T12:05:27+00:00
+aggressive,10,2036,leading_lab_concentration,0.95,"index, 1 means winner-take-most frontier","company momentum concentration from benchmark, API, ecosystem and release signals",2026-05-16T12:05:27+00:00

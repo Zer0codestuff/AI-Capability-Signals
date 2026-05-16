@@ -1,0 +1,11 @@
+vendor,total_releases,recent_releases_365d,median_days_between_releases,days_since_latest_release,latest_release_date,source_mix,cadence_label,portfolio_families,analysis_captured_at
+OpenAI,162,66,16.0,10,2026-05-05,"research_metadata:82,api_catalog:62,open_weight:18",fast,GPT,2026-05-16T12:05:27+00:00
+Alibaba,131,64,8.0,18,2026-04-27,"open_weight:78,api_catalog:48,research_metadata:5",fast,Qwen,2026-05-16T12:05:27+00:00
+Google,100,40,12.0,8,2026-05-07,"research_metadata:51,api_catalog:27,open_weight:22",fast,"Gemini,Gemma",2026-05-16T12:05:27+00:00
+Mistral,67,30,17.0,15,2026-04-30,"open_weight:42,api_catalog:25",fast,Mistral,2026-05-16T12:05:27+00:00
+Anthropic,37,24,37.5,3,2026-05-12,"research_metadata:21,api_catalog:16",fast,Claude,2026-05-16T12:05:27+00:00
+DeepSeek,52,19,26.5,21,2026-04-24,"open_weight:36,api_catalog:15,research_metadata:1",fast,DeepSeek,2026-05-16T12:05:27+00:00
+xAI,22,13,40.0,15,2026-04-30,"research_metadata:18,api_catalog:3,open_weight:1",fast,Grok,2026-05-16T12:05:27+00:00
+Meta,92,3,13.0,212,2025-10-15,"open_weight:59,api_catalog:26,research_metadata:7",fast,Llama,2026-05-16T12:05:27+00:00
+Cohere,11,2,104.0,267,2025-08-21,"open_weight:5,api_catalog:4,research_metadata:2",steady,Command,2026-05-16T12:05:27+00:00
+Microsoft,17,1,71.0,210,2025-10-17,"open_weight:14,api_catalog:2,research_metadata:1",fast,Phi,2026-05-16T12:05:27+00:00

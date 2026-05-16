@@ -1,0 +1,13 @@
+model_family,vendor,evidence_count,direct_benchmark_match_count,coverage_score,underobserved,underobserved_reasons,audit_note,analysis_captured_at
+Cohere,Cohere,0.0,0,0.0,True,"few_direct_model_matches,low_source_coverage,below_median_evidence_depth",Use family ranking cautiously when direct benchmark and coverage fields are sparse.,2026-05-16T12:05:27+00:00
+GPT,OpenAI,1083.0,120,99.5,True,below_median_evidence_depth,Use family ranking cautiously when direct benchmark and coverage fields are sparse.,2026-05-16T12:05:27+00:00
+Claude,Anthropic,424.0,48,100.0,True,below_median_evidence_depth,Use family ranking cautiously when direct benchmark and coverage fields are sparse.,2026-05-16T12:05:27+00:00
+Gemini,Google,283.0,24,100.0,True,below_median_evidence_depth,Use family ranking cautiously when direct benchmark and coverage fields are sparse.,2026-05-16T12:05:27+00:00
+Grok,xAI,55.0,3,100.0,True,below_median_evidence_depth,Use family ranking cautiously when direct benchmark and coverage fields are sparse.,2026-05-16T12:05:27+00:00
+Command,Cohere,235.0,12,100.0,True,below_median_evidence_depth,Use family ranking cautiously when direct benchmark and coverage fields are sparse.,2026-05-16T12:05:27+00:00
+Gemma,Google,2024.0,15,96.3,False,none,Coverage is comparatively strong in this snapshot.,2026-05-16T12:05:27+00:00
+Llama,Meta,8569.0,81,98.08,False,none,Coverage is comparatively strong in this snapshot.,2026-05-16T12:05:27+00:00
+DeepSeek,DeepSeek,1187.0,25,98.89,False,none,Coverage is comparatively strong in this snapshot.,2026-05-16T12:05:27+00:00
+Qwen,Alibaba,12932.0,83,99.3,False,none,Coverage is comparatively strong in this snapshot.,2026-05-16T12:05:27+00:00
+Mistral,Mistral,2394.0,56,99.33,False,none,Coverage is comparatively strong in this snapshot.,2026-05-16T12:05:27+00:00
+Phi,Microsoft,1372.0,6,100.0,False,none,Coverage is comparatively strong in this snapshot.,2026-05-16T12:05:27+00:00

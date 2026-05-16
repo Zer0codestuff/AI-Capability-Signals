@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 import requests
 
+from frontier_ai.model_matching import MATCH_CONFIDENCE_ORDER, find_best_model_match, normalize_model_name
 from frontier_ai.pipeline import ROOT, classify_access, classify_family, clean_text, slug, write_run_manifest
 
 DATASET = ROOT / "data" / "dataset"
@@ -103,6 +104,40 @@ BOTTLENECK_WORDS = {
     "physical": ["repair", "install", "operate", "drive", "lift", "clean", "cook", "weld", "inspect equipment", "manual"],
     "human_trust": ["teach", "counsel", "negotiate", "care", "nurse", "patient", "child", "therapy", "supervise"],
     "regulated": ["legal", "medical", "safety", "compliance", "license", "court", "diagnos", "prescribe"],
+}
+
+FAMILY_VENDOR_MAP = {
+    "GPT": "OpenAI",
+    "Claude": "Anthropic",
+    "Gemini": "Google",
+    "Gemma": "Google",
+    "Qwen": "Alibaba",
+    "Llama": "Meta",
+    "Mistral": "Mistral",
+    "DeepSeek": "DeepSeek",
+    "Grok": "xAI",
+    "Phi": "Microsoft",
+    "Command": "Cohere",
+    "Cohere": "Cohere",
+}
+
+EVIDENCE_BADGES = {
+    "observed": "Directly observed source row.",
+    "direct_match": "OpenRouter model matched to a benchmark model row.",
+    "family_proxy": "Benchmark evidence attached at family level.",
+    "scenario": "Transparent scenario transform, not a calibrated forecast.",
+    "speculative": "Useful directional claim with weak or incomplete evidence.",
+}
+
+BUSINESS_DOMAIN_RULES = {
+    "software_engineering": ["software", "developer", "program", "code", "web", "database", "systems", "qa", "computer"],
+    "customer_support": ["customer", "support", "service", "call center", "reception", "client", "help desk"],
+    "legal_compliance": ["legal", "law", "compliance", "paralegal", "contract", "claims", "insurance"],
+    "marketing_content": ["marketing", "writer", "editor", "content", "public relations", "advertising", "media"],
+    "finance_analysis": ["financial", "account", "analyst", "bookkeeping", "budget", "credit", "loan", "actuar"],
+    "healthcare_administration": ["medical records", "health information", "billing", "healthcare", "clinic", "hospital", "insurance"],
+    "education": ["teacher", "instruction", "tutor", "education", "training", "library"],
+    "operations_back_office": ["office", "administrative", "clerical", "operations", "logistics", "coordinator", "data entry"],
 }
 
 
@@ -238,6 +273,56 @@ def frontier_family_from_model(name: Any = "", model_id: Any = "", vendor: Any =
     return family_from_text(name, model_id, vendor)
 
 
+def apply_family_score_components(scores: pd.DataFrame) -> pd.DataFrame:
+    scores = scores.copy()
+    scores["performance_component"] = (
+        minmax(scores.get("lmarena_best", pd.Series(index=scores.index))) * 0.45
+        + minmax(scores.get("swebench_best", pd.Series(index=scores.index))) * 0.30
+        + minmax(scores.get("openllm_top_mean", pd.Series(index=scores.index))) * 0.25
+    )
+    scores["release_velocity_component"] = (
+        minmax(scores.get("recent_api_releases", pd.Series(index=scores.index))) * 0.55
+        + minmax(scores.get("epoch_recent_releases", pd.Series(index=scores.index))) * 0.45
+    )
+    scores["ecosystem_component"] = (
+        minmax(scores.get("hf_downloads", pd.Series(index=scores.index)), log=True) * 0.40
+        + minmax(scores.get("github_model_mentions", pd.Series(index=scores.index)), log=True) * 0.25
+        + minmax(scores.get("openalex_paper_mentions", pd.Series(index=scores.index)), log=True) * 0.25
+        + minmax(scores.get("hf_likes", pd.Series(index=scores.index)), log=True) * 0.10
+    )
+    scores["capability_surface_component"] = (
+        minmax(scores.get("context_window_max", pd.Series(index=scores.index)), log=True) * 0.35
+        + minmax(scores.get("max_output_tokens", pd.Series(index=scores.index)), log=True) * 0.20
+        + minmax(scores.get("multimodal_models", pd.Series(index=scores.index))) * 0.20
+        + minmax(scores.get("training_compute_max", pd.Series(index=scores.index)), log=True) * 0.25
+    )
+    price = scores.get("output_price_min", pd.Series(index=scores.index)).replace(0, np.nan)
+    scores["cost_efficiency_component"] = minmax(price, invert=True, log=True)
+    scores["openness_component"] = (
+        scores.get("hf_open_weight_share", pd.Series(index=scores.index)).fillna(0) * 55
+        + scores.get("open_weight_epoch_share", pd.Series(index=scores.index)).fillna(0) * 35
+        + minmax(scores.get("open_api_models", pd.Series(index=scores.index))) * 0.10
+    ).clip(0, 100)
+    scores["frontier_momentum_heuristic_index"] = sum(scores[col] * weight for col, weight in COMPONENT_WEIGHTS.items()).round(2)
+    scores["frontier_momentum_score"] = scores["frontier_momentum_heuristic_index"]
+    scores["rank"] = scores["frontier_momentum_heuristic_index"].rank(ascending=False, method="min").astype(int)
+    evidence_cols = [
+        "lmarena_models",
+        "api_model_count",
+        "epoch_model_count",
+        "openllm_metric_count",
+        "swebench_submissions",
+        "hf_models",
+        "github_model_mentions",
+        "openalex_paper_mentions",
+    ]
+    for col in evidence_cols:
+        if col not in scores.columns:
+            scores[col] = 0
+    scores["evidence_count"] = scores[evidence_cols].fillna(0).sum(axis=1)
+    return scores
+
+
 def build_company_frontier_scores() -> tuple[pd.DataFrame, pd.DataFrame]:
     openrouter = read_csv_table("openrouter_models_catalog")
     epoch = read_csv_table("epoch_models_normalized")
@@ -347,49 +432,7 @@ def build_company_frontier_scores() -> tuple[pd.DataFrame, pd.DataFrame]:
             scores[col] = numeric(scores[col])
     scores = scores[(scores["model_family"].ne("Other")) & (scores["model_family"].isin(FRONTIER_FAMILIES) | (scores.get("api_model_count", 0).fillna(0) >= 2))].copy()
 
-    scores["performance_component"] = (
-        minmax(scores.get("lmarena_best", pd.Series(index=scores.index))) * 0.45
-        + minmax(scores.get("swebench_best", pd.Series(index=scores.index))) * 0.30
-        + minmax(scores.get("openllm_top_mean", pd.Series(index=scores.index))) * 0.25
-    )
-    scores["release_velocity_component"] = (
-        minmax(scores.get("recent_api_releases", pd.Series(index=scores.index))) * 0.55
-        + minmax(scores.get("epoch_recent_releases", pd.Series(index=scores.index))) * 0.45
-    )
-    scores["ecosystem_component"] = (
-        minmax(scores.get("hf_downloads", pd.Series(index=scores.index)), log=True) * 0.40
-        + minmax(scores.get("github_model_mentions", pd.Series(index=scores.index)), log=True) * 0.25
-        + minmax(scores.get("openalex_paper_mentions", pd.Series(index=scores.index)), log=True) * 0.25
-        + minmax(scores.get("hf_likes", pd.Series(index=scores.index)), log=True) * 0.10
-    )
-    scores["capability_surface_component"] = (
-        minmax(scores.get("context_window_max", pd.Series(index=scores.index)), log=True) * 0.35
-        + minmax(scores.get("max_output_tokens", pd.Series(index=scores.index)), log=True) * 0.20
-        + minmax(scores.get("multimodal_models", pd.Series(index=scores.index))) * 0.20
-        + minmax(scores.get("training_compute_max", pd.Series(index=scores.index)), log=True) * 0.25
-    )
-    price = scores.get("output_price_min", pd.Series(index=scores.index)).replace(0, np.nan)
-    scores["cost_efficiency_component"] = minmax(price, invert=True, log=True)
-    scores["openness_component"] = (
-        scores.get("hf_open_weight_share", pd.Series(index=scores.index)).fillna(0) * 55
-        + scores.get("open_weight_epoch_share", pd.Series(index=scores.index)).fillna(0) * 35
-        + minmax(scores.get("open_api_models", pd.Series(index=scores.index))) * 0.10
-    ).clip(0, 100)
-    scores["frontier_momentum_heuristic_index"] = sum(scores[col] * weight for col, weight in COMPONENT_WEIGHTS.items()).round(2)
-    scores["frontier_momentum_score"] = scores["frontier_momentum_heuristic_index"]
-    scores["rank"] = scores["frontier_momentum_heuristic_index"].rank(ascending=False, method="min").astype(int)
-    scores["evidence_count"] = scores[
-        [
-            "lmarena_models",
-            "api_model_count",
-            "epoch_model_count",
-            "openllm_metric_count",
-            "swebench_submissions",
-            "hf_models",
-            "github_model_mentions",
-            "openalex_paper_mentions",
-        ]
-    ].fillna(0).sum(axis=1)
+    scores = apply_family_score_components(scores)
     sensitivity = build_company_score_sensitivity(scores)
     stable_top = set(sensitivity[sensitivity["rank"].le(3)].groupby("model_family").size().loc[lambda s: s >= 3].index)
     scores["sensitivity_label"] = np.where(scores["model_family"].isin(stable_top), "stable_top_tier", "weight_sensitive")
@@ -955,6 +998,661 @@ def build_price_performance_frontier() -> pd.DataFrame:
         "source_url",
     ]
     return write_table(work[cols].sort_values("price_performance_index", ascending=False), "price_performance_frontier")
+
+
+def benchmark_candidate_tables() -> dict[str, list[dict[str, Any]]]:
+    lmarena = read_csv_table("lmarena_full").copy()
+    lmarena["family"] = [family_from_text(n, o) for n, o in zip(lmarena.get("model_name", ""), lmarena.get("organization", ""))]
+    lmarena["rating"] = numeric(lmarena["rating"])
+    lmarena_candidates = []
+    for model_name, group in lmarena.sort_values("rating", ascending=False).groupby("model_name", dropna=True):
+        best = group.iloc[0]
+        lmarena_candidates.append(
+            {
+                "model_name": model_name,
+                "model_id": model_name,
+                "family": best.get("family"),
+                "benchmark_score": best.get("rating"),
+                "benchmark_metric": "lmarena_rating",
+                "benchmark_category": best.get("category"),
+                "sort_score": best.get("rating"),
+                "source_url": best.get("source_url"),
+            }
+        )
+
+    swe = read_csv_table("swebench_submissions").copy()
+    swe["family"] = [family_from_text(m, s, sub) for m, s, sub in zip(swe.get("model", ""), swe.get("system_name", ""), swe.get("submission", ""))]
+    swe_candidates = []
+    for model_name, group in swe.sort_values("score", ascending=False).groupby("model", dropna=True):
+        best = group.iloc[0]
+        swe_candidates.append(
+            {
+                "model_name": model_name,
+                "model_id": best.get("submission"),
+                "family": best.get("family"),
+                "benchmark_score": best.get("score"),
+                "benchmark_metric": "swebench_percent_resolved",
+                "benchmark_category": "software_engineering",
+                "sort_score": best.get("score"),
+                "source_url": best.get("source_url"),
+            }
+        )
+
+    livebench = read_csv_table("livebench_judgments").copy()
+    livebench["family"] = [family_from_text(m) for m in livebench.get("model", "")]
+    livebench["score"] = numeric(livebench["score"])
+    livebench_group = livebench.groupby("model", dropna=True).agg(
+        family=("family", "first"),
+        benchmark_score=("score", "mean"),
+        best_score=("score", "max"),
+        categories=("category", lambda s: sentence_join(sorted(set(clean_text(x) for x in s)), 4)),
+    ).reset_index()
+    livebench_candidates = [
+        {
+            "model_name": row["model"],
+            "model_id": row["model"],
+            "family": row["family"],
+            "benchmark_score": row["benchmark_score"],
+            "benchmark_metric": "livebench_mean_judgment_score",
+            "benchmark_category": row["categories"],
+            "sort_score": row["best_score"],
+            "source_url": "https://huggingface.co/datasets/livebench/model_judgment",
+        }
+        for _, row in livebench_group.iterrows()
+    ]
+
+    openllm = read_csv_table("openllm_leaderboard_metrics_long").copy()
+    openllm = openllm[~openllm["metric"].astype(str).str.contains("stderr", case=False, na=False)].copy()
+    openllm["value"] = numeric(openllm["value"])
+    openllm = openllm[openllm["value"].between(0, 1, inclusive="both")]
+    openllm["family"] = [family_from_text(n, p) for n, p in zip(openllm.get("model_name", ""), openllm.get("model_path", ""))]
+    openllm_group = openllm.groupby(["model_name", "model_path"], dropna=True).agg(
+        family=("family", "first"),
+        benchmark_score=("value", "mean"),
+        best_score=("value", "max"),
+        metrics=("metric", lambda s: sentence_join(sorted(set(clean_text(x) for x in s)), 4)),
+        source_url=("source_url", "first"),
+    ).reset_index()
+    openllm_candidates = [
+        {
+            "model_name": row["model_name"],
+            "model_id": row["model_path"],
+            "family": row["family"],
+            "benchmark_score": row["benchmark_score"],
+            "benchmark_metric": "open_llm_leaderboard_mean_metric",
+            "benchmark_category": row["metrics"],
+            "sort_score": row["best_score"],
+            "source_url": row["source_url"],
+        }
+        for _, row in openllm_group.iterrows()
+    ]
+
+    return {
+        "lmarena": lmarena_candidates,
+        "swebench": swe_candidates,
+        "livebench": livebench_candidates,
+        "open_llm_leaderboard": openllm_candidates,
+    }
+
+
+def build_model_benchmark_match_audit() -> pd.DataFrame:
+    openrouter = read_csv_table("openrouter_models_catalog").copy()
+    openrouter["model_family"] = [
+        frontier_family_from_model(name, mid, vendor)
+        for name, mid, vendor in zip(openrouter.get("canonical_model", ""), openrouter.get("openrouter_id", ""), openrouter.get("vendor", ""))
+    ]
+    candidate_tables = benchmark_candidate_tables()
+    rows = []
+    for _, model in openrouter.iterrows():
+        for source, candidates in candidate_tables.items():
+            match = find_best_model_match(
+                model.get("canonical_model"),
+                model.get("openrouter_id"),
+                clean_text(model.get("model_family")),
+                candidates,
+            )
+            record = match.benchmark_record or {}
+            rows.append(
+                {
+                    "openrouter_id": model.get("openrouter_id"),
+                    "canonical_model": model.get("canonical_model"),
+                    "vendor": model.get("vendor"),
+                    "model_family": model.get("model_family"),
+                    "benchmark_source": source,
+                    "benchmark_model_name": match.benchmark_model_name,
+                    "benchmark_family": match.benchmark_family,
+                    "match_confidence": match.confidence,
+                    "match_rank": MATCH_CONFIDENCE_ORDER[match.confidence],
+                    "match_key": match.match_key,
+                    "direct_model_match": match.direct_model_match,
+                    "benchmark_score": record.get("benchmark_score"),
+                    "benchmark_metric": record.get("benchmark_metric", ""),
+                    "benchmark_category": record.get("benchmark_category", ""),
+                    "benchmark_source_url": record.get("source_url", ""),
+                    "normalized_openrouter_name": normalize_model_name(model.get("canonical_model")),
+                    "normalized_benchmark_name": normalize_model_name(match.benchmark_model_name),
+                }
+            )
+    audit = pd.DataFrame(rows).sort_values(["openrouter_id", "match_rank", "benchmark_source"])
+    return write_table(audit, "model_benchmark_match_audit")
+
+
+def build_direct_model_price_performance(match_audit: pd.DataFrame, proxy_frontier: pd.DataFrame) -> pd.DataFrame:
+    openrouter = read_csv_table("openrouter_models_catalog").copy()
+    openrouter["model_family"] = [
+        frontier_family_from_model(name, mid, vendor)
+        for name, mid, vendor in zip(openrouter.get("canonical_model", ""), openrouter.get("openrouter_id", ""), openrouter.get("vendor", ""))
+    ]
+    direct = match_audit[match_audit["direct_model_match"].astype(bool)].copy()
+    if direct.empty:
+        cols = [
+            "openrouter_id",
+            "canonical_model",
+            "vendor",
+            "model_family",
+            "direct_evidence_sources",
+            "direct_match_count",
+            "direct_lmarena_rating",
+            "direct_price_performance_index",
+            "direct_price_performance_frontier",
+        ]
+        return write_table(pd.DataFrame(columns=cols), "direct_model_price_performance")
+
+    source_summary = direct.groupby("openrouter_id").agg(
+        direct_evidence_sources=("benchmark_source", lambda s: ",".join(sorted(set(s)))),
+        direct_match_count=("benchmark_source", "nunique"),
+        best_direct_match_confidence=("match_rank", "min"),
+    ).reset_index()
+    lmarena = direct[direct["benchmark_source"].eq("lmarena")].copy()
+    lmarena["benchmark_score"] = numeric(lmarena["benchmark_score"])
+    lmarena_best = lmarena.sort_values("benchmark_score", ascending=False).groupby("openrouter_id", as_index=False).head(1)
+    lmarena_best = lmarena_best[
+        [
+            "openrouter_id",
+            "benchmark_model_name",
+            "benchmark_score",
+            "benchmark_category",
+            "match_confidence",
+            "benchmark_source_url",
+        ]
+    ].rename(
+        columns={
+            "benchmark_model_name": "direct_lmarena_model_name",
+            "benchmark_score": "direct_lmarena_rating",
+            "benchmark_category": "direct_lmarena_category",
+            "match_confidence": "direct_lmarena_match_confidence",
+            "benchmark_source_url": "direct_lmarena_source_url",
+        }
+    )
+    work = openrouter.merge(source_summary, on="openrouter_id", how="inner").merge(lmarena_best, on="openrouter_id", how="left")
+    work["output_price_clean"] = numeric(work["output_usd_per_1m"]).replace(0, np.nan)
+    work["input_price_clean"] = numeric(work["input_usd_per_1m"]).replace(0, np.nan)
+    work["blended_price_usd_per_1m"] = work["input_price_clean"].fillna(work["output_price_clean"]) * 0.35 + work["output_price_clean"].fillna(work["input_price_clean"]) * 0.65
+    work["direct_price_performance_index"] = (
+        minmax(work["direct_lmarena_rating"]) * 0.76
+        + minmax(work["context_window"], log=True) * 0.12
+        + minmax(work["blended_price_usd_per_1m"], invert=True, log=True) * 0.12
+    ).round(2)
+    candidates = work[["direct_lmarena_rating", "blended_price_usd_per_1m"]].copy()
+    frontier_flags = []
+    for _, row in candidates.iterrows():
+        rating = row["direct_lmarena_rating"]
+        price = row["blended_price_usd_per_1m"]
+        if not np.isfinite(rating) or not np.isfinite(price):
+            frontier_flags.append(False)
+            continue
+        dominates = candidates[
+            (candidates["direct_lmarena_rating"] >= rating)
+            & (candidates["blended_price_usd_per_1m"] <= price)
+            & ((candidates["direct_lmarena_rating"] > rating) | (candidates["blended_price_usd_per_1m"] < price))
+        ]
+        frontier_flags.append(dominates.empty)
+    work["direct_price_performance_frontier"] = frontier_flags
+    proxy_cols = proxy_frontier[["openrouter_id", "family_best_lmarena", "price_performance_index"]].rename(
+        columns={"family_best_lmarena": "proxy_family_best_lmarena", "price_performance_index": "proxy_price_performance_index"}
+    )
+    work = work.merge(proxy_cols, on="openrouter_id", how="left")
+    work["quality_proxy_level"] = np.where(work["direct_lmarena_rating"].notna(), "direct_model_lmarena", "direct_non_lmarena_benchmark")
+    work["evidence_type"] = "direct_match"
+    cols = [
+        "openrouter_id",
+        "canonical_model",
+        "vendor",
+        "model_family",
+        "release_date",
+        "context_window",
+        "input_usd_per_1m",
+        "output_usd_per_1m",
+        "blended_price_usd_per_1m",
+        "direct_evidence_sources",
+        "direct_match_count",
+        "best_direct_match_confidence",
+        "direct_lmarena_model_name",
+        "direct_lmarena_rating",
+        "direct_lmarena_category",
+        "direct_lmarena_match_confidence",
+        "proxy_family_best_lmarena",
+        "direct_price_performance_index",
+        "proxy_price_performance_index",
+        "direct_price_performance_frontier",
+        "quality_proxy_level",
+        "evidence_type",
+        "direct_lmarena_source_url",
+        "source_url",
+    ]
+    return write_table(work[cols].sort_values("direct_price_performance_index", ascending=False), "direct_model_price_performance")
+
+
+def build_vendor_frontier_scores(company_scores: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    scores = company_scores.copy()
+    scores["vendor"] = scores["model_family"].map(FAMILY_VENDOR_MAP).fillna(scores["model_family"])
+    rows = []
+    component_rows = []
+    for vendor, group in scores.groupby("vendor"):
+        group = group.sort_values("frontier_momentum_heuristic_index", ascending=False)
+        flagship = group.iloc[0]
+        weights = numeric(group["evidence_count"]).fillna(1).clip(lower=1)
+        row: dict[str, Any] = {
+            "vendor": vendor,
+            "flagship_family": flagship["model_family"],
+            "portfolio_families": ",".join(group["model_family"].astype(str)),
+            "family_count": len(group),
+            "evidence_count": round(float(weights.sum()), 2),
+        }
+        for component in COMPONENT_WEIGHTS:
+            flagship_value = float(flagship.get(component, 0) or 0)
+            portfolio_mean = float(np.average(numeric(group[component]).fillna(0), weights=weights))
+            row[component] = round(0.65 * flagship_value + 0.35 * portfolio_mean, 2)
+            component_rows.append(
+                {
+                    "vendor": vendor,
+                    "flagship_family": flagship["model_family"],
+                    "component": component,
+                    "flagship_component_value": round(flagship_value, 2),
+                    "evidence_weighted_portfolio_mean": round(portfolio_mean, 2),
+                    "vendor_component_value": row[component],
+                    "baseline_weight": COMPONENT_WEIGHTS[component],
+                }
+            )
+        row["vendor_frontier_portfolio_score"] = round(sum(row[c] * w for c, w in COMPONENT_WEIGHTS.items()), 2)
+        rows.append(row)
+    vendor_scores = pd.DataFrame(rows).sort_values("vendor_frontier_portfolio_score", ascending=False)
+    vendor_scores["rank"] = vendor_scores["vendor_frontier_portfolio_score"].rank(ascending=False, method="min").astype(int)
+    component_df = pd.DataFrame(component_rows)
+    return write_table(vendor_scores, "vendor_frontier_scores"), write_table(component_df, "vendor_score_components")
+
+
+def source_latest_date(df: pd.DataFrame) -> str:
+    date_cols = [c for c in df.columns if "date" in c.lower() or c.lower().endswith("_at")]
+    latest = pd.NaT
+    for col in date_cols:
+        parsed = pd.to_datetime(df[col], errors="coerce", utc=True)
+        if parsed.notna().any():
+            candidate = parsed.max()
+            latest = candidate if pd.isna(latest) or candidate > latest else latest
+    return latest.date().isoformat() if pd.notna(latest) else ""
+
+
+def field_coverage(df: pd.DataFrame, candidates: list[str], positive: bool = False) -> float:
+    cols = [col for col in candidates if col in df.columns]
+    if not cols or df.empty:
+        return 0.0
+    covered = pd.Series(False, index=df.index)
+    for col in cols:
+        values = df[col]
+        if positive:
+            covered = covered | numeric(values).gt(0).fillna(False)
+        else:
+            covered = covered | values.notna() & values.astype(str).str.strip().ne("")
+    return round(float(covered.mean()), 4)
+
+
+def build_coverage_diagnostics(company_scores: pd.DataFrame, match_audit: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    manifest_path = DATASET / "dataset_manifest.csv"
+    source_path = DATASET / "source_registry_rich.csv"
+    manifest = pd.read_csv(manifest_path) if manifest_path.exists() else pd.DataFrame()
+    sources = pd.read_csv(source_path) if source_path.exists() else pd.DataFrame(columns=["source_id", "name", "url", "type"])
+    source_names = dict(zip(sources.get("source_id", []), sources.get("name", [])))
+    rows = []
+    for _, row in manifest.iterrows():
+        path = ROOT / clean_text(row.get("csv_path"))
+        if not path.exists():
+            continue
+        df = pd.read_csv(path, low_memory=False)
+        source_ids = clean_text(row.get("source_ids")).split(",") if clean_text(row.get("source_ids")) else []
+        rows.append(
+            {
+                "table": row.get("table"),
+                "rows": int(row.get("rows", len(df))),
+                "columns": int(row.get("columns", len(df.columns))),
+                "captured_at": row.get("captured_at"),
+                "source_ids": ",".join(source_ids),
+                "source_names": sentence_join([source_names.get(source_id, source_id) for source_id in source_ids], 5),
+                "latest_source_date": source_latest_date(df),
+                "release_date_coverage": field_coverage(df, ["release_date", "release_or_created_at", "leaderboard_publish_date", "created_at"]),
+                "price_coverage": field_coverage(df, ["input_usd_per_1m", "output_usd_per_1m"], positive=True),
+                "access_class_coverage": field_coverage(df, ["access_class", "license"]),
+                "benchmark_value_coverage": field_coverage(df, ["rating", "score", "value"], positive=False),
+                "context_window_coverage": field_coverage(df, ["context_window"], positive=True),
+                "organization_vendor_coverage": field_coverage(df, ["vendor", "organization", "org", "author", "vendor_or_author"]),
+                "columns_present": ",".join(df.columns[:40]),
+            }
+        )
+    diagnostics = pd.DataFrame(rows).sort_values("table")
+
+    openrouter = read_csv_table("openrouter_models_catalog").copy()
+    openrouter["model_family"] = [
+        frontier_family_from_model(name, mid, vendor)
+        for name, mid, vendor in zip(openrouter.get("canonical_model", ""), openrouter.get("openrouter_id", ""), openrouter.get("vendor", ""))
+    ]
+    direct_counts = match_audit[match_audit["direct_model_match"].astype(bool)].groupby("model_family").size().rename("direct_benchmark_match_count")
+    family_rows = []
+    for _, row in company_scores.iterrows():
+        family = row["model_family"]
+        family_openrouter = openrouter[openrouter["model_family"].eq(family)]
+        price_cov = field_coverage(family_openrouter, ["input_usd_per_1m", "output_usd_per_1m"], positive=True)
+        release_cov = field_coverage(family_openrouter, ["release_date"])
+        access_cov = field_coverage(family_openrouter, ["access_class"])
+        context_cov = field_coverage(family_openrouter, ["context_window"], positive=True)
+        direct_count = int(direct_counts.get(family, 0))
+        proxy_value = row.get("lmarena_models", 0)
+        proxy_count = int(proxy_value) if pd.notna(proxy_value) else 0
+        api_value = row.get("api_model_count", 0)
+        api_count = int(api_value) if pd.notna(api_value) else 0
+        coverage_parts = [
+            price_cov,
+            release_cov,
+            access_cov,
+            context_cov,
+            min(1.0, direct_count / 3),
+            min(1.0, proxy_count / 5),
+        ]
+        source_gap_count = int(sum(part <= 0 for part in coverage_parts))
+        family_rows.append(
+            {
+                "model_family": family,
+                "vendor": FAMILY_VENDOR_MAP.get(family, family),
+                "api_model_count": api_count,
+                "price_coverage": price_cov,
+                "release_date_coverage": release_cov,
+                "access_class_coverage": access_cov,
+                "context_window_coverage": context_cov,
+                "direct_benchmark_match_count": direct_count,
+                "family_proxy_benchmark_count": proxy_count,
+                "labor_signal_coverage": 1.0,
+                "source_gap_count": source_gap_count,
+                "coverage_score": round(float(np.mean(coverage_parts) * 100), 2),
+            }
+        )
+    family_matrix = pd.DataFrame(family_rows).sort_values("coverage_score", ascending=False)
+    return write_table(diagnostics, "source_coverage_diagnostics"), write_table(family_matrix, "family_coverage_matrix")
+
+
+def build_rank_stability(company_scores: pd.DataFrame, draws: int = 700) -> tuple[pd.DataFrame, pd.DataFrame]:
+    rng = np.random.default_rng(20260516)
+    component_cols = list(COMPONENT_WEIGHTS)
+    base = company_scores[["model_family", "rank", "evidence_count", *component_cols]].copy().fillna(0)
+    rows = []
+    for draw in range(draws):
+        weights = rng.dirichlet(np.array(list(COMPONENT_WEIGHTS.values())) * 120)
+        evidence = numeric(base["evidence_count"]).clip(lower=1)
+        noise_scale = 2.2 + 36 / np.sqrt(evidence)
+        simulated_components = base[component_cols].to_numpy(dtype=float) + rng.normal(0, noise_scale.to_numpy()[:, None], size=(len(base), len(component_cols)))
+        simulated_components = np.clip(simulated_components, 0, 100)
+        simulated_scores = simulated_components @ weights
+        ranks = pd.Series(simulated_scores).rank(ascending=False, method="min").astype(int)
+        for i, family in enumerate(base["model_family"]):
+            rows.append(
+                {
+                    "draw": draw,
+                    "model_family": family,
+                    "bootstrap_frontier_momentum_heuristic_index": round(float(simulated_scores[i]), 2),
+                    "bootstrap_rank": int(ranks.iloc[i]),
+                    "method": "Deterministic component bootstrap with evidence-scaled noise and Dirichlet component weights; not a calibrated probability model.",
+                }
+            )
+    bootstrap = pd.DataFrame(rows)
+    intervals = bootstrap.groupby("model_family").agg(
+        score_p10=("bootstrap_frontier_momentum_heuristic_index", lambda s: round(float(np.quantile(s, 0.10)), 2)),
+        score_p50=("bootstrap_frontier_momentum_heuristic_index", lambda s: round(float(np.quantile(s, 0.50)), 2)),
+        score_p90=("bootstrap_frontier_momentum_heuristic_index", lambda s: round(float(np.quantile(s, 0.90)), 2)),
+        best_rank=("bootstrap_rank", "min"),
+        median_rank=("bootstrap_rank", "median"),
+        worst_rank=("bootstrap_rank", "max"),
+        rank_iqr=("bootstrap_rank", lambda s: round(float(np.quantile(s, 0.75) - np.quantile(s, 0.25)), 2)),
+    ).reset_index()
+    intervals = intervals.merge(base[["model_family", "rank"]].rename(columns={"rank": "current_rank"}), on="model_family", how="left")
+    intervals["rank_stability_label"] = np.select(
+        [intervals["rank_iqr"].le(1), intervals["rank_iqr"].le(3)],
+        ["stable", "moderate"],
+        default="unstable",
+    )
+    intervals = intervals.sort_values(["median_rank", "score_p50"])
+    return write_table(bootstrap, "frontier_score_bootstrap"), write_table(intervals, "rank_stability_intervals")
+
+
+def build_failure_mode_audits(company_scores: pd.DataFrame, match_audit: pd.DataFrame, coverage: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    rows = [
+        {
+            "claim_id": "family-frontier-ranking",
+            "claim": "Frontier-family ranking is useful for comparing public signals.",
+            "assumption": "Benchmark, release, ecosystem, cost and openness signals are directionally informative.",
+            "failure_mode": "A private model or undisclosed benchmark result changes the frontier without appearing in public data.",
+            "evidence_that_would_break_it": "Official release or benchmark snapshot with materially higher direct model evidence.",
+            "mitigation": "Keep heuristic label, show sensitivity, and refresh source snapshots before external use.",
+            "affected_artifact": "company_frontier_scores.csv",
+            "severity": "high",
+        },
+        {
+            "claim_id": "direct-model-evidence",
+            "claim": "Direct model matches are stronger than family-level proxies.",
+            "assumption": "Normalized names and curated aliases correctly identify equivalent model rows.",
+            "failure_mode": "Vendor naming drift or hidden routing makes same-looking model IDs non-equivalent.",
+            "evidence_that_would_break_it": "Provider documentation or benchmark metadata showing the row is a different checkpoint.",
+            "mitigation": "Expose match confidence and keep unmatched/family-only rows in the audit table.",
+            "affected_artifact": "model_benchmark_match_audit.csv",
+            "severity": "high",
+        },
+        {
+            "claim_id": "vendor-portfolio-ranking",
+            "claim": "Vendor portfolio scores are easier for business readers than family scores.",
+            "assumption": "Flagship plus evidence-weighted portfolio mean is a reasonable vendor aggregation.",
+            "failure_mode": "A vendor has one dominant model family and several weak rows that should not affect portfolio interpretation.",
+            "evidence_that_would_break_it": "Manual portfolio review showing one product line carries nearly all deployment relevance.",
+            "mitigation": "Report flagship family, family count and components beside the vendor score.",
+            "affected_artifact": "vendor_frontier_scores.csv",
+            "severity": "medium",
+        },
+        {
+            "claim_id": "labor-domain-pressure",
+            "claim": "Business domain pressure summarizes occupation-level AI exposure in business language.",
+            "assumption": "Keyword domain mapping is sufficient for a portfolio-level translation layer.",
+            "failure_mode": "Occupation titles hide domain-specific workflows or regulated subdomains.",
+            "evidence_that_would_break_it": "Manual O*NET task audit contradicting assigned domain for high-weight occupations.",
+            "mitigation": "Keep occupation examples and human gates visible for each domain.",
+            "affected_artifact": "business_domain_ai_pressure.csv",
+            "severity": "medium",
+        },
+        {
+            "claim_id": "forecast-envelope",
+            "claim": "Scenario envelopes show plausible directional range.",
+            "assumption": "Conservative/base/aggressive scenarios bound the intended stress test.",
+            "failure_mode": "A structural market break makes historical slopes irrelevant.",
+            "evidence_that_would_break_it": "Large price shock, regulation shock, or discontinuous capability release.",
+            "mitigation": "Label forecast bands as non-calibrated scenario envelopes.",
+            "affected_artifact": "forecast_uncertainty_bands.png",
+            "severity": "high",
+        },
+    ]
+    failure_modes = pd.DataFrame(rows)
+
+    direct_counts = match_audit[match_audit["direct_model_match"].astype(bool)].groupby("model_family").size().rename("direct_benchmark_match_count")
+    coverage_map = coverage.set_index("model_family") if not coverage.empty else pd.DataFrame()
+    audit_rows = []
+    for _, row in company_scores.iterrows():
+        family = row["model_family"]
+        direct_count = int(direct_counts.get(family, 0))
+        coverage_score = float(coverage_map.loc[family, "coverage_score"]) if family in coverage_map.index else 0.0
+        evidence_count = float(row.get("evidence_count", 0) or 0)
+        reasons = []
+        if direct_count < 2:
+            reasons.append("few_direct_model_matches")
+        if coverage_score < 60:
+            reasons.append("low_source_coverage")
+        if evidence_count < company_scores["evidence_count"].median():
+            reasons.append("below_median_evidence_depth")
+        audit_rows.append(
+            {
+                "model_family": family,
+                "vendor": FAMILY_VENDOR_MAP.get(family, family),
+                "evidence_count": round(evidence_count, 2),
+                "direct_benchmark_match_count": direct_count,
+                "coverage_score": round(coverage_score, 2),
+                "underobserved": bool(reasons),
+                "underobserved_reasons": ",".join(reasons) if reasons else "none",
+                "audit_note": "Use family ranking cautiously when direct benchmark and coverage fields are sparse." if reasons else "Coverage is comparatively strong in this snapshot.",
+            }
+        )
+    underobserved = pd.DataFrame(audit_rows).sort_values(["underobserved", "coverage_score"], ascending=[False, True])
+    return write_table(failure_modes, "claim_failure_modes"), write_table(underobserved, "underobserved_family_audit")
+
+
+def business_domain_for_job(row: pd.Series) -> str:
+    text = " ".join(clean_text(row.get(col)) for col in ["title", "job_family", "example_tasks"]).lower()
+    scores = {
+        domain: sum(1 for keyword in keywords if keyword in text)
+        for domain, keywords in BUSINESS_DOMAIN_RULES.items()
+    }
+    best_domain, best_score = max(scores.items(), key=lambda item: item[1])
+    return best_domain if best_score > 0 else "operations_back_office"
+
+
+def build_business_domain_implications(job_scores: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    jobs = job_scores.copy()
+    jobs["business_domain"] = jobs.apply(business_domain_for_job, axis=1)
+    weights = numeric(jobs.get("bls_employment", pd.Series(index=jobs.index))).fillna(numeric(jobs.get("job_forecast", pd.Series(index=jobs.index)))).fillna(1).clip(lower=1)
+    jobs["domain_labor_weight"] = weights
+    rows = []
+    for domain in BUSINESS_DOMAIN_RULES:
+        group = jobs[jobs["business_domain"].eq(domain)].copy()
+        if group.empty:
+            group = jobs.sort_values("near_term_disruption_index", ascending=False).head(1).copy()
+        weight = numeric(group["domain_labor_weight"]).fillna(1)
+        rows.append(
+            {
+                "business_domain": domain,
+                "occupation_count": len(group),
+                "labor_weight_sum": round(float(weight.sum()), 2),
+                "disruption_index": round(float(np.average(group["near_term_disruption_index"], weights=weight)), 2),
+                "augmentation_index": round(float(np.average(group["augmentation_index"], weights=weight)), 2),
+                "replacement_feasibility_index": round(float(np.average(group["full_job_automation_feasibility_index"], weights=weight)), 2),
+                "human_bottleneck_index": round(float(np.average(group["human_bottleneck_index"], weights=weight)), 2),
+                "dominant_outcome": group["dominant_outcome"].mode().iloc[0] if not group["dominant_outcome"].mode().empty else "mixed_redesign",
+                "example_occupations": sentence_join(group.sort_values("near_term_disruption_index", ascending=False)["title"].astype(str).tolist(), 4),
+            }
+        )
+    domain_pressure = pd.DataFrame(rows).sort_values("disruption_index", ascending=False)
+    domain_pressure["pressure_label"] = pd.cut(
+        domain_pressure["disruption_index"],
+        bins=[-1, 25, 45, 65, 101],
+        labels=["low", "moderate", "high", "very_high"],
+    ).astype(str)
+    workflow_rows = [
+        ("software_engineering", "Issue triage, code review, test generation and migration planning", "draft patches and review checklists", "senior engineer approval and production ownership"),
+        ("customer_support", "Ticket summarization, answer drafting and escalation routing", "suggest responses and detect repeated issues", "human review for refunds, safety and account actions"),
+        ("legal_compliance", "Contract review, policy comparison and evidence packet preparation", "extract clauses and compare requirements", "licensed professional signoff"),
+        ("marketing_content", "Campaign briefs, SEO drafts, localization and asset variants", "generate drafts and performance hypotheses", "brand, legal and factual review"),
+        ("finance_analysis", "Variance explanations, spreadsheet checks and memo drafting", "surface anomalies and draft analysis", "accountability for assumptions and controls"),
+        ("healthcare_administration", "Claims coding, prior authorization packets and patient-message drafts", "prepare structured documentation", "clinical and compliance review"),
+        ("education", "Lesson planning, tutoring support and feedback drafting", "adapt materials and summarize progress", "teacher judgment and student relationship"),
+        ("operations_back_office", "Data entry cleanup, scheduling, reconciliation and process documentation", "automate routine transformations", "exception handling and vendor/customer accountability"),
+    ]
+    workflows = pd.DataFrame(
+        [
+            {
+                "business_domain": domain,
+                "workflow_example": workflow,
+                "likely_ai_role": ai_role,
+                "human_gate": gate,
+                "evidence_basis": "Mapped from occupation exposure, O*NET task features, augmentation/substitution mode shares and bottleneck indexes.",
+            }
+            for domain, workflow, ai_role, gate in workflow_rows
+        ]
+    )
+    return write_table(domain_pressure, "business_domain_ai_pressure"), write_table(workflows, "domain_workflow_examples")
+
+
+def build_release_cadence() -> tuple[pd.DataFrame, pd.DataFrame]:
+    openrouter = read_csv_table("openrouter_models_catalog").copy()
+    epoch = read_csv_table("epoch_models_normalized").copy()
+    rows = []
+    for _, row in openrouter.iterrows():
+        family = frontier_family_from_model(row.get("canonical_model"), row.get("openrouter_id"), row.get("vendor"))
+        release_date = pd.to_datetime(row.get("release_date"), errors="coerce")
+        if pd.isna(release_date):
+            continue
+        rows.append(
+            {
+                "release_date": release_date.date().isoformat(),
+                "model_family": family,
+                "vendor": FAMILY_VENDOR_MAP.get(family, clean_text(row.get("vendor"), "Unknown")),
+                "product_line": clean_text(row.get("product_line"), family),
+                "model_name": row.get("canonical_model"),
+                "release_type": "open_weight" if clean_text(row.get("access_class")).startswith("open") else "api_catalog",
+                "source_table": "openrouter_models_catalog",
+            }
+        )
+    epoch_family = family_column(epoch)
+    for _, row in epoch.iterrows():
+        family = clean_text(row.get(epoch_family))
+        release_date = pd.to_datetime(row.get("release_date"), errors="coerce")
+        if pd.isna(release_date) or family in {"", "Other", "unknown"}:
+            continue
+        rows.append(
+            {
+                "release_date": release_date.date().isoformat(),
+                "model_family": family,
+                "vendor": FAMILY_VENDOR_MAP.get(family, clean_text(row.get("vendor"), "Unknown")),
+                "product_line": clean_text(row.get("product_line"), family),
+                "model_name": row.get("canonical_model", row.get("model")),
+                "release_type": "open_weight" if "open" in clean_text(row.get("access_class")).lower() else "research_metadata",
+                "source_table": "epoch_models_normalized",
+            }
+        )
+    releases = pd.DataFrame(rows)
+    releases = releases[releases["model_family"].isin(set(FAMILY_VENDOR_MAP) | set(FRONTIER_FAMILIES))]
+    releases = releases.drop_duplicates(["release_date", "model_family", "vendor", "product_line", "model_name", "release_type"])
+    reference = pd.Timestamp(REFERENCE_DATE)
+
+    def cadence_summary(group: pd.DataFrame, label_col: str) -> dict[str, Any]:
+        dates = pd.to_datetime(group["release_date"], errors="coerce").dropna().sort_values()
+        recent = dates[dates >= reference - pd.Timedelta(days=365)]
+        gaps = dates.drop_duplicates().diff().dt.days.dropna()
+        latest = dates.max() if len(dates) else pd.NaT
+        median_gap = float(gaps.median()) if len(gaps) else np.nan
+        cadence_label = "fast" if len(recent) >= 5 or (np.isfinite(median_gap) and median_gap <= 75) else "steady" if len(recent) >= 2 else "slow_or_sparse"
+        source_mix = group.groupby("release_type").size().sort_values(ascending=False)
+        return {
+            label_col: group[label_col].iloc[0],
+            "vendor": group["vendor"].iloc[0] if label_col == "model_family" else group[label_col].iloc[0],
+            "total_releases": len(group),
+            "recent_releases_365d": len(recent),
+            "median_days_between_releases": round(median_gap, 1) if np.isfinite(median_gap) else np.nan,
+            "days_since_latest_release": int((reference - latest).days) if pd.notna(latest) else np.nan,
+            "latest_release_date": latest.date().isoformat() if pd.notna(latest) else "",
+            "source_mix": ",".join(f"{idx}:{value}" for idx, value in source_mix.items()),
+            "cadence_label": cadence_label,
+        }
+
+    family_rows = [cadence_summary(group, "model_family") for _, group in releases.groupby("model_family") if len(group)]
+    vendor_rows = []
+    for vendor, group in releases.groupby("vendor"):
+        summary = cadence_summary(group.assign(vendor=vendor), "vendor")
+        summary["portfolio_families"] = ",".join(sorted(set(group["model_family"])))
+        vendor_rows.append(summary)
+    family_cadence = pd.DataFrame(family_rows).sort_values("recent_releases_365d", ascending=False)
+    vendor_cadence = pd.DataFrame(vendor_rows).sort_values("recent_releases_365d", ascending=False)
+    return write_table(family_cadence, "release_cadence_by_family"), write_table(vendor_cadence, "release_cadence_by_vendor")
 
 
 def build_company_leadership_simulation(company_scores: pd.DataFrame, draws: int = 6000) -> pd.DataFrame:
@@ -1661,6 +2359,192 @@ def plot_replacement_feasibility(replacement: pd.DataFrame) -> None:
     finish_figure(fig, "job_replacement_feasibility.png")
 
 
+def plot_direct_vs_proxy_price_performance(direct: pd.DataFrame, proxy: pd.DataFrame) -> None:
+    direct_work = direct.dropna(subset=["direct_lmarena_rating", "blended_price_usd_per_1m"]).copy()
+    proxy_work = proxy.dropna(subset=["family_best_lmarena", "blended_price_usd_per_1m"]).copy()
+    if direct_work.empty or proxy_work.empty:
+        return
+    fig, ax = plt.subplots(figsize=(10.4, 6.4))
+    ax.scatter(
+        proxy_work["blended_price_usd_per_1m"],
+        proxy_work["family_best_lmarena"],
+        s=28,
+        alpha=0.24,
+        color=PALETTE["slate"],
+        label="family proxy",
+    )
+    ax.scatter(
+        direct_work["blended_price_usd_per_1m"],
+        direct_work["direct_lmarena_rating"],
+        s=np.where(direct_work["direct_price_performance_frontier"], 88, 44),
+        alpha=0.78,
+        color=PALETTE["teal"],
+        edgecolor="white",
+        linewidth=0.5,
+        label="direct model match",
+    )
+    for _, row in direct_work.sort_values("direct_price_performance_index", ascending=False).head(8).iterrows():
+        ax.annotate(str(row["model_family"]), (row["blended_price_usd_per_1m"], row["direct_lmarena_rating"]), fontsize=8, xytext=(4, 4), textcoords="offset points")
+    ax.set_xscale("log")
+    ax.set_xlabel("Blended output-heavy price, USD / 1M tokens (log)")
+    ax.set_ylabel("LMArena rating")
+    ax.set_title("Direct Model Evidence vs Family Proxy")
+    ax.grid(alpha=0.25)
+    ax.legend(frameon=False)
+    add_note(ax, "Direct points require model-level name matches. Proxy points keep the broader deployability screen visible without upgrading family evidence to model-level proof.")
+    soften_axes(ax)
+    finish_figure(fig, "direct_vs_proxy_price_performance.png")
+
+
+def plot_vendor_scores(vendor_scores: pd.DataFrame, company_scores: pd.DataFrame) -> None:
+    top = vendor_scores.sort_values("vendor_frontier_portfolio_score").copy()
+    fig, ax = plt.subplots(figsize=(10, 6.2))
+    ax.barh(top["vendor"], top["vendor_frontier_portfolio_score"], color=PALETTE["blue"])
+    ax.set_title("Vendor Frontier Portfolio Score")
+    ax.set_xlabel("Heuristic vendor portfolio score")
+    ax.grid(axis="x", alpha=0.25)
+    for _, row in top.iterrows():
+        ax.text(row["vendor_frontier_portfolio_score"] + 1, row["vendor"], f"{row['vendor_frontier_portfolio_score']:.1f}", va="center", fontsize=8, color=PALETTE["muted"])
+    add_note(ax, "Vendor score combines flagship family signal with evidence-weighted portfolio breadth. It is a business-facing companion to family rank, not a replacement.")
+    soften_axes(ax)
+    finish_figure(fig, "vendor_frontier_scores.png")
+
+    family = company_scores[["model_family", "rank"]].copy()
+    family["vendor"] = family["model_family"].map(FAMILY_VENDOR_MAP).fillna(family["model_family"])
+    rank_shift = family.merge(vendor_scores[["vendor", "rank"]].rename(columns={"rank": "vendor_rank"}), on="vendor", how="left")
+    rank_shift["rank_shift"] = rank_shift["vendor_rank"] - rank_shift["rank"]
+    work = rank_shift.sort_values("rank_shift").copy()
+    fig, ax = plt.subplots(figsize=(10.4, 6.4))
+    colors = np.where(work["rank_shift"] > 0, PALETTE["orange"], PALETTE["teal"])
+    ax.barh(work["model_family"], work["rank_shift"], color=colors)
+    ax.axvline(0, color="#333333", linewidth=1)
+    ax.set_title("Family Rank vs Vendor Portfolio Rank Shift")
+    ax.set_xlabel("Vendor rank minus family rank")
+    ax.grid(axis="x", alpha=0.25)
+    add_note(ax, "Negative values mean the vendor portfolio rank is stronger than the individual family rank; positive values mean the opposite.")
+    soften_axes(ax)
+    finish_figure(fig, "family_vs_vendor_rank_shift.png")
+
+
+def plot_source_coverage(source_coverage: pd.DataFrame, family_coverage: pd.DataFrame) -> None:
+    if not source_coverage.empty:
+        cols = ["release_date_coverage", "price_coverage", "access_class_coverage", "benchmark_value_coverage", "context_window_coverage", "organization_vendor_coverage"]
+        work = source_coverage.set_index("table")[cols].fillna(0)
+        work = work.loc[work.mean(axis=1).sort_values().tail(12).index]
+        fig, ax = plt.subplots(figsize=(12.2, 6.8))
+        im = ax.imshow(work.to_numpy(dtype=float), aspect="auto", cmap="YlGnBu", vmin=0, vmax=1)
+        ax.set_xticks(range(len(cols)))
+        ax.set_xticklabels([c.replace("_coverage", "").replace("_", " ") for c in cols], rotation=35, ha="right")
+        ax.set_yticks(range(len(work.index)))
+        ax.set_yticklabels(work.index)
+        ax.set_title("Source Freshness and Coverage Dashboard")
+        fig.colorbar(im, ax=ax, fraction=0.025, label="Coverage share")
+        soften_axes(ax)
+        finish_figure(fig, "source_coverage_dashboard.png")
+
+    if not family_coverage.empty:
+        cols = ["price_coverage", "release_date_coverage", "access_class_coverage", "context_window_coverage", "labor_signal_coverage"]
+        work = family_coverage.sort_values("coverage_score").set_index("model_family")[cols].fillna(0)
+        fig, ax = plt.subplots(figsize=(10.8, 6.2))
+        im = ax.imshow(work.to_numpy(dtype=float), aspect="auto", cmap="YlGnBu", vmin=0, vmax=1)
+        ax.set_xticks(range(len(cols)))
+        ax.set_xticklabels([c.replace("_coverage", "").replace("_", " ") for c in cols], rotation=30, ha="right")
+        ax.set_yticks(range(len(work.index)))
+        ax.set_yticklabels(work.index)
+        ax.set_title("Family Signal Coverage Heatmap")
+        fig.colorbar(im, ax=ax, fraction=0.03, label="Coverage share")
+        soften_axes(ax)
+        finish_figure(fig, "family_signal_coverage_heatmap.png")
+
+
+def plot_rank_uncertainty(rank_intervals: pd.DataFrame) -> None:
+    work = rank_intervals.sort_values("score_p50").copy()
+    fig, ax = plt.subplots(figsize=(10.4, 6.2))
+    xerr = np.vstack([work["score_p50"] - work["score_p10"], work["score_p90"] - work["score_p50"]])
+    colors = work["rank_stability_label"].map({"stable": PALETTE["teal"], "moderate": PALETTE["gold"], "unstable": PALETTE["red"]}).fillna(PALETTE["slate"])
+    ax.errorbar(work["score_p50"], work["model_family"], xerr=xerr, fmt="none", ecolor="#9aa7b4", elinewidth=2, capsize=4)
+    ax.scatter(work["score_p50"], work["model_family"], color=colors, s=60, zorder=3)
+    ax.set_title("Frontier Rank Uncertainty")
+    ax.set_xlabel("Bootstrap heuristic index interval")
+    ax.grid(axis="x", alpha=0.25)
+    add_note(ax, "Intervals are evidence-scaled bootstrap stress tests, not calibrated confidence intervals. Labels come from rank IQR.")
+    soften_axes(ax)
+    finish_figure(fig, "frontier_rank_uncertainty.png")
+
+
+def plot_forecast_uncertainty_bands(forecasts: pd.DataFrame) -> None:
+    metrics = [
+        "frontier_output_price_factor",
+        "open_weight_lmarena_gap_remaining",
+        "share_of_us_occupation_tasks_materially_touched",
+    ]
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4.8))
+    for ax, metric in zip(axes, metrics):
+        pivot = forecasts[forecasts["metric"].eq(metric)].pivot(index="target_year", columns="scenario", values="value").sort_index()
+        if pivot.empty:
+            continue
+        lower = pivot.min(axis=1)
+        upper = pivot.max(axis=1)
+        base = pivot["base"] if "base" in pivot.columns else pivot.mean(axis=1)
+        ax.fill_between(pivot.index.astype(int), lower, upper, color=PALETTE["blue"], alpha=0.18)
+        ax.plot(pivot.index.astype(int), base, marker="o", color=PALETTE["blue"], linewidth=2)
+        ax.set_title(metric.replace("_", " "))
+        ax.set_xlabel("Target year")
+        ax.grid(alpha=0.22)
+        soften_axes(ax)
+    fig.suptitle("Forecast Scenario Envelopes, Not Calibrated Confidence Bands", fontsize=14, fontweight="bold", color=PALETTE["ink"])
+    finish_figure(fig, "forecast_uncertainty_bands.png")
+
+
+def plot_business_domain_pressure(domain_pressure: pd.DataFrame) -> None:
+    work = domain_pressure.sort_values("disruption_index").copy()
+    fig, ax = plt.subplots(figsize=(11, 6.6))
+    ax.barh(work["business_domain"].str.replace("_", " "), work["disruption_index"], color=PALETTE["teal"], label="disruption")
+    ax.scatter(work["augmentation_index"], work["business_domain"].str.replace("_", " "), color=PALETTE["blue"], s=58, label="augmentation")
+    ax.scatter(work["replacement_feasibility_index"], work["business_domain"].str.replace("_", " "), color=PALETTE["red"], s=58, label="replacement feasibility")
+    ax.set_title("Business Domain AI Pressure Matrix")
+    ax.set_xlabel("Weighted index")
+    ax.grid(axis="x", alpha=0.25)
+    ax.legend(frameon=False)
+    add_note(ax, "The domain view translates occupation-level exposure into business language while keeping augmentation and replacement separate.")
+    soften_axes(ax)
+    finish_figure(fig, "business_domain_pressure_matrix.png")
+
+
+def plot_release_cadence(family_cadence: pd.DataFrame, vendor_cadence: pd.DataFrame) -> None:
+    if not family_cadence.empty:
+        work = family_cadence.sort_values("recent_releases_365d").copy()
+        fig, ax = plt.subplots(figsize=(10.4, 6.2))
+        ax.barh(work["model_family"], work["recent_releases_365d"], color=PALETTE["gold"])
+        ax.set_title("Recent Release Velocity by Family")
+        ax.set_xlabel("Visible releases in last 365 days")
+        ax.grid(axis="x", alpha=0.25)
+        soften_axes(ax)
+        finish_figure(fig, "recent_release_velocity.png")
+
+    if not vendor_cadence.empty:
+        work = vendor_cadence.sort_values("total_releases", ascending=False).head(10).copy()
+        fig, ax = plt.subplots(figsize=(10.6, 6.2))
+        ax.scatter(
+            work["median_days_between_releases"].fillna(work["median_days_between_releases"].max()),
+            work["recent_releases_365d"],
+            s=np.sqrt(work["total_releases"].clip(lower=1)) * 70,
+            color=PALETTE["purple"],
+            alpha=0.72,
+            edgecolor="white",
+            linewidth=0.6,
+        )
+        for _, row in work.iterrows():
+            ax.annotate(str(row["vendor"]), (row["median_days_between_releases"], row["recent_releases_365d"]), xytext=(4, 4), textcoords="offset points", fontsize=8)
+        ax.set_title("Release Cadence Timeline Summary")
+        ax.set_xlabel("Median days between visible releases")
+        ax.set_ylabel("Recent releases in last 365 days")
+        ax.grid(alpha=0.25)
+        add_note(ax, "Bubble size tracks total visible releases. This is visible public cadence, not a complete internal product roadmap.")
+        soften_axes(ax)
+        finish_figure(fig, "release_cadence_timeline.png")
+
+
 def build_plots(
     company_scores: pd.DataFrame,
     jobs: pd.DataFrame,
@@ -1673,6 +2557,15 @@ def build_plots(
     cluster_profiles: pd.DataFrame,
     labor_summary: pd.DataFrame,
     replacement: pd.DataFrame,
+    match_audit: pd.DataFrame,
+    direct_price: pd.DataFrame,
+    vendor_scores: pd.DataFrame,
+    source_coverage: pd.DataFrame,
+    family_coverage: pd.DataFrame,
+    rank_intervals: pd.DataFrame,
+    business_domain_pressure: pd.DataFrame,
+    release_cadence_family: pd.DataFrame,
+    release_cadence_vendor: pd.DataFrame,
 ) -> None:
     FIGURES.mkdir(parents=True, exist_ok=True)
     apply_chart_theme()
@@ -1687,6 +2580,13 @@ def build_plots(
     plot_labor_clusters(cluster_profiles)
     plot_labor_outcome_mix(labor_summary)
     plot_replacement_feasibility(replacement)
+    plot_direct_vs_proxy_price_performance(direct_price, price_frontier)
+    plot_vendor_scores(vendor_scores, company_scores)
+    plot_source_coverage(source_coverage, family_coverage)
+    plot_rank_uncertainty(rank_intervals)
+    plot_forecast_uncertainty_bands(forecasts)
+    plot_business_domain_pressure(business_domain_pressure)
+    plot_release_cadence(release_cadence_family, release_cadence_vendor)
 
 
 def source_registry() -> pd.DataFrame:
@@ -1750,6 +2650,18 @@ def write_report(
     labor_summary: pd.DataFrame,
     replacement: pd.DataFrame,
     findings: pd.DataFrame,
+    match_audit: pd.DataFrame,
+    direct_price: pd.DataFrame,
+    vendor_scores: pd.DataFrame,
+    source_coverage: pd.DataFrame,
+    family_coverage: pd.DataFrame,
+    rank_intervals: pd.DataFrame,
+    failure_modes: pd.DataFrame,
+    underobserved: pd.DataFrame,
+    business_domain_pressure: pd.DataFrame,
+    domain_workflows: pd.DataFrame,
+    release_cadence_family: pd.DataFrame,
+    release_cadence_vendor: pd.DataFrame,
 ) -> None:
     top_company = company_scores.iloc[0]
     top_open = company_scores.sort_values("openness_component", ascending=False).iloc[0]
@@ -1766,6 +2678,45 @@ def write_report(
     ].head(10)
     efficient_models = price_frontier[price_frontier["price_performance_frontier"]][
         ["canonical_model", "model_family", "access_class", "blended_price_usd_per_1m", "family_best_lmarena", "quality_proxy_level", "price_performance_index"]
+    ].head(12)
+    direct_models = direct_price[
+        [
+            "canonical_model",
+            "model_family",
+            "blended_price_usd_per_1m",
+            "direct_evidence_sources",
+            "direct_lmarena_rating",
+            "direct_lmarena_match_confidence",
+            "direct_price_performance_index",
+            "quality_proxy_level",
+        ]
+    ].head(12)
+    direct_match_summary = match_audit.groupby("match_confidence").size().rename("rows").reset_index().sort_values("match_confidence")
+    vendor_table = vendor_scores[
+        ["rank", "vendor", "vendor_frontier_portfolio_score", "flagship_family", "family_count", "portfolio_families", "evidence_count"]
+    ].head(10)
+    source_table = source_coverage[
+        ["table", "rows", "latest_source_date", "release_date_coverage", "price_coverage", "benchmark_value_coverage", "organization_vendor_coverage"]
+    ].head(12)
+    family_coverage_table = family_coverage[
+        ["model_family", "vendor", "coverage_score", "direct_benchmark_match_count", "family_proxy_benchmark_count", "source_gap_count"]
+    ].head(12)
+    rank_table = rank_intervals[
+        ["model_family", "current_rank", "score_p10", "score_p50", "score_p90", "best_rank", "median_rank", "worst_rank", "rank_stability_label"]
+    ].head(12)
+    weakness_table = failure_modes[["claim_id", "assumption", "failure_mode", "mitigation", "severity"]]
+    underobserved_table = underobserved[
+        ["model_family", "vendor", "direct_benchmark_match_count", "coverage_score", "underobserved", "underobserved_reasons"]
+    ].head(12)
+    domain_table = business_domain_pressure[
+        ["business_domain", "pressure_label", "disruption_index", "augmentation_index", "replacement_feasibility_index", "human_bottleneck_index", "example_occupations"]
+    ]
+    workflow_table = domain_workflows[["business_domain", "workflow_example", "likely_ai_role", "human_gate"]]
+    cadence_family_table = release_cadence_family[
+        ["model_family", "vendor", "total_releases", "recent_releases_365d", "median_days_between_releases", "days_since_latest_release", "cadence_label"]
+    ].head(12)
+    cadence_vendor_table = release_cadence_vendor[
+        ["vendor", "portfolio_families", "total_releases", "recent_releases_365d", "median_days_between_releases", "cadence_label"]
     ].head(12)
     gap_table = gap[["category", "closed_or_api", "open_weight", "open_closed_best_gap", "open_closed_gap_pct_of_closed", "comparison_note"]].head(10)
     cluster_table = cluster_profiles[
@@ -1799,6 +2750,8 @@ The report is organized around three questions:
 
 Every chart should be read as an audit surface. If a conclusion depends on one metric, the report names that metric and shows the caveat near the visualization.
 
+Evidence badges used throughout the HTML view: `observed`, `direct_match`, `family_proxy`, `scenario`, `speculative`. They are labels for evidence strength, not decoration.
+
 ## Executive Takeaways
 
 1. **Near-term frontier-family leadership is concentrated, but not one-dimensional.** The highest heuristic index in this run is **{top_company['model_family']}** with a frontier momentum heuristic index of **{top_company['frontier_momentum_heuristic_index']:.1f}**. The strongest openness/cost/ecosystem signal is **{top_open['model_family']}**, which is not automatically the same thing as best closed frontier performance.
@@ -1806,6 +2759,20 @@ Every chart should be read as an audit surface. If a conclusion depends on one m
 3. **Open vs closed is category-specific.** Some LMArena categories show narrow gaps; others preserve a clear closed/API advantage. "Open source caught up" is too crude.
 4. **The job story is not "all jobs disappear."** The highest-risk roles are task bundles where language, analysis, clerical transformation and directive delegation are already exposed. Jobs with physical work, trust, regulation or face-to-face accountability keep meaningful bottlenecks.
 5. **The 10-year question is institutional, not only technical.** In the base scenario, AI materially touches a large share of occupational tasks by 2036, but the binding constraint becomes verification, liability, workflow redesign and who owns the interface to work.
+
+## Data Freshness And Coverage
+
+The report now exposes source coverage before leaning on rankings. This section records row counts, captured dates, latest source dates and missingness across release dates, prices, benchmark values, context windows and organization/vendor fields.
+
+{report_table(source_table)}
+
+Family coverage matrix:
+
+{report_table(family_coverage_table)}
+
+![Source coverage dashboard](../figures/deep_analysis/source_coverage_dashboard.png)
+
+![Family signal coverage heatmap](../figures/deep_analysis/family_signal_coverage_heatmap.png)
 
 ## Model Family Frontier Score
 
@@ -1822,6 +2789,16 @@ The headline rank is only the entry point. The stacked component chart below sho
 The evidence-depth scatter is the reviewer sanity check. A family with high score and high evidence count is more defensible than a family with a high score from sparse rows. Bubble size is tied to API catalog breadth, while color shows openness.
 
 ![Score evidence scatter](../figures/deep_analysis/company_score_evidence_scatter.png)
+
+## Family Ranking vs Vendor Portfolio Ranking
+
+Reviewers often reason in terms of companies, but model families remain the cleaner technical unit. The vendor view is therefore a companion view: it blends the flagship family with the evidence-weighted portfolio mean and keeps the flagship family visible.
+
+{report_table(vendor_table)}
+
+![Vendor frontier scores](../figures/deep_analysis/vendor_frontier_scores.png)
+
+![Family vs vendor rank shift](../figures/deep_analysis/family_vs_vendor_rank_shift.png)
 
 ## Who Builds The Next Best Model?
 
@@ -1867,6 +2844,20 @@ The context-price map keeps three product dimensions visible at once: context wi
 
 ![Context price rating map](../figures/deep_analysis/price_context_rating_map.png)
 
+## Direct Model Evidence vs Family Proxy
+
+The audit table matches OpenRouter model IDs/names to LMArena, SWE-bench, LiveBench and Open LLM Leaderboard rows. Direct model matches are separated from `family_only` evidence so the deployability screen does not quietly inherit model-level certainty it does not have.
+
+Match confidence audit:
+
+{report_table(direct_match_summary)}
+
+Direct evidence price-performance rows:
+
+{report_table(direct_models)}
+
+![Direct vs proxy price performance](../figures/deep_analysis/direct_vs_proxy_price_performance.png)
+
 ## Job Exposure And Labor Pressure
 
 The labor table joins Anthropic observed occupation exposure to wage/job companion data, task-level penetration, automation/augmentation mode shares, and keyword-derived task bottlenecks from O*NET text. The output is an occupation-level pressure index, not a prediction that a whole occupation vanishes.
@@ -1899,6 +2890,18 @@ The labor-weighted outcome mix below is the report's guardrail against overclaim
 
 ![Labor outcome mix](../figures/deep_analysis/labor_outcome_mix.png)
 
+## Business Domain Implications
+
+The domain layer translates occupation-level pressure into business language. It does not replace occupation evidence; each domain keeps example occupations and explicit human gates so a portfolio reviewer can see where the abstraction could fail.
+
+{report_table(domain_table)}
+
+Workflow examples:
+
+{report_table(workflow_table)}
+
+![Business domain pressure matrix](../figures/deep_analysis/business_domain_pressure_matrix.png)
+
 ## 2, 5 And 10 Year Forecasts
 
 Base scenario subset:
@@ -1914,6 +2917,34 @@ The dashboard puts four scenario families on one page: context scale, output pri
 ![Cost forecast](../figures/deep_analysis/cost_forecast_scenarios.png)
 
 ![Open closed catchup](../figures/deep_analysis/open_closed_catchup.png)
+
+## Uncertainty And Rank Stability
+
+The uncertainty view stress-tests component weights and evidence depth. These intervals are not calibrated confidence intervals; they are a visibility layer for how much the rank can move when public-source signals are perturbed.
+
+{report_table(rank_table)}
+
+![Frontier rank uncertainty](../figures/deep_analysis/frontier_rank_uncertainty.png)
+
+The forecast band chart is a scenario envelope across conservative, base and aggressive cases. It should not be read as a statistical confidence band.
+
+![Forecast uncertainty bands](../figures/deep_analysis/forecast_uncertainty_bands.png)
+
+## Release Velocity And Product Cadence
+
+Release cadence separates visible public execution speed from benchmark quality. The cadence tables combine OpenRouter API catalog entries and Epoch metadata, deduplicated by family, vendor, product line and date.
+
+Family cadence:
+
+{report_table(cadence_family_table)}
+
+Vendor cadence:
+
+{report_table(cadence_vendor_table)}
+
+![Release cadence timeline](../figures/deep_analysis/release_cadence_timeline.png)
+
+![Recent release velocity](../figures/deep_analysis/recent_release_velocity.png)
 
 ## Historical Analogy
 
@@ -1931,9 +2962,22 @@ AI looks less like a single prior wave and more like an uncomfortable hybrid: sp
 
 {report_table(findings)}
 
+## Where This Analysis Is Weak
+
+The skeptical section names assumptions that could break the analysis. It is meant to make the work easier to challenge, not to protect it with broad caveats.
+
+{report_table(weakness_table)}
+
+Under-observed family audit:
+
+{report_table(underobserved_table)}
+
 ## Method Notes
 
 - Model-family scoring uses `data/dataset/`: LMArena full leaderboard rows, SWE-bench submissions, Open LLM Leaderboard metrics, OpenRouter prices/context, Epoch model metadata, Hugging Face rollups, GitHub model mentions and OpenAlex paper mentions.
+- Direct model evidence uses conservative name matching across exact, normalized exact, alias, family-only and unmatched classes. Family-only rows are audit evidence, not direct model proof.
+- Vendor scoring maps model families to legal vendors and combines flagship-family signal with evidence-weighted portfolio breadth.
+- Rank stability and forecast bands are stress tests and scenario envelopes. They are not calibrated confidence intervals.
 - Labor scoring uses Anthropic Economic Index files from Hugging Face, including occupation exposure, task penetration, task automation/augmentation labels, O*NET task mappings/statements, and BLS wage/employment companion data.
 - Scenario forecasts are not forecasts from a proprietary model. They are transparent transforms of observed slopes and pressure scores. Every scenario row includes a method field and the input diagnostics include caps/fallback policy.
 - Leadership simulation shares are stochastic sensitivity analyses over explicit score components, not calibrated market probabilities.
@@ -1945,6 +2989,20 @@ AI looks less like a single prior wave and more like an uncomfortable hybrid: sp
 - `data/analysis/company_frontier_scores.csv`
 - `data/analysis/company_score_methodology.csv`
 - `data/analysis/company_score_sensitivity.csv`
+- `data/analysis/model_benchmark_match_audit.csv`
+- `data/analysis/direct_model_price_performance.csv`
+- `data/analysis/vendor_frontier_scores.csv`
+- `data/analysis/vendor_score_components.csv`
+- `data/analysis/source_coverage_diagnostics.csv`
+- `data/analysis/family_coverage_matrix.csv`
+- `data/analysis/frontier_score_bootstrap.csv`
+- `data/analysis/rank_stability_intervals.csv`
+- `data/analysis/claim_failure_modes.csv`
+- `data/analysis/underobserved_family_audit.csv`
+- `data/analysis/business_domain_ai_pressure.csv`
+- `data/analysis/domain_workflow_examples.csv`
+- `data/analysis/release_cadence_by_family.csv`
+- `data/analysis/release_cadence_by_vendor.csv`
 - `data/analysis/job_exposure_scores.csv`
 - `data/analysis/capability_forecasts.csv`
 - `data/analysis/forecast_input_diagnostics.csv`
@@ -1965,6 +3023,16 @@ AI looks less like a single prior wave and more like an uncomfortable hybrid: sp
 - `figures/deep_analysis/price_context_rating_map.png`
 - `figures/deep_analysis/labor_outcome_mix.png`
 - `figures/deep_analysis/forecast_scenario_dashboard.png`
+- `figures/deep_analysis/direct_vs_proxy_price_performance.png`
+- `figures/deep_analysis/vendor_frontier_scores.png`
+- `figures/deep_analysis/family_vs_vendor_rank_shift.png`
+- `figures/deep_analysis/source_coverage_dashboard.png`
+- `figures/deep_analysis/family_signal_coverage_heatmap.png`
+- `figures/deep_analysis/frontier_rank_uncertainty.png`
+- `figures/deep_analysis/forecast_uncertainty_bands.png`
+- `figures/deep_analysis/business_domain_pressure_matrix.png`
+- `figures/deep_analysis/release_cadence_timeline.png`
+- `figures/deep_analysis/recent_release_velocity.png`
 - `figures/deep_analysis/*.png`
 """
     md_path = REPORT / "deep_frontier_ai_forecast.md"
@@ -1973,6 +3041,7 @@ AI looks less like a single prior wave and more like an uncomfortable hybrid: sp
 
 
 def write_html_report(markdown: str, path: Path) -> None:
+    write_report_assets()
     lines = markdown.splitlines()
     title = next((line[2:].strip() for line in lines if line.startswith("# ")), "Deep Frontier AI Analysis")
     toc: list[tuple[str, str]] = []
@@ -1990,6 +3059,7 @@ def write_html_report(markdown: str, path: Path) -> None:
         "<meta charset='utf-8'>",
         "<meta name='viewport' content='width=device-width, initial-scale=1'>",
         f"<title>{html.escape(title)}</title>",
+        "<link rel='stylesheet' href='assets/report.css'>",
         "<style>",
         html_report_css(),
         "</style>",
@@ -2004,10 +3074,18 @@ def write_html_report(markdown: str, path: Path) -> None:
         "</ol></nav>",
         "</aside>",
         "<main id='top' class='report-main'>",
+        "<div class='sticky-summary' aria-label='Sticky key-number summary'>"
+        "<strong>Audit view</strong>"
+        "<span>Direct matches, coverage, rank stability and scenario bands are inspectable below.</span>"
+        "</div>",
         "<header class='hero'>",
         "<div class='eyebrow'>Hiring portfolio analysis</div>",
         f"<h1>{html.escape(title)}</h1>",
         "<p class='hero-copy'>A public-source, audit-friendly view of frontier model signals, open/closed gaps, deployability economics and labor exposure. The report favors transparent assumptions over false precision.</p>",
+        "<div class='evidence-badges'>"
+        + "".join(f"<span class='evidence-badge evidence-{html.escape(key)}'>{html.escape(key)}</span>" for key in EVIDENCE_BADGES)
+        + "</div>",
+        "<details class='methodology-block' open><summary>Methodology details</summary><p>Composite indexes are heuristic, direct model evidence is separated from family proxies, and forecast bands are scenario envelopes rather than calibrated confidence intervals.</p></details>",
         "<div class='meta-grid'>",
         f"<div><span>Reference date</span><strong>{html.escape(REFERENCE_DATE)}</strong></div>",
         f"<div><span>Generated</span><strong>{html.escape(CAPTURED_AT)}</strong></div>",
@@ -2089,7 +3167,7 @@ def write_html_report(markdown: str, path: Path) -> None:
                 src = match.group(2)
                 out.append(
                     "<figure class='figure-panel'>"
-                    f"<a href='{html.escape(src)}'><img loading='lazy' alt='{html.escape(alt)}' src='{html.escape(src)}'></a>"
+                    f"<a data-lightbox='figure' href='{html.escape(src)}'><img loading='lazy' alt='{html.escape(alt)}' src='{html.escape(src)}'></a>"
                     f"<figcaption>{html.escape(alt)}</figcaption>"
                     "</figure>"
                 )
@@ -2121,6 +3199,8 @@ def write_html_report(markdown: str, path: Path) -> None:
             "</footer>",
             "</main>",
             "</div>",
+            "<div id='figure-lightbox' class='lightbox' hidden><button type='button' aria-label='Close figure'>Close</button><img alt='Expanded report figure'></div>",
+            "<script src='assets/report.js'></script>",
             "</body>",
             "</html>",
         ]
@@ -2136,7 +3216,13 @@ def pipe_table_to_html(lines: list[str]) -> str:
             continue
         tag = "th" if i == 0 else "td"
         rows.append("<tr>" + "".join(f"<{tag}>{inline_markdown(c)}</{tag}>" for c in cells) + "</tr>")
-    return "<div class='table-wrap'><table>" + "".join(rows) + "</table></div>"
+    return (
+        "<div class='table-wrap'>"
+        "<div class='table-actions'><a href='../data/analysis/analysis_manifest.csv' download>Download table index</a></div>"
+        "<table data-sortable='true'>"
+        + "".join(rows)
+        + "</table></div>"
+    )
 
 
 def unique_html_id(label: str, used: set[str]) -> str:
@@ -2148,6 +3234,90 @@ def unique_html_id(label: str, used: set[str]) -> str:
         counter += 1
     used.add(candidate)
     return candidate
+
+
+def write_report_assets() -> None:
+    assets = REPORT / "assets"
+    assets.mkdir(parents=True, exist_ok=True)
+    css = """
+.table-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: #fbfcfd;
+  font-size: 12px;
+}
+table[data-sortable='true'] th { cursor: pointer; user-select: none; }
+table[data-sortable='true'] th::after { content: ' sort'; color: var(--muted); font-weight: 500; font-size: 10px; }
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: rgba(12, 18, 24, 0.88);
+}
+.lightbox[hidden] { display: none; }
+.lightbox img { max-width: 94vw; max-height: 88vh; background: white; }
+.lightbox button {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.12);
+  color: white;
+  border-radius: 6px;
+  padding: 8px 11px;
+}
+"""
+    js = """
+document.querySelectorAll("table[data-sortable='true']").forEach((table) => {
+  const headers = Array.from(table.querySelectorAll("th"));
+  headers.forEach((header, index) => {
+    header.addEventListener("click", () => {
+      const rows = Array.from(table.querySelectorAll("tr")).slice(1);
+      const direction = header.dataset.sortDir === "asc" ? "desc" : "asc";
+      header.dataset.sortDir = direction;
+      rows.sort((a, b) => {
+        const av = a.children[index]?.textContent?.trim() || "";
+        const bv = b.children[index]?.textContent?.trim() || "";
+        const an = Number(av.replace(/[%,$]/g, ""));
+        const bn = Number(bv.replace(/[%,$]/g, ""));
+        const cmp = Number.isFinite(an) && Number.isFinite(bn) ? an - bn : av.localeCompare(bv);
+        return direction === "asc" ? cmp : -cmp;
+      });
+      rows.forEach((row) => table.tBodies[0].appendChild(row));
+    });
+  });
+});
+
+const lightbox = document.getElementById("figure-lightbox");
+if (lightbox) {
+  const img = lightbox.querySelector("img");
+  document.querySelectorAll("a[data-lightbox='figure']").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      img.src = link.href;
+      img.alt = link.querySelector("img")?.alt || "Expanded report figure";
+      lightbox.hidden = false;
+    });
+  });
+  lightbox.querySelector("button").addEventListener("click", () => {
+    lightbox.hidden = true;
+    img.removeAttribute("src");
+  });
+  lightbox.addEventListener("click", (event) => {
+    if (event.target === lightbox) {
+      lightbox.hidden = true;
+      img.removeAttribute("src");
+    }
+  });
+}
+"""
+    (assets / "report.css").write_text(css, encoding="utf-8")
+    (assets / "report.js").write_text(js, encoding="utf-8")
 
 
 def html_report_css() -> str:
@@ -2228,6 +3398,26 @@ a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 3
   margin: 0 auto;
   padding: 48px 42px 72px;
 }
+.sticky-summary {
+  position: sticky;
+  top: 18px;
+  z-index: 5;
+  float: right;
+  width: min(280px, 38vw);
+  margin: 0 0 16px 24px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 10px 24px rgba(23, 32, 38, 0.06);
+  font-size: 12px;
+  color: var(--muted);
+}
+.sticky-summary strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
 .hero {
   padding: 48px 0 40px;
   border-bottom: 1px solid var(--line-strong);
@@ -2250,6 +3440,44 @@ h1 {
   max-width: 820px;
   font-size: 19px;
   color: #415060;
+}
+.evidence-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 18px 0 12px;
+}
+.evidence-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #344252;
+  font-size: 12px;
+  font-weight: 700;
+}
+.evidence-direct_match { border-color: #8ac2ba; color: var(--teal); }
+.evidence-family_proxy { border-color: #d5bd82; color: var(--gold); }
+.evidence-scenario { border-color: #a6b7c9; color: var(--blue); }
+.evidence-speculative { border-color: #d59a9a; color: var(--red); }
+.methodology-block {
+  max-width: 860px;
+  margin: 16px 0 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+.methodology-block summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+.methodology-block p {
+  margin: 8px 0 0;
+  font-size: 14px;
 }
 .meta-grid {
   display: grid;
@@ -2403,6 +3631,13 @@ td {
     width: 100%;
     padding: 32px 22px 56px;
   }
+  .sticky-summary {
+    float: none;
+    position: relative;
+    top: auto;
+    width: 100%;
+    margin: 0 0 12px;
+  }
   .meta-grid { grid-template-columns: 1fr; }
 }
 @media print {
@@ -2435,6 +3670,20 @@ Generated by `python -m frontier_ai.deep_analysis`.
 - `company_score_components`: reduced component table for plotting and review.
 - `company_score_methodology`: explicit component weights, transforms and rationale.
 - `company_score_sensitivity`: rank sensitivity under alternative component weights.
+- `model_benchmark_match_audit`: conservative OpenRouter-to-benchmark model matching audit with exact, normalized, alias, family-only and unmatched confidence labels.
+- `direct_model_price_performance`: deployability table restricted to rows with direct model-level benchmark evidence.
+- `vendor_frontier_scores`: vendor portfolio score that combines flagship family and evidence-weighted portfolio components.
+- `vendor_score_components`: component-level vendor aggregation audit.
+- `source_coverage_diagnostics`: row counts, captured dates, latest source dates and core-field missingness by source table.
+- `family_coverage_matrix`: family/vendor coverage matrix for prices, release dates, context, benchmarks and labor signals.
+- `frontier_score_bootstrap`: evidence-scaled bootstrap draws for heuristic family scores.
+- `rank_stability_intervals`: score intervals, best/median/worst rank and stability labels from bootstrap draws.
+- `claim_failure_modes`: skeptical audit of assumptions, failure modes and mitigations.
+- `underobserved_family_audit`: families/vendors where evidence coverage is sparse or mostly indirect.
+- `business_domain_ai_pressure`: occupation-derived AI pressure mapped to business domains.
+- `domain_workflow_examples`: workflow examples, likely AI role and human gate by business domain.
+- `release_cadence_by_family`: visible release cadence summary by model family.
+- `release_cadence_by_vendor`: visible release cadence summary by vendor portfolio.
 - `company_next_frontier_probabilities`: Monte Carlo simulation-win share for each family at 2, 5 and 10-year horizons.
 - `leadership_model_audit`: component-level audit explaining why frontier-quality and open-ecosystem scenarios differ.
 - `open_closed_gap_by_category`: LMArena category-level open-vs-closed best-model gaps.
@@ -2467,9 +3716,17 @@ def build_deep_analysis(overwrite_sources: bool = False, write_reports_flag: boo
     analogies = build_historical_analogy_index()
     gap, category_leaders = build_open_closed_gap_by_category()
     price_frontier = build_price_performance_frontier()
+    match_audit = build_model_benchmark_match_audit()
+    direct_price = build_direct_model_price_performance(match_audit, price_frontier)
+    vendor_scores, vendor_components = build_vendor_frontier_scores(company_scores)
+    source_coverage, family_coverage = build_coverage_diagnostics(company_scores, match_audit)
+    bootstrap, rank_intervals = build_rank_stability(company_scores)
     probabilities = build_company_leadership_simulation(company_scores)
     leadership_audit = build_leadership_model_audit(company_scores, probabilities)
     cluster_profiles, labor_summary, replacement = build_labor_deep_dive(job_scores)
+    business_domain_pressure, domain_workflows = build_business_domain_implications(job_scores)
+    release_cadence_family, release_cadence_vendor = build_release_cadence()
+    failure_modes, underobserved = build_failure_mode_audits(company_scores, match_audit, family_coverage)
     findings = build_counterintuitive_findings(company_scores, probabilities, gap, price_frontier, labor_summary, replacement)
     sources = source_registry()
 
@@ -2482,13 +3739,64 @@ def build_deep_analysis(overwrite_sources: bool = False, write_reports_flag: boo
     manifest = pd.DataFrame(manifest_rows).sort_values("table")
     write_table(manifest, "analysis_manifest")
     write_run_manifest("analysis", ANALYSIS, list(ANALYSIS.glob("*.csv")), upstream_manifest=DATASET / "run_manifest.json")
-    build_plots(company_scores, job_scores, forecasts, analogies, domain, gap, price_frontier, probabilities, cluster_profiles, labor_summary, replacement)
+    build_plots(
+        company_scores,
+        job_scores,
+        forecasts,
+        analogies,
+        domain,
+        gap,
+        price_frontier,
+        probabilities,
+        cluster_profiles,
+        labor_summary,
+        replacement,
+        match_audit,
+        direct_price,
+        vendor_scores,
+        source_coverage,
+        family_coverage,
+        rank_intervals,
+        business_domain_pressure,
+        release_cadence_family,
+        release_cadence_vendor,
+    )
     if write_reports_flag:
-        write_report(company_scores, job_scores, forecasts, analogies, claims, probabilities, gap, price_frontier, cluster_profiles, labor_summary, replacement, findings)
+        write_report(
+            company_scores,
+            job_scores,
+            forecasts,
+            analogies,
+            claims,
+            probabilities,
+            gap,
+            price_frontier,
+            cluster_profiles,
+            labor_summary,
+            replacement,
+            findings,
+            match_audit,
+            direct_price,
+            vendor_scores,
+            source_coverage,
+            family_coverage,
+            rank_intervals,
+            failure_modes,
+            underobserved,
+            business_domain_pressure,
+            domain_workflows,
+            release_cadence_family,
+            release_cadence_vendor,
+        )
         write_run_manifest(
             "deep_report",
             REPORT,
-            [REPORT / "deep_frontier_ai_forecast.md", REPORT / "deep_frontier_ai_forecast.html"],
+            [
+                REPORT / "deep_frontier_ai_forecast.md",
+                REPORT / "deep_frontier_ai_forecast.html",
+                REPORT / "assets" / "report.css",
+                REPORT / "assets" / "report.js",
+            ],
             upstream_manifest=ANALYSIS / "run_manifest.json",
         )
     write_data_dictionary()
