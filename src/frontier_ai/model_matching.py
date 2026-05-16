@@ -35,7 +35,6 @@ PROVIDER_PREFIXES = {
     "ai21",
     "alibaba",
     "anthropic",
-    "cohere",
     "deepseek",
     "google",
     "meta",
@@ -58,8 +57,7 @@ FAMILY_ALIASES = {
     "DeepSeek": ["deepseek"],
     "Grok": ["grok", "xai", "x-ai"],
     "Phi": ["phi"],
-    "Command": ["command", "command-r", "cohere"],
-    "Cohere": ["command", "command-r", "cohere"],
+    "Command": ["command", "command-r"],
 }
 
 
@@ -121,7 +119,6 @@ def _version_aliases(text: str, family: str) -> set[str]:
         "Grok": [r"\bgrok[-_ ]?([0-9]+(?:\.[0-9]+)?)?"],
         "Phi": [r"\bphi[-_ ]?([0-9]+(?:\.[0-9]+)?)?"],
         "Command": [r"\bcommand[-_ ]?r?[-_ ]?([a-z0-9.]+)?"],
-        "Cohere": [r"\bcommand[-_ ]?r?[-_ ]?([a-z0-9.]+)?"],
     }
     for pattern in patterns.get(family, []):
         for match in re.finditer(pattern, text):

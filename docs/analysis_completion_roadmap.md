@@ -44,7 +44,7 @@ The report ranks model families such as GPT, Claude, Gemini, Qwen, and Mistral. 
 
 What to add:
 
-- Aggregate model-family signals to vendors: OpenAI, Anthropic, Google, Alibaba, Meta, Mistral, DeepSeek, xAI, Microsoft, Cohere.
+- Aggregate model-family signals to vendors: OpenAI, Anthropic, Google, Alibaba, Meta, Mistral, DeepSeek, xAI, Microsoft, Command.
 - Preserve both views:
   - model-family frontier score;
   - vendor frontier portfolio score.

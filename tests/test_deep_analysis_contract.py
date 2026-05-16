@@ -10,6 +10,7 @@ class DeepAnalysisContractTests(unittest.TestCase):
     def test_deep_analysis_tables_exist(self):
         required = [
             "company_frontier_scores",
+            "dashboard_key_findings",
             "company_score_components",
             "company_score_methodology",
             "company_score_sensitivity",
@@ -57,6 +58,15 @@ class DeepAnalysisContractTests(unittest.TestCase):
         self.assertTrue(df["frontier_momentum_heuristic_index"].between(0, 100).all())
         self.assertIn("sensitivity_label", df.columns)
         self.assertGreaterEqual(df["evidence_count"].max(), 1000)
+
+    def test_dashboard_key_findings_are_auditable_entry_points(self):
+        df = pd.read_csv(ROOT / "data" / "analysis" / "dashboard_key_findings.csv")
+        self.assertGreaterEqual(len(df), 10)
+        for col in ["section", "question", "headline", "metric", "evidence_level", "primary_artifact", "priority_order"]:
+            self.assertIn(col, df.columns)
+        self.assertTrue(set(df["evidence_level"]).issubset({"observed", "direct_match", "family_proxy", "scenario", "speculative"}))
+        self.assertIn("company_frontier_scores.csv", set(df["primary_artifact"]))
+        self.assertTrue(df["priority_order"].is_monotonic_increasing)
 
     def test_company_score_methodology_and_sensitivity(self):
         methodology = pd.read_csv(ROOT / "data" / "analysis" / "company_score_methodology.csv")

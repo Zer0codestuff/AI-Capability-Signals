@@ -133,7 +133,6 @@ CLOSED_VENDOR_HINTS = (
     "openai",
     "anthropic",
     "google",
-    "cohere",
     "x-ai",
     "perplexity",
     "amazon",
@@ -367,7 +366,6 @@ def canonical_vendor(organization: str = "", name: str = "") -> str:
         ("Alibaba", ["qwen", "alibaba", "tongyi"]),
         ("xAI", ["x-ai", "xai", "grok"]),
         ("Microsoft", ["microsoft"]),
-        ("Cohere", ["cohere"]),
     ]
     for vendor, needles in rules:
         if any(needle in text for needle in needles):

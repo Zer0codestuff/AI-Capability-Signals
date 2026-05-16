@@ -18,7 +18,7 @@ class ClassificationTests(unittest.TestCase):
             ("Qwen3 Max", "alibaba", "Qwen"),
             ("DeepSeek V4", "deepseek", "DeepSeek"),
             ("Microsoft: Phi 4", "microsoft", "Phi"),
-            ("Cohere Command R", "cohere", "Command"),
+            ("Command R", "independent", "Command"),
             ("xAI: Grok 4", "x-ai", "Grok"),
         ]
         for name, organization, expected in cases:

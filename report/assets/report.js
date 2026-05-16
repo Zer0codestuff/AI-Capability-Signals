@@ -1,9 +1,22 @@
 
 document.querySelectorAll("table[data-sortable='true']").forEach((table) => {
   const headers = Array.from(table.querySelectorAll("th"));
+  const tableWrap = table.closest(".table-wrap");
+  const filter = tableWrap?.querySelector("[data-table-filter]");
+  const bodyRows = () => Array.from(table.querySelectorAll("tr")).slice(1);
+
+  if (filter) {
+    filter.addEventListener("input", () => {
+      const query = filter.value.trim().toLowerCase();
+      bodyRows().forEach((row) => {
+        row.hidden = query.length > 0 && !row.textContent.toLowerCase().includes(query);
+      });
+    });
+  }
+
   headers.forEach((header, index) => {
     header.addEventListener("click", () => {
-      const rows = Array.from(table.querySelectorAll("tr")).slice(1);
+      const rows = bodyRows();
       const direction = header.dataset.sortDir === "asc" ? "desc" : "asc";
       header.dataset.sortDir = direction;
       rows.sort((a, b) => {

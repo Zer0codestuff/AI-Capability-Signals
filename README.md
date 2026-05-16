@@ -10,6 +10,7 @@ Published report: https://zer0codestuff.github.io/AI-Capability-Signals/
 - Normalized model metadata with separate `vendor`, `model_family`, and `product_line` fields so product families are not inferred from vendor names alone.
 - Benchmark and pricing tables that keep incompatible metrics separate instead of averaging them into a fake universal model score.
 - A deep-analysis layer with heuristic score methodology, sensitivity checks, direct model benchmark matching, vendor portfolio aggregation, source coverage diagnostics, rank-stability stress tests, skeptical failure-mode audits, business-domain implications, release cadence, labor clusters, whole-job replacement feasibility, bounded forecast scenarios, and forecast diagnostics.
+- A dashboard-first HTML report that opens with navigable findings, sortable/filterable evidence tables, and drill-down links into the detailed analysis.
 - A small sample mode for quick local verification without network access.
 
 ## Reproduce
@@ -39,6 +40,7 @@ Use `--skip-reports` on `frontier_ai.deep_analysis` only when you want the deriv
 - `data/processed/`: normalized core model, pricing, benchmark, source, and release-calendar tables.
 - `data/dataset/`: optional rich dataset package built from broader ecosystem sources.
 - `data/analysis/`: analytical tables including heuristic model-family scores, direct benchmark match audits, vendor portfolio scores, source coverage diagnostics, rank stability intervals, skeptical failure modes, business-domain pressure, release cadence, next-frontier simulation shares, leadership audit, open/closed category gaps, price-performance frontiers, job exposure indexes, labor clusters, replacement feasibility, bounded forecasts, and diagnostics.
+- `data/analysis/dashboard_key_findings.csv`: dashboard entry points that connect each headline finding to its evidence label and primary artifact.
 - `report/`: generated reports when `--write-reports` is used.
 
 Large raw, processed, and rich dataset dumps are intentionally ignored by git. The smaller deep-analysis result tables and deep-analysis figures are kept publishable so reviewers can inspect the actual findings without regenerating the full million-row dataset.

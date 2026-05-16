@@ -29,6 +29,8 @@ class ReportContractTests(unittest.TestCase):
             self.skipTest("deep report has not been written")
         text = report.read_text(encoding="utf-8")
         self.assertIn("Model Family Frontier Score", text)
+        self.assertIn("Dashboard Snapshot", text)
+        self.assertIn("dashboard_key_findings.csv", text)
         self.assertIn("How To Read This Report", text)
         self.assertIn("company_score_component_stack.png", text)
         self.assertIn("forecast_scenario_dashboard.png", text)
@@ -56,7 +58,12 @@ class ReportContractTests(unittest.TestCase):
             "class='report-shell'",
             "class='report-sidebar'",
             "class='hero'",
+            "class='hero-layout'",
             "class='meta-grid'",
+            "class='analysis-dashboard'",
+            "class='dashboard-tiles'",
+            "class='dashboard-lanes'",
+            "data-table-filter",
             "class='figure-panel'",
             "class='table-wrap'",
             "data-sortable='true'",

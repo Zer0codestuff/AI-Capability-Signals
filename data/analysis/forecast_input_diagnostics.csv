@@ -1,4 +1,4 @@
 series,source_table,years_used,fit_start_year,fit_end_year,raw_log10_slope_per_year,fallback_or_cap_policy,observed_log10_slope_per_year,scenario_assumed_log10_slope_per_year,analysis_captured_at
-epoch_training_compute_upper_tail,epoch_models_normalized,9,2018,2026,0.5492263178707799,Raw extrapolation capped by scenario compute_cap.,,,2026-05-16T12:05:27+00:00
-openrouter_context_window_upper_tail,openrouter_models_catalog,4,2023,2026,0.3970873560280472,Raw extrapolation capped by scenario context_cap.,,,2026-05-16T12:05:27+00:00
-openrouter_output_price_lower_quintile,openrouter_models_catalog,4,2023,2026,0.03851229516114638,Uses the observed lower-quintile slope when it is negative; otherwise assumes no price decline. Price factor floors at 0.05.,0.03851229516114638,0.0,2026-05-16T12:05:27+00:00
+epoch_training_compute_upper_tail,epoch_models_normalized,9,2018,2026,0.5495217149018652,Raw extrapolation capped by scenario compute_cap.,,,2026-05-16T17:13:09+00:00
+openrouter_context_window_upper_tail,openrouter_models_catalog,4,2023,2026,0.3970873560280472,Raw extrapolation capped by scenario context_cap.,,,2026-05-16T17:13:09+00:00
+openrouter_output_price_lower_quintile,openrouter_models_catalog,4,2023,2026,0.03642728126383246,Uses the observed lower-quintile slope when it is negative; otherwise assumes no price decline. Price factor floors at 0.05.,0.03642728126383246,0.0,2026-05-16T17:13:09+00:00

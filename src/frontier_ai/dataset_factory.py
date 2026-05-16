@@ -57,7 +57,6 @@ HF_AUTHORS = [
     "01-ai",
     "databricks",
     "stabilityai",
-    "CohereForAI",
     "HuggingFaceH4",
     "Open-Orca",
     "baichuan-inc",

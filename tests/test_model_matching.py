@@ -63,7 +63,7 @@ class ModelMatchingTests(unittest.TestCase):
             "DeepSeek": "deepseek/deepseek-r1",
             "Grok": "x-ai/grok-4",
             "Phi": "microsoft/phi-4",
-            "Command": "cohere/command-r-plus",
+            "Command": "command-r-plus",
         }
         for family, model_id in cases.items():
             with self.subTest(family=family):

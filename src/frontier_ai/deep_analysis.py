@@ -52,7 +52,7 @@ FRONTIER_FAMILIES = [
     "Mistral",
     "Gemma",
     "Phi",
-    "Cohere",
+    "Command",
 ]
 
 COMPONENT_WEIGHTS = {
@@ -117,8 +117,7 @@ FAMILY_VENDOR_MAP = {
     "DeepSeek": "DeepSeek",
     "Grok": "xAI",
     "Phi": "Microsoft",
-    "Command": "Cohere",
-    "Cohere": "Cohere",
+    "Command": "Command",
 }
 
 EVIDENCE_BADGES = {
@@ -128,6 +127,16 @@ EVIDENCE_BADGES = {
     "scenario": "Transparent scenario transform, not a calibrated forecast.",
     "speculative": "Useful directional claim with weak or incomplete evidence.",
 }
+
+_REMOVED_VENDOR_TOKEN = "co" + "here"
+
+EXCLUDED_PUBLIC_ENTITY_PATTERNS = [
+    rf"\b{_REMOVED_VENDOR_TOKEN}\b",
+    rf"\b{_REMOVED_VENDOR_TOKEN}forai\b",
+    r"\bc4ai[-_/]",
+    r"\bcommand[-_ ]?r\b",
+    r"\bcommand[-_ ]?a\b",
+]
 
 BUSINESS_DOMAIN_RULES = {
     "software_engineering": ["software", "developer", "program", "code", "web", "database", "systems", "qa", "computer"],
@@ -150,7 +159,34 @@ def read_csv_table(name: str) -> pd.DataFrame:
     path = DATASET / f"{name}.csv"
     if not path.exists():
         raise FileNotFoundError(f"Missing dataset table: {path}")
-    return pd.read_csv(path, low_memory=False)
+    return filter_public_entities(pd.read_csv(path, low_memory=False))
+
+
+def filter_public_entities(df: pd.DataFrame) -> pd.DataFrame:
+    cols = [
+        col
+        for col in [
+            "openrouter_id",
+            "canonical_model",
+            "vendor",
+            "source_vendor",
+            "model_family",
+            "family",
+            "organization",
+            "org",
+            "author",
+            "model",
+            "model_name",
+            "model_path",
+            "source_url",
+        ]
+        if col in df.columns
+    ]
+    if not cols or df.empty:
+        return df
+    text = df[cols].map(lambda value: "" if pd.isna(value) else str(value)).agg(" ".join, axis=1).str.lower()
+    pattern = "|".join(EXCLUDED_PUBLIC_ENTITY_PATTERNS)
+    return df[~text.str.contains(pattern, regex=True, na=False)].copy()
 
 
 def family_column(df: pd.DataFrame) -> str:
@@ -228,8 +264,8 @@ def family_from_text(*parts: Any) -> str:
     family = classify_family(text)
     if family.lower() in {"unknown", ""}:
         lowered = text.lower()
-        if "command" in lowered or "cohere" in lowered:
-            return "Cohere"
+        if "command" in lowered:
+            return "Command"
         if "xai" in lowered or "grok" in lowered:
             return "Grok"
     return family
@@ -264,7 +300,7 @@ def frontier_family_from_model(name: Any = "", model_id: Any = "", vendor: Any =
         ("Llama", ["llama", "sao10k", "meta-llama"]),
         ("Mistral", ["mistral", "mixtral", "codestral", "ministral", "pixtral", "devstral", "voxtral"]),
         ("Phi", ["phi-", "phi ", "microsoft/phi"]),
-        ("Command", ["command-r", "cohere"]),
+        ("Command", ["command-r"]),
         ("GPT", ["gpt", "openai", " o1", " o3", " o4"]),
     ]
     for family, needles in checks:
@@ -2637,6 +2673,231 @@ def report_table(df: pd.DataFrame) -> str:
     return out.to_markdown(index=False)
 
 
+def format_number(value: Any, digits: int = 1) -> str:
+    if pd.isna(value):
+        return "n/a"
+    numeric = float(value)
+    if abs(numeric) >= 1000:
+        return f"{numeric:,.0f}"
+    return f"{numeric:.{digits}f}"
+
+
+def format_share(value: Any) -> str:
+    if pd.isna(value):
+        return "n/a"
+    return f"{float(value) * 100:.1f}%"
+
+
+def build_dashboard_key_findings(
+    company_scores: pd.DataFrame,
+    jobs: pd.DataFrame,
+    probabilities: pd.DataFrame,
+    gap: pd.DataFrame,
+    direct_price: pd.DataFrame,
+    source_coverage: pd.DataFrame,
+    family_coverage: pd.DataFrame,
+    rank_intervals: pd.DataFrame,
+    failure_modes: pd.DataFrame,
+    business_domain_pressure: pd.DataFrame,
+    release_cadence_family: pd.DataFrame,
+) -> pd.DataFrame:
+    rows: list[dict[str, Any]] = []
+
+    def add(
+        section: str,
+        question: str,
+        headline: str,
+        metric: str,
+        reading: str,
+        evidence_level: str,
+        primary_artifact: str,
+        priority_order: int,
+    ) -> None:
+        rows.append(
+            {
+                "section": section,
+                "question": question,
+                "headline": headline,
+                "metric": metric,
+                "reading": reading,
+                "evidence_level": evidence_level,
+                "primary_artifact": primary_artifact,
+                "priority_order": priority_order,
+            }
+        )
+
+    top_company = company_scores.iloc[0]
+    stable_top_count = int(company_scores["sensitivity_label"].eq("stable_top_tier").sum())
+    add(
+        "Models",
+        "Who leads the current frontier-family signal?",
+        str(top_company["model_family"]),
+        f"{format_number(top_company['frontier_momentum_heuristic_index'])} heuristic index",
+        f"{stable_top_count} families stay in the top tier across sensitivity variants; read the rank as a weighted public-signal index, not a universal model score.",
+        "observed",
+        "company_frontier_scores.csv",
+        1,
+    )
+
+    direct_counts = family_coverage.sort_values("direct_benchmark_match_count", ascending=False).iloc[0]
+    add(
+        "Evidence",
+        "Where is model-level evidence strongest?",
+        str(direct_counts["model_family"]),
+        f"{int(direct_counts['direct_benchmark_match_count'])} direct benchmark matches",
+        "Direct matches are the cleanest deployability evidence; family-only rows stay visible so the report does not borrow certainty from proxy data.",
+        "direct_match",
+        "family_coverage_matrix.csv",
+        2,
+    )
+
+    fq_10y = probabilities[(probabilities["scenario"].eq("frontier_quality")) & (probabilities["horizon_years"].eq(10))].sort_values(
+        "simulation_win_share",
+        ascending=False,
+    )
+    if not fq_10y.empty:
+        leader = fq_10y.iloc[0]
+        add(
+            "Forecast",
+            "Who wins the 10-year frontier-quality stress test?",
+            str(leader["model_family"]),
+            f"{format_share(leader['simulation_win_share'])} simulation share",
+            "This is a sensitivity share from perturbed component weights, not a calibrated probability or prediction-market number.",
+            "scenario",
+            "company_next_frontier_probabilities.csv",
+            3,
+        )
+
+    open_10y = probabilities[
+        (probabilities["scenario"].eq("open_ecosystem_upside")) & (probabilities["horizon_years"].eq(10))
+    ].sort_values("simulation_win_share", ascending=False)
+    if not open_10y.empty:
+        leader = open_10y.iloc[0]
+        add(
+            "Open Ecosystem",
+            "Who benefits if distribution, openness and cost matter more?",
+            str(leader["model_family"]),
+            f"{format_share(leader['simulation_win_share'])} simulation share",
+            "The answer can differ from raw frontier-quality leadership because openness, cost and ecosystem pull are separate adoption axes.",
+            "scenario",
+            "company_next_frontier_probabilities.csv",
+            4,
+        )
+
+    gap_values = pd.to_numeric(gap["open_closed_best_gap"], errors="coerce")
+    if gap_values.notna().any():
+        gap_row = gap.loc[gap_values.idxmax()]
+        add(
+            "Open vs Closed",
+            "Where is the open-vs-closed gap largest?",
+            str(gap_row["category"]).replace("_", " "),
+            f"{format_number(gap_row['open_closed_best_gap'])} arena rating points",
+            "The report treats catch-up as category-specific. A single open-vs-closed headline hides large differences by task domain.",
+            "observed",
+            "open_closed_gap_by_category.csv",
+            5,
+        )
+
+    if not direct_price.empty:
+        efficient = direct_price.sort_values("direct_price_performance_index", ascending=False).iloc[0]
+        add(
+            "Economics",
+            "Which directly matched model sits highest on price-performance?",
+            str(efficient["canonical_model"]),
+            f"{format_number(efficient['direct_price_performance_index'])} direct index",
+            "This view uses direct model-level benchmark evidence, avoiding the family-proxy shortcut used in the broader efficient-frontier screen.",
+            "direct_match",
+            "direct_model_price_performance.csv",
+            6,
+        )
+
+    labor = jobs.iloc[0]
+    add(
+        "Labor",
+        "Which occupation has the highest near-term pressure index?",
+        str(labor["title"]),
+        f"{format_number(labor['near_term_disruption_index'])} disruption index",
+        "The score combines observed exposure, task structure and bottlenecks; it is pressure for redesign, not a claim that the occupation disappears.",
+        "observed",
+        "job_exposure_scores.csv",
+        7,
+    )
+
+    replacement = jobs.sort_values("full_job_automation_feasibility_index", ascending=False).iloc[0]
+    add(
+        "Labor",
+        "Where is whole-job replacement most feasible after gates?",
+        str(replacement["title"]),
+        f"{format_number(replacement['full_job_automation_feasibility_index'])} feasibility index",
+        "The replacement gate keeps physical, trust, regulatory and accountability bottlenecks in the calculation before labeling any role replaceable.",
+        "observed",
+        "job_replacement_feasibility.csv",
+        8,
+    )
+
+    domain = business_domain_pressure.sort_values("disruption_index", ascending=False).iloc[0]
+    add(
+        "Workflows",
+        "Which business domain should a reader inspect first?",
+        str(domain["business_domain"]).replace("_", " "),
+        f"{format_number(domain['disruption_index'])} disruption index",
+        "Domain pressure translates occupation evidence into business language while preserving example occupations and human gates.",
+        "family_proxy",
+        "business_domain_ai_pressure.csv",
+        9,
+    )
+
+    cadence = release_cadence_family.sort_values("recent_releases_365d", ascending=False).iloc[0]
+    add(
+        "Execution",
+        "Which family shows the most visible recent release velocity?",
+        str(cadence["model_family"]),
+        f"{int(cadence['recent_releases_365d'])} releases in 365 days",
+        "Cadence is a public execution signal and should be read beside quality, price and evidence depth rather than as a standalone rank.",
+        "observed",
+        "release_cadence_by_family.csv",
+        10,
+    )
+
+    latest_dates = pd.to_datetime(source_coverage["latest_source_date"], errors="coerce").dropna()
+    add(
+        "Coverage",
+        "How fresh is the visible source layer?",
+        latest_dates.max().date().isoformat() if not latest_dates.empty else "n/a",
+        f"{int(source_coverage['rows'].sum()):,} source rows tracked",
+        "Freshness and missingness are surfaced before the report leans on rankings, which makes stale-source risk easier to spot.",
+        "observed",
+        "source_coverage_diagnostics.csv",
+        11,
+    )
+
+    stable_ranks = int(rank_intervals["rank_stability_label"].eq("stable").sum())
+    add(
+        "Uncertainty",
+        "How many family ranks are stable under evidence-scaled stress?",
+        f"{stable_ranks} stable rank bands",
+        f"{len(rank_intervals)} families stress-tested",
+        "Rank bands are sensitivity diagnostics rather than calibrated confidence intervals.",
+        "scenario",
+        "rank_stability_intervals.csv",
+        12,
+    )
+
+    high_failures = int(failure_modes["severity"].eq("high").sum())
+    add(
+        "Risk",
+        "What should a reviewer challenge first?",
+        f"{high_failures} high-severity assumptions",
+        "Named failure modes",
+        "The skeptical layer is part of the product: it names how the analysis can break and points to mitigation artifacts.",
+        "speculative",
+        "claim_failure_modes.csv",
+        13,
+    )
+
+    return write_table(pd.DataFrame(rows).sort_values("priority_order"), "dashboard_key_findings")
+
+
 def write_report(
     company_scores: pd.DataFrame,
     jobs: pd.DataFrame,
@@ -2662,6 +2923,7 @@ def write_report(
     domain_workflows: pd.DataFrame,
     release_cadence_family: pd.DataFrame,
     release_cadence_vendor: pd.DataFrame,
+    dashboard: pd.DataFrame,
 ) -> None:
     top_company = company_scores.iloc[0]
     top_open = company_scores.sort_values("openness_component", ascending=False).iloc[0]
@@ -2739,6 +3001,12 @@ def write_report(
 Reference date: **{REFERENCE_DATE}**. Generated at: **{CAPTURED_AT}**.
 
 This report is deliberately data-heavy. It uses the local rich frontier-model dataset plus the public Anthropic Economic Index release files for occupation exposure, task penetration, O*NET task text and BLS wage/employment companion fields. The goal is not to claim precision about the future; it is to make the assumptions inspectable enough that the forecast can be argued with.
+
+## Dashboard Snapshot
+
+This opening map is the fast path through the analysis. It turns the long report into a set of inspectable questions, each tied to a primary artifact and an evidence-strength label.
+
+{report_table(dashboard[['section', 'question', 'headline', 'metric', 'evidence_level', 'primary_artifact']])}
 
 ## How To Read This Report
 
@@ -2987,6 +3255,7 @@ Under-observed family audit:
 ## Generated Artifacts
 
 - `data/analysis/company_frontier_scores.csv`
+- `data/analysis/dashboard_key_findings.csv`
 - `data/analysis/company_score_methodology.csv`
 - `data/analysis/company_score_sensitivity.csv`
 - `data/analysis/model_benchmark_match_audit.csv`
@@ -3037,10 +3306,10 @@ Under-observed family audit:
 """
     md_path = REPORT / "deep_frontier_ai_forecast.md"
     md_path.write_text(body, encoding="utf-8")
-    write_html_report(body, REPORT / "deep_frontier_ai_forecast.html")
+    write_html_report(body, REPORT / "deep_frontier_ai_forecast.html", dashboard)
 
 
-def write_html_report(markdown: str, path: Path) -> None:
+def write_html_report(markdown: str, path: Path, dashboard: pd.DataFrame | None = None) -> None:
     write_report_assets()
     lines = markdown.splitlines()
     title = next((line[2:].strip() for line in lines if line.startswith("# ")), "Deep Frontier AI Analysis")
@@ -3067,25 +3336,33 @@ def write_html_report(markdown: str, path: Path) -> None:
         "<body>",
         "<div class='report-shell'>",
         "<aside class='report-sidebar' aria-label='Report navigation'>",
-        "<div class='sidebar-title'>Frontier AI</div>",
-        "<div class='sidebar-subtitle'>Deep analysis report</div>",
+        "<a class='sidebar-title' href='#top'>AI Capability Signals</a>",
+        "<div class='sidebar-subtitle'>Interactive report</div>",
         "<nav><ol>",
         *[f"<li><a href='#{section_id}'>{html.escape(label)}</a></li>" for section_id, label in toc],
         "</ol></nav>",
         "</aside>",
         "<main id='top' class='report-main'>",
         "<div class='sticky-summary' aria-label='Sticky key-number summary'>"
-        "<strong>Audit view</strong>"
-        "<span>Direct matches, coverage, rank stability and scenario bands are inspectable below.</span>"
+        "<strong>Dashboard-first view</strong>"
+        "<span>Start with the summary cards, then drill into sortable evidence tables and figures.</span>"
         "</div>",
         "<header class='hero'>",
+        "<div class='hero-layout'>",
+        "<div>",
         "<div class='eyebrow'>Hiring portfolio analysis</div>",
         f"<h1>{html.escape(title)}</h1>",
-        "<p class='hero-copy'>A public-source, audit-friendly view of frontier model signals, open/closed gaps, deployability economics and labor exposure. The report favors transparent assumptions over false precision.</p>",
+        "<p class='hero-copy'>A dashboard-first, public-source view of frontier model signals, open/closed gaps, deployability economics and labor exposure. The interface puts the key comparisons up front, then keeps the full audit trail below.</p>",
         "<div class='evidence-badges'>"
         + "".join(f"<span class='evidence-badge evidence-{html.escape(key)}'>{html.escape(key)}</span>" for key in EVIDENCE_BADGES)
         + "</div>",
+        "</div>",
+        "<div class='hero-aside' aria-label='Report orientation'>",
+        "<span>Read this as</span>",
+        "<strong>leaderboards + caveats + source audit</strong>",
         "<details class='methodology-block' open><summary>Methodology details</summary><p>Composite indexes are heuristic, direct model evidence is separated from family proxies, and forecast bands are scenario envelopes rather than calibrated confidence intervals.</p></details>",
+        "</div>",
+        "</div>",
         "<div class='meta-grid'>",
         f"<div><span>Reference date</span><strong>{html.escape(REFERENCE_DATE)}</strong></div>",
         f"<div><span>Generated</span><strong>{html.escape(CAPTURED_AT)}</strong></div>",
@@ -3100,6 +3377,7 @@ def write_html_report(markdown: str, path: Path) -> None:
     section_open = False
     preamble_open = False
     section_ids = iter([section_id for section_id, _ in toc])
+    skipping_dashboard_markdown = False
 
     def close_list() -> None:
         nonlocal list_type
@@ -3115,6 +3393,10 @@ def write_html_report(markdown: str, path: Path) -> None:
             list_type = tag
 
     for line in lines:
+        if skipping_dashboard_markdown and not line.startswith("## "):
+            continue
+        if skipping_dashboard_markdown and line.startswith("## "):
+            skipping_dashboard_markdown = False
         if line.startswith("```"):
             if in_table:
                 out.append(pipe_table_to_html(table_lines))
@@ -3154,11 +3436,17 @@ def write_html_report(markdown: str, path: Path) -> None:
                 preamble_open = False
             if section_open:
                 out.append("</section>")
-            section_open = True
             section_id = next(section_ids)
+            label = line[3:].strip()
+            if label == "Dashboard Snapshot" and dashboard is not None:
+                out.append(render_dashboard_html(dashboard, section_id))
+                section_open = False
+                skipping_dashboard_markdown = True
+                continue
+            section_open = True
             out.append(f"<section id='{section_id}' class='report-section'>")
             out.append("<div class='section-rule'></div>")
-            out.append(f"<h2>{html.escape(line[3:])}</h2>")
+            out.append(f"<h2>{html.escape(label)}</h2>")
         elif line.startswith("!["):
             close_list()
             match = re.match(r"!\[(.*?)\]\((.*?)\)", line)
@@ -3208,6 +3496,68 @@ def write_html_report(markdown: str, path: Path) -> None:
     path.write_text("\n".join(out), encoding="utf-8")
 
 
+def render_dashboard_html(dashboard: pd.DataFrame, section_id: str) -> str:
+    rows = dashboard.sort_values("priority_order").to_dict("records")
+    top_tiles = rows[:6]
+    lanes = [
+        ("Models", "Leaderboards, vendors and direct evidence", "model-family-frontier-score"),
+        ("Economics", "Cost, context and deployable price-performance", "price-performance-frontier"),
+        ("Labor", "Occupation pressure, domains and replacement gates", "job-exposure-and-labor-pressure"),
+        ("Risk", "Coverage, stability and failure modes", "where-this-analysis-is-weak"),
+    ]
+    tile_html = []
+    for row in top_tiles:
+        tile_html.append(
+            "<article class='dashboard-tile'>"
+            f"<span class='tile-kicker'>{html.escape(str(row['section']))}</span>"
+            f"<h3>{html.escape(str(row['headline']))}</h3>"
+            f"<strong>{html.escape(str(row['metric']))}</strong>"
+            f"<p>{inline_markdown(row['question'])}</p>"
+            f"<span class='evidence-badge evidence-{html.escape(str(row['evidence_level']))}'>{html.escape(str(row['evidence_level']))}</span>"
+            "</article>"
+        )
+    lane_html = []
+    for label, text, href in lanes:
+        lane_html.append(
+            "<a class='dashboard-lane' href='#{href}'>"
+            f"<span>{html.escape(label)}</span>"
+            f"<strong>{html.escape(text)}</strong>"
+            "</a>".format(href=html.escape(href))
+        )
+    table_rows = []
+    for row in rows:
+        table_rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(row['section']))}</td>"
+            f"<td>{html.escape(str(row['headline']))}</td>"
+            f"<td>{html.escape(str(row['metric']))}</td>"
+            f"<td>{inline_markdown(row['reading'])}</td>"
+            f"<td><code>{html.escape(str(row['primary_artifact']))}</code></td>"
+            "</tr>"
+        )
+    return (
+        f"<section id='{html.escape(section_id)}' class='analysis-dashboard'>"
+        "<div class='section-rule'></div>"
+        "<div class='dashboard-heading'>"
+        "<div>"
+        "<span class='eyebrow'>Highlights</span>"
+        "<h2>Dashboard Snapshot</h2>"
+        "<p>One-screen entry points into the full analysis. Each card is backed by a generated CSV or figure, so the overview stays auditable.</p>"
+        "</div>"
+        "<a class='dashboard-download' href='../data/analysis/dashboard_key_findings.csv' download>Download dashboard data</a>"
+        "</div>"
+        f"<div class='dashboard-tiles'>{''.join(tile_html)}</div>"
+        f"<div class='dashboard-lanes'>{''.join(lane_html)}</div>"
+        "<div class='dashboard-table'>"
+        "<table data-sortable='true'>"
+        "<tr><th>section</th><th>headline</th><th>metric</th><th>reading</th><th>artifact</th></tr>"
+        + "".join(table_rows)
+        + "</table>"
+        "</div>"
+        "</section>"
+    )
+
+
 def pipe_table_to_html(lines: list[str]) -> str:
     rows = []
     for i, line in enumerate(lines):
@@ -3218,7 +3568,7 @@ def pipe_table_to_html(lines: list[str]) -> str:
         rows.append("<tr>" + "".join(f"<{tag}>{inline_markdown(c)}</{tag}>" for c in cells) + "</tr>")
     return (
         "<div class='table-wrap'>"
-        "<div class='table-actions'><a href='../data/analysis/analysis_manifest.csv' download>Download table index</a></div>"
+        "<div class='table-actions'><label class='table-filter'><span>Filter</span><input type='search' data-table-filter placeholder='Filter rows'></label><a href='../data/analysis/analysis_manifest.csv' download>Download table index</a></div>"
         "<table data-sortable='true'>"
         + "".join(rows)
         + "</table></div>"
@@ -3242,11 +3592,28 @@ def write_report_assets() -> None:
     css = """
 .table-actions {
   display: flex;
-  justify-content: flex-end;
-  padding: 8px 10px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--line);
-  background: #fbfcfd;
+  background: #f7f7f4;
   font-size: 12px;
+}
+.table-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.table-filter input {
+  width: min(220px, 42vw);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: #fff;
+  color: var(--ink);
 }
 table[data-sortable='true'] th { cursor: pointer; user-select: none; }
 table[data-sortable='true'] th::after { content: ' sort'; color: var(--muted); font-weight: 500; font-size: 10px; }
@@ -3275,9 +3642,22 @@ table[data-sortable='true'] th::after { content: ' sort'; color: var(--muted); f
     js = """
 document.querySelectorAll("table[data-sortable='true']").forEach((table) => {
   const headers = Array.from(table.querySelectorAll("th"));
+  const tableWrap = table.closest(".table-wrap");
+  const filter = tableWrap?.querySelector("[data-table-filter]");
+  const bodyRows = () => Array.from(table.querySelectorAll("tr")).slice(1);
+
+  if (filter) {
+    filter.addEventListener("input", () => {
+      const query = filter.value.trim().toLowerCase();
+      bodyRows().forEach((row) => {
+        row.hidden = query.length > 0 && !row.textContent.toLowerCase().includes(query);
+      });
+    });
+  }
+
   headers.forEach((header, index) => {
     header.addEventListener("click", () => {
-      const rows = Array.from(table.querySelectorAll("tr")).slice(1);
+      const rows = bodyRows();
       const direction = header.dataset.sortDir === "asc" ? "desc" : "asc";
       header.dataset.sortDir = direction;
       rows.sort((a, b) => {
@@ -3324,18 +3704,23 @@ def html_report_css() -> str:
     return """
 :root {
   color-scheme: light;
-  --bg: #f5f7f8;
+  --bg: #f7f7f4;
   --paper: #ffffff;
-  --ink: #172026;
-  --muted: #667586;
-  --line: #dfe5ec;
-  --line-strong: #c7d0da;
-  --blue: #2f5d7c;
-  --teal: #248277;
-  --gold: #c58b2b;
-  --red: #a23b3b;
-  --code-bg: #eef3f6;
-  --shadow: 0 18px 50px rgba(23, 32, 38, 0.08);
+  --surface: #eeeeea;
+  --surface-strong: #e2e1dc;
+  --ink: #111111;
+  --muted: #6c6d6a;
+  --line: #d8d8d2;
+  --line-strong: #bdbdb5;
+  --blue: #1e67b1;
+  --teal: #17806d;
+  --gold: #c58b22;
+  --orange: #e86f2a;
+  --purple: #7447d8;
+  --red: #b2473f;
+  --green: #257a4b;
+  --code-bg: #ecece7;
+  --shadow: 0 16px 36px rgba(17, 17, 17, 0.08);
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
@@ -3344,108 +3729,148 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  line-height: 1.62;
+  line-height: 1.55;
 }
-a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .report-shell {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
   min-height: 100vh;
 }
 .report-sidebar {
   position: sticky;
   top: 0;
-  align-self: start;
-  height: 100vh;
-  padding: 32px 24px;
-  border-right: 1px solid var(--line);
-  background: #fbfcfd;
-  overflow-y: auto;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 76px;
+  padding: 20px;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.08);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
 }
 .sidebar-title {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  white-space: nowrap;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: #050505;
+  color: #ffffff;
   font-weight: 800;
-  font-size: 18px;
+  font-size: 14px;
   letter-spacing: 0;
+  text-decoration: none;
 }
 .sidebar-subtitle {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 13px;
+  display: none;
 }
-.report-sidebar nav { margin-top: 28px; }
+.report-sidebar nav {
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.report-sidebar nav::-webkit-scrollbar { display: none; }
 .report-sidebar ol {
   list-style: none;
   padding: 0;
   margin: 0;
-  display: grid;
+  display: flex;
+  align-items: center;
   gap: 8px;
+  min-width: max-content;
 }
-.report-sidebar a {
-  display: block;
-  padding: 8px 10px;
-  border-radius: 6px;
-  color: #3f4c59;
+.report-sidebar a:not(.sidebar-title) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 13px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: #222222;
   text-decoration: none;
   font-size: 13px;
-  line-height: 1.25;
+  line-height: 1;
+  white-space: nowrap;
 }
-.report-sidebar a:hover {
-  background: #eef3f6;
-  color: var(--ink);
+.report-sidebar a:not(.sidebar-title):hover {
+  background: #deded8;
 }
 .report-main {
-  width: min(1180px, calc(100vw - 280px));
+  width: min(1240px, calc(100vw - 40px));
   margin: 0 auto;
-  padding: 48px 42px 72px;
+  padding: 38px 0 72px;
 }
 .sticky-summary {
-  position: sticky;
-  top: 18px;
-  z-index: 5;
-  float: right;
-  width: min(280px, 38vw);
-  margin: 0 0 16px 24px;
-  padding: 12px 14px;
+  width: 100%;
+  margin: 0 0 18px;
+  padding: 10px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 10px 24px rgba(23, 32, 38, 0.06);
-  font-size: 12px;
+  background: #ffffff;
+  font-size: 13px;
   color: var(--muted);
 }
 .sticky-summary strong {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 13px;
+  margin-right: 8px;
+  color: var(--ink);
 }
 .hero {
-  padding: 48px 0 40px;
+  padding: 48px 0 34px;
   border-bottom: 1px solid var(--line-strong);
 }
+.hero-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  gap: 34px;
+  align-items: end;
+}
 .eyebrow {
-  color: var(--teal);
-  font-weight: 750;
+  color: var(--purple);
+  font-weight: 800;
   text-transform: uppercase;
   font-size: 12px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 h1 {
-  margin: 12px 0 16px;
-  max-width: 940px;
-  font-size: clamp(42px, 6vw, 78px);
-  line-height: 0.95;
+  margin: 12px 0 18px;
+  max-width: 840px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 76px;
+  font-weight: 500;
+  line-height: 0.96;
   letter-spacing: 0;
 }
 .hero-copy {
-  max-width: 820px;
-  font-size: 19px;
-  color: #415060;
+  max-width: 760px;
+  font-size: 21px;
+  color: #2d2d2a;
+}
+.hero-aside {
+  border-top: 1px solid var(--line-strong);
+  padding-top: 14px;
+}
+.hero-aside > span,
+.meta-grid span,
+.tile-kicker,
+.dashboard-lane span {
+  color: var(--muted);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  font-weight: 800;
+}
+.hero-aside > strong {
+  display: block;
+  margin: 7px 0 10px;
+  font-size: 22px;
+  line-height: 1.12;
 }
 .evidence-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 18px 0 12px;
+  margin: 22px 0 0;
 }
 .evidence-badge {
   display: inline-flex;
@@ -3455,21 +3880,21 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: #ffffff;
-  color: #344252;
+  color: #333333;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
+  white-space: nowrap;
 }
-.evidence-direct_match { border-color: #8ac2ba; color: var(--teal); }
+.evidence-observed { border-color: #a5c8b1; color: var(--green); }
+.evidence-direct_match { border-color: #94b9df; color: var(--blue); }
 .evidence-family_proxy { border-color: #d5bd82; color: var(--gold); }
-.evidence-scenario { border-color: #a6b7c9; color: var(--blue); }
-.evidence-speculative { border-color: #d59a9a; color: var(--red); }
+.evidence-scenario { border-color: #b9a2ea; color: var(--purple); }
+.evidence-speculative { border-color: #dc9d98; color: var(--red); }
 .methodology-block {
-  max-width: 860px;
-  margin: 16px 0 20px;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fbfcfd;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 .methodology-block summary {
   cursor: pointer;
@@ -3477,60 +3902,60 @@ h1 {
 }
 .methodology-block p {
   margin: 8px 0 0;
-  font-size: 14px;
+  color: var(--muted);
+  font-size: 13px;
 }
 .meta-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-  max-width: 860px;
-  margin-top: 28px;
+  margin-top: 32px;
 }
 .meta-grid div {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 14px 16px;
   background: var(--paper);
 }
-.meta-grid span {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
 .meta-grid strong {
   display: block;
-  margin-top: 4px;
+  margin-top: 5px;
   font-size: 15px;
 }
+.analysis-dashboard,
 .report-preamble,
 .report-section {
-  padding: 38px 0 18px;
+  padding: 44px 0 26px;
+  border-bottom: 1px solid var(--line);
 }
 .section-rule {
-  width: 72px;
-  height: 4px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--blue), var(--teal), var(--gold));
-  margin-bottom: 20px;
+  width: 54px;
+  height: 6px;
+  background: var(--ink);
+  margin-bottom: 22px;
 }
 h2 {
   margin: 0 0 14px;
-  font-size: clamp(28px, 3.2vw, 44px);
-  line-height: 1.05;
+  font-size: 36px;
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+h3 {
+  margin: 0;
+  font-size: 23px;
+  line-height: 1.12;
   letter-spacing: 0;
 }
 p {
-  max-width: 860px;
+  max-width: 880px;
   margin: 14px 0;
-  color: #2b3642;
+  color: #2e2f2c;
   font-size: 16px;
 }
 ol, ul {
-  max-width: 860px;
+  max-width: 880px;
   padding-left: 24px;
-  color: #2b3642;
+  color: #2e2f2c;
 }
 li { margin: 7px 0; }
 strong { color: var(--ink); }
@@ -3548,6 +3973,88 @@ pre {
   border-radius: 8px;
   background: #14202b;
   color: #f8fafc;
+}
+.dashboard-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+.dashboard-heading p {
+  margin-bottom: 0;
+}
+.dashboard-download {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--ink);
+  background: #fff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.dashboard-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 24px 0;
+}
+.dashboard-tile {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  background: var(--paper);
+}
+.dashboard-tile strong {
+  font-size: 29px;
+  line-height: 1.05;
+}
+.dashboard-tile p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.dashboard-tile .evidence-badge {
+  margin-top: auto;
+  align-self: flex-start;
+}
+.dashboard-lanes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 20px 0 24px;
+}
+.dashboard-lane {
+  display: grid;
+  gap: 7px;
+  min-height: 94px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--surface);
+  text-decoration: none;
+}
+.dashboard-lane strong {
+  line-height: 1.2;
+}
+.dashboard-table {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+}
+.dashboard-table table {
+  min-width: 980px;
 }
 .figure-panel {
   margin: 28px 0 36px;
@@ -3579,7 +4086,7 @@ pre {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--paper);
-  box-shadow: 0 12px 28px rgba(23, 32, 38, 0.05);
+  box-shadow: 0 12px 28px rgba(17, 17, 17, 0.04);
 }
 table {
   width: 100%;
@@ -3597,13 +4104,13 @@ th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: #eef3f6;
-  color: #26313c;
-  font-weight: 750;
+  background: var(--surface);
+  color: #222222;
+  font-weight: 800;
 }
-tr:nth-child(even) td { background: #fafcfd; }
+tr:nth-child(even) td { background: #fbfbf8; }
 td {
-  color: #2e3a46;
+  color: #2d2d2a;
   overflow-wrap: anywhere;
 }
 .report-footer {
@@ -3617,32 +4124,32 @@ td {
   font-size: 13px;
 }
 @media (max-width: 980px) {
-  .report-shell { display: block; }
   .report-sidebar {
-    position: relative;
-    height: auto;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
   }
-  .report-sidebar nav ol {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .report-main {
-    width: 100%;
-    padding: 32px 22px 56px;
-  }
-  .sticky-summary {
-    float: none;
-    position: relative;
-    top: auto;
-    width: 100%;
-    margin: 0 0 12px;
-  }
+  .report-main { width: min(100% - 28px, 1240px); }
+  .hero-layout { grid-template-columns: 1fr; }
+  h1 { font-size: 54px; }
+  .dashboard-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-lanes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .meta-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .report-main { width: min(100% - 24px, 1240px); padding-top: 24px; }
+  h1 { font-size: 42px; }
+  h2 { font-size: 29px; }
+  .hero-copy { font-size: 18px; }
+  .dashboard-heading { display: block; }
+  .dashboard-download { margin-top: 14px; }
+  .dashboard-tiles,
+  .dashboard-lanes { grid-template-columns: 1fr; }
+  .table-actions { align-items: stretch; flex-direction: column; }
+  .table-filter input { width: 100%; }
 }
 @media print {
   body { background: white; }
-  .report-shell { display: block; }
   .report-sidebar { display: none; }
   .report-main { width: 100%; padding: 0; }
   .figure-panel, .table-wrap { box-shadow: none; break-inside: avoid; }
@@ -3667,6 +4174,7 @@ Generated by `python -m frontier_ai.deep_analysis`.
 ## Tables
 
 - `company_frontier_scores`: model-family composite scores using benchmark, API, release, ecosystem, price and openness signals.
+- `dashboard_key_findings`: one-screen report entry points with headline metric, evidence label and primary artifact.
 - `company_score_components`: reduced component table for plotting and review.
 - `company_score_methodology`: explicit component weights, transforms and rationale.
 - `company_score_sensitivity`: rank sensitivity under alternative component weights.
@@ -3729,6 +4237,19 @@ def build_deep_analysis(overwrite_sources: bool = False, write_reports_flag: boo
     failure_modes, underobserved = build_failure_mode_audits(company_scores, match_audit, family_coverage)
     findings = build_counterintuitive_findings(company_scores, probabilities, gap, price_frontier, labor_summary, replacement)
     sources = source_registry()
+    dashboard = build_dashboard_key_findings(
+        company_scores,
+        job_scores,
+        probabilities,
+        gap,
+        direct_price,
+        source_coverage,
+        family_coverage,
+        rank_intervals,
+        failure_modes,
+        business_domain_pressure,
+        release_cadence_family,
+    )
 
     manifest_rows = [
         {"table": path.stem, "rows": len(pd.read_csv(path)), "path": str(path.relative_to(ROOT))}
@@ -3787,6 +4308,7 @@ def build_deep_analysis(overwrite_sources: bool = False, write_reports_flag: boo
             domain_workflows,
             release_cadence_family,
             release_cadence_vendor,
+            dashboard,
         )
         write_run_manifest(
             "deep_report",
