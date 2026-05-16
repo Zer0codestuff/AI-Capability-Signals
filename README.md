@@ -2,6 +2,8 @@
 
 Hiring-portfolio data project for tracking frontier AI model capability signals with public sources, reproducible ingestion, explicit caveats, and defensible heuristic analysis.
 
+Published report: https://zer0codestuff.github.io/AI-Capability-Signals/
+
 ## What This Project Shows
 
 - Public-source ingestion from Epoch AI, OpenRouter, LMArena, LiveBench, SWE-bench Verified, Hugging Face, OpenAlex, GitHub, and Anthropic Economic Index files.
