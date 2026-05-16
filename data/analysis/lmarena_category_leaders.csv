@@ -1,0 +1,57 @@
+category,model_family,access_bucket,model_name,organization,rating,rank,vote_count,analysis_captured_at
+document,Claude,closed_or_api,claude-opus-4-6-thinking,anthropic,1527.827468863649,1.0,7962.0,2026-05-16T11:27:28+00:00
+document,GPT,closed_or_api,gpt-5.5-high,openai,1498.3352465656094,5.0,3334.0,2026-05-16T11:27:28+00:00
+document,Gemini,closed_or_api,gemini-3.1-pro-preview,google,1462.0239473763693,4.0,1266.0,2026-05-16T11:27:28+00:00
+document,Other,closed_or_api,kimi-k2.6,moonshot,1458.73692339158,8.0,828.0,2026-05-16T11:27:28+00:00
+document,Gemma,open_weight,gemma-4-31b,google,1433.687985154499,10.0,1577.0,2026-05-16T11:27:28+00:00
+document,Grok,closed_or_api,grok-4.20-beta-0309-reasoning,xai,1426.875506385381,11.0,1346.0,2026-05-16T11:27:28+00:00
+image_edit,Other,closed_or_api,gpt-image-2 (medium),openai,1513.0111081104385,1.0,10252.0,2026-05-16T11:27:28+00:00
+image_edit,Gemini,closed_or_api,gemini-3-pro-image-preview-2k (nano-banana-pro),google,1408.6204438124778,1.0,37609.0,2026-05-16T11:27:28+00:00
+image_edit,Grok,closed_or_api,grok-imagine-image-quality,xai,1356.0504922715318,7.0,8929.0,2026-05-16T11:27:28+00:00
+image_edit,Qwen,open_weight,qwen-image-2.0-pro-2026-04-22,alibaba,1272.2820948867309,17.0,6860.0,2026-05-16T11:27:28+00:00
+image_edit,GPT,closed_or_api,kling-image-o1,kling,1257.589459994102,11.0,10172.0,2026-05-16T11:27:28+00:00
+search,Claude,closed_or_api,claude-opus-4-6-search,anthropic,1255.8640018663891,1.0,3337.0,2026-05-16T11:27:28+00:00
+search,GPT,closed_or_api,gpt-5.5-search,openai,1241.9879204126996,2.0,7348.0,2026-05-16T11:27:28+00:00
+search,Grok,closed_or_api,grok-4.20-beta1,xai,1225.627221100342,2.0,3992.0,2026-05-16T11:27:28+00:00
+search,Other,closed_or_api,ernie-5.1,baidu,1225.54421671289,4.0,2293.0,2026-05-16T11:27:28+00:00
+search,Gemini,closed_or_api,gemini-3-flash-grounding,google,1223.6140069501632,1.0,11062.0,2026-05-16T11:27:28+00:00
+text,GPT,closed_or_api,o1-2024-12-17,openai,1619.7821471012762,1.0,97.0,2026-05-16T11:27:28+00:00
+text,Other,closed_or_api,chatgpt-4o-latest-20250326,openai,1573.256683785629,1.0,3303.0,2026-05-16T11:27:28+00:00
+text,Claude,closed_or_api,claude-opus-4-6,anthropic,1571.8497650481618,1.0,219.0,2026-05-16T11:27:28+00:00
+text,Grok,closed_or_api,grok-3-preview-02-24,xai,1571.2656280202125,2.0,2306.0,2026-05-16T11:27:28+00:00
+text,Gemini,closed_or_api,gemini-3.1-pro-preview,google,1560.5937993713349,2.0,213.0,2026-05-16T11:27:28+00:00
+text,Qwen,open_weight,qwen3.5-max-preview,alibaba,1549.227871094854,2.0,291.0,2026-05-16T11:27:28+00:00
+text,DeepSeek,open_weight,deepseek-r1,deepseek,1528.507077844067,1.0,66.0,2026-05-16T11:27:28+00:00
+text,Mistral,open_weight,mistral-medium-2508,mistral,1507.9217319197355,1.0,200.0,2026-05-16T11:27:28+00:00
+text,Gemma,open_weight,gemma-4-26b-a4b,google,1488.798269314228,20.0,361.0,2026-05-16T11:27:28+00:00
+text,GPT,open_weight,gpt-oss-120b,openai,1452.8114366207992,2.0,52.0,2026-05-16T11:27:28+00:00
+text,Command,closed_or_api,command-a-03-2025,cohere,1439.4215693390065,9.0,104.0,2026-05-16T11:27:28+00:00
+text,Llama,open_weight,llama-3.1-nemotron-ultra-253b-v1,nvidia,1417.226742140817,6.0,42.0,2026-05-16T11:27:28+00:00
+text,Other,open_weight,codellama-70b-instruct,meta,1400.9204085353886,1.0,5.0,2026-05-16T11:27:28+00:00
+text,Command,open_weight,command-r-plus-08-2024,cohere,1326.3806841539713,16.0,55.0,2026-05-16T11:27:28+00:00
+text,Phi,open_weight,phi-4,microsoft,1325.1763615409457,34.0,137.0,2026-05-16T11:27:28+00:00
+text,Yi,open_weight,yi-1.5-34b-chat,01 AI,1274.4629586958804,9.0,940.0,2026-05-16T11:27:28+00:00
+text_to_image,Other,closed_or_api,gpt-image-2 (medium),openai,1574.2435525676242,1.0,6161.0,2026-05-16T11:27:28+00:00
+text_to_image,Gemini,closed_or_api,gemini-3.1-flash-image-preview (nano-banana-2) [web-search],google,1324.207898118516,1.0,1092.0,2026-05-16T11:27:28+00:00
+text_to_image,Grok,closed_or_api,grok-imagine-image-quality,xai,1264.5276719194371,3.0,2409.0,2026-05-16T11:27:28+00:00
+text_to_image,Qwen,open_weight,qwen-image-2.0-pro-2026-04-22,alibaba,1212.6857458083412,7.0,1316.0,2026-05-16T11:27:28+00:00
+vision,GPT,closed_or_api,o3-2025-04-16,openai,1451.6865163930936,1.0,34.0,2026-05-16T11:27:28+00:00
+vision,Gemini,closed_or_api,gemini-2.5-pro,google,1445.018679561757,1.0,401.0,2026-05-16T11:27:28+00:00
+vision,Grok,closed_or_api,grok-4-0709,xai,1405.923732579192,2.0,143.0,2026-05-16T11:27:28+00:00
+vision,Claude,closed_or_api,claude-opus-4-6-thinking,anthropic,1397.7909127562784,1.0,304.0,2026-05-16T11:27:28+00:00
+vision,Other,closed_or_api,dola-seed-2.0-preview,Bytedance,1390.8646586808109,1.0,145.0,2026-05-16T11:27:28+00:00
+vision,Qwen,open_weight,qwen3.5-397b-a17b,alibaba,1341.839120952578,5.0,237.0,2026-05-16T11:27:28+00:00
+vision,Gemma,open_weight,gemma-4-26b-a4b,google,1337.7470108143043,11.0,559.0,2026-05-16T11:27:28+00:00
+vision,Mistral,open_weight,mistral-medium-2505,mistral,1286.4682056311872,16.0,1739.0,2026-05-16T11:27:28+00:00
+vision,Llama,open_weight,llama-4-maverick-17b-128e-instruct,meta,1274.534961578383,16.0,173.0,2026-05-16T11:27:28+00:00
+vision,Other,open_weight,molmo-72b-0924,Ai2,1119.454603530889,11.0,1120.0,2026-05-16T11:27:28+00:00
+vision,Phi,open_weight,phi-3.5-vision-instruct,microsoft,941.8372793575452,33.0,1620.0,2026-05-16T11:27:28+00:00
+webdev,Claude,closed_or_api,claude-opus-4-7-thinking,anthropic,1586.928798035784,1.0,1498.0,2026-05-16T11:27:28+00:00
+webdev,Other,closed_or_api,glm-5.1,zai,1540.3444785347142,5.0,500.0,2026-05-16T11:27:28+00:00
+webdev,GPT,closed_or_api,gpt-5.5-xhigh (codex-harness),openai,1536.7625484951511,5.0,1816.0,2026-05-16T11:27:28+00:00
+webdev,Gemini,closed_or_api,gemini-3.1-pro-preview,google,1522.170361298268,3.0,222.0,2026-05-16T11:27:28+00:00
+webdev,Qwen,open_weight,qwen3.6-max-preview,alibaba,1491.3053126020395,10.0,1900.0,2026-05-16T11:27:28+00:00
+webdev,DeepSeek,open_weight,deepseek-v4-pro-thinking,deepseek,1489.3202689424093,11.0,145.0,2026-05-16T11:27:28+00:00
+webdev,Grok,closed_or_api,grok-4.3,xai,1408.482136915802,27.0,1048.0,2026-05-16T11:27:28+00:00
+webdev,Gemma,open_weight,gemma-4-31b,google,1386.8621712019192,40.0,2309.0,2026-05-16T11:27:28+00:00
+webdev,Mistral,open_weight,mistral-large-3,mistral,1229.1367373503008,62.0,1031.0,2026-05-16T11:27:28+00:00

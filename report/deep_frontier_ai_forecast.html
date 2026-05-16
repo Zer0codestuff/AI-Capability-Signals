@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang='en'>
+<head>
+<meta charset='utf-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<title>Deep Frontier AI Analysis</title>
+<style>
+
+:root {
+  color-scheme: light;
+  --bg: #f5f7f8;
+  --paper: #ffffff;
+  --ink: #172026;
+  --muted: #667586;
+  --line: #dfe5ec;
+  --line-strong: #c7d0da;
+  --blue: #2f5d7c;
+  --teal: #248277;
+  --gold: #c58b2b;
+  --red: #a23b3b;
+  --code-bg: #eef3f6;
+  --shadow: 0 18px 50px rgba(23, 32, 38, 0.08);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.62;
+}
+a { color: var(--blue); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.report-shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: 100vh;
+}
+.report-sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  padding: 32px 24px;
+  border-right: 1px solid var(--line);
+  background: #fbfcfd;
+  overflow-y: auto;
+}
+.sidebar-title {
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0;
+}
+.sidebar-subtitle {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.report-sidebar nav { margin-top: 28px; }
+.report-sidebar ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.report-sidebar a {
+  display: block;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: #3f4c59;
+  text-decoration: none;
+  font-size: 13px;
+  line-height: 1.25;
+}
+.report-sidebar a:hover {
+  background: #eef3f6;
+  color: var(--ink);
+}
+.report-main {
+  width: min(1180px, calc(100vw - 280px));
+  margin: 0 auto;
+  padding: 48px 42px 72px;
+}
+.hero {
+  padding: 48px 0 40px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.eyebrow {
+  color: var(--teal);
+  font-weight: 750;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+h1 {
+  margin: 12px 0 16px;
+  max-width: 940px;
+  font-size: clamp(42px, 6vw, 78px);
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+.hero-copy {
+  max-width: 820px;
+  font-size: 19px;
+  color: #415060;
+}
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 860px;
+  margin-top: 28px;
+}
+.meta-grid div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: var(--paper);
+}
+.meta-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.meta-grid strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+}
+.report-preamble,
+.report-section {
+  padding: 38px 0 18px;
+}
+.section-rule {
+  width: 72px;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--blue), var(--teal), var(--gold));
+  margin-bottom: 20px;
+}
+h2 {
+  margin: 0 0 14px;
+  font-size: clamp(28px, 3.2vw, 44px);
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+p {
+  max-width: 860px;
+  margin: 14px 0;
+  color: #2b3642;
+  font-size: 16px;
+}
+ol, ul {
+  max-width: 860px;
+  padding-left: 24px;
+  color: #2b3642;
+}
+li { margin: 7px 0; }
+strong { color: var(--ink); }
+code {
+  background: var(--code-bg);
+  padding: 2px 5px;
+  border-radius: 5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+}
+pre {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 18px;
+  border-radius: 8px;
+  background: #14202b;
+  color: #f8fafc;
+}
+.figure-panel {
+  margin: 28px 0 36px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.figure-panel a {
+  display: block;
+  background: #fff;
+}
+.figure-panel img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.figure-panel figcaption {
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+}
+.table-wrap {
+  width: 100%;
+  margin: 24px 0 32px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: 0 12px 28px rgba(23, 32, 38, 0.05);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 760px;
+}
+th, td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #eef3f6;
+  color: #26313c;
+  font-weight: 750;
+}
+tr:nth-child(even) td { background: #fafcfd; }
+td {
+  color: #2e3a46;
+  overflow-wrap: anywhere;
+}
+.report-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 52px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 13px;
+}
+@media (max-width: 980px) {
+  .report-shell { display: block; }
+  .report-sidebar {
+    position: relative;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .report-sidebar nav ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .report-main {
+    width: 100%;
+    padding: 32px 22px 56px;
+  }
+  .meta-grid { grid-template-columns: 1fr; }
+}
+@media print {
+  body { background: white; }
+  .report-shell { display: block; }
+  .report-sidebar { display: none; }
+  .report-main { width: 100%; padding: 0; }
+  .figure-panel, .table-wrap { box-shadow: none; break-inside: avoid; }
+  a { color: inherit; text-decoration: none; }
+}
+
+</style>
+</head>
+<body>
+<div class='report-shell'>
+<aside class='report-sidebar' aria-label='Report navigation'>
+<div class='sidebar-title'>Frontier AI</div>
+<div class='sidebar-subtitle'>Deep analysis report</div>
+<nav><ol>
+<li><a href='#how-to-read-this-report'>How To Read This Report</a></li>
+<li><a href='#executive-takeaways'>Executive Takeaways</a></li>
+<li><a href='#model-family-frontier-score'>Model Family Frontier Score</a></li>
+<li><a href='#who-builds-the-next-best-model'>Who Builds The Next Best Model?</a></li>
+<li><a href='#open-vs-closed-where-is-the-gap'>Open vs Closed: Where Is The Gap?</a></li>
+<li><a href='#price-performance-frontier'>Price-Performance Frontier</a></li>
+<li><a href='#job-exposure-and-labor-pressure'>Job Exposure And Labor Pressure</a></li>
+<li><a href='#whole-job-replacement-feasibility'>Whole-Job Replacement Feasibility</a></li>
+<li><a href='#labor-clusters'>Labor Clusters</a></li>
+<li><a href='#2-5-and-10-year-forecasts'>2, 5 And 10 Year Forecasts</a></li>
+<li><a href='#historical-analogy'>Historical Analogy</a></li>
+<li><a href='#forecast-claims'>Forecast Claims</a></li>
+<li><a href='#counterintuitive-findings'>Counterintuitive Findings</a></li>
+<li><a href='#method-notes'>Method Notes</a></li>
+<li><a href='#generated-artifacts'>Generated Artifacts</a></li>
+</ol></nav>
+</aside>
+<main id='top' class='report-main'>
+<header class='hero'>
+<div class='eyebrow'>Hiring portfolio analysis</div>
+<h1>Deep Frontier AI Analysis</h1>
+<p class='hero-copy'>A public-source, audit-friendly view of frontier model signals, open/closed gaps, deployability economics and labor exposure. The report favors transparent assumptions over false precision.</p>
+<div class='meta-grid'>
+<div><span>Reference date</span><strong>2026-05-15</strong></div>
+<div><span>Generated</span><strong>2026-05-16T11:27:28+00:00</strong></div>
+<div><span>Method</span><strong>Heuristic + sensitivity</strong></div>
+</div>
+</header>
+<section class='report-preamble'>
+<p>This report is deliberately data-heavy. It uses the local rich frontier-model dataset plus the public Anthropic Economic Index release files for occupation exposure, task penetration, O*NET task text and BLS wage/employment companion fields. The goal is not to claim precision about the future; it is to make the assumptions inspectable enough that the forecast can be argued with.</p>
+</section>
+<section id='how-to-read-this-report' class='report-section'>
+<div class='section-rule'></div>
+<h2>How To Read This Report</h2>
+<p>The report is organized around three questions:</p>
+<ol>
+<li><strong>Who has the strongest frontier-family signal right now?</strong> The answer is a composite heuristic, so the report shows both rank and component composition instead of hiding the weighting.</li>
+<li><strong>Where are the counterintuitive gaps?</strong> Open-weight systems, low prices, context windows and benchmark ratings move on different axes. The plots keep those axes separate.</li>
+<li><strong>What happens when model capability meets labor structure?</strong> Occupation exposure is not the same thing as replacement. The labor section separates task pressure, augmentation, bottlenecks and whole-job feasibility.</li>
+</ol>
+<p>Every chart should be read as an audit surface. If a conclusion depends on one metric, the report names that metric and shows the caveat near the visualization.</p>
+</section>
+<section id='executive-takeaways' class='report-section'>
+<div class='section-rule'></div>
+<h2>Executive Takeaways</h2>
+<ol>
+<li><strong>Near-term frontier-family leadership is concentrated, but not one-dimensional.</strong> The highest heuristic index in this run is <strong>Qwen</strong> with a frontier momentum heuristic index of <strong>79.2</strong>. The strongest openness/cost/ecosystem signal is <strong>Qwen</strong>, which is not automatically the same thing as best closed frontier performance.</li>
+<li><strong>The next-winner question is a simulation sensitivity exercise.</strong> The table changes component weights thousands of times and injects evidence noise. Its shares are not calibrated probabilities.</li>
+<li><strong>Open vs closed is category-specific.</strong> Some LMArena categories show narrow gaps; others preserve a clear closed/API advantage. &quot;Open source caught up&quot; is too crude.</li>
+<li><strong>The job story is not &quot;all jobs disappear.&quot;</strong> The highest-risk roles are task bundles where language, analysis, clerical transformation and directive delegation are already exposed. Jobs with physical work, trust, regulation or face-to-face accountability keep meaningful bottlenecks.</li>
+<li><strong>The 10-year question is institutional, not only technical.</strong> In the base scenario, AI materially touches a large share of occupational tasks by 2036, but the binding constraint becomes verification, liability, workflow redesign and who owns the interface to work.</li>
+</ol>
+</section>
+<section id='model-family-frontier-score' class='report-section'>
+<div class='section-rule'></div>
+<h2>Model Family Frontier Score</h2>
+<p>The index ranks model families and product lines, not legal companies. It blends benchmark performance, release velocity, API surface, price, research/ecosystem pull and openness. It is not a universal truth; sensitivity outputs show which rankings are weight-sensitive.</p>
+<div class='table-wrap'><table><tr><th>rank</th><th>model_family</th><th>frontier_momentum_heuristic_index</th><th>sensitivity_label</th><th>performance_component</th><th>release_velocity_component</th><th>ecosystem_component</th><th>cost_efficiency_component</th><th>openness_component</th></tr><tr><td>1</td><td>Qwen</td><td>79.16</td><td>stable_top_tier</td><td>74.6117</td><td>87.0417</td><td>80.9259</td><td>94.6247</td><td>97.9167</td></tr><tr><td>2</td><td>GPT</td><td>78.54</td><td>stable_top_tier</td><td>69.2487</td><td>100</td><td>87.1657</td><td>91.7046</td><td>41.4415</td></tr><tr><td>3</td><td>Mistral</td><td>56.7</td><td>weight_sensitive</td><td>45.7925</td><td>37.1667</td><td>70.6138</td><td>100</td><td>95.1064</td></tr><tr><td>4</td><td>Claude</td><td>55.27</td><td>weight_sensitive</td><td>69.9818</td><td>37.0417</td><td>57.7862</td><td>36.1209</td><td>55</td></tr><tr><td>5</td><td>Llama</td><td>55.09</td><td>weight_sensitive</td><td>36.747</td><td>4.64583</td><td>81.3439</td><td>100</td><td>91.607</td></tr><tr><td>6</td><td>DeepSeek</td><td>55.01</td><td>weight_sensitive</td><td>33.7632</td><td>34.3542</td><td>78.004</td><td>85.8923</td><td>92.2704</td></tr><tr><td>7</td><td>Gemini</td><td>52.32</td><td>weight_sensitive</td><td>64.5602</td><td>51.1042</td><td>35.3614</td><td>80.9676</td><td>0</td></tr><tr><td>8</td><td>Gemma</td><td>47.4</td><td>weight_sensitive</td><td>38.4005</td><td>10.1458</td><td>65.6807</td><td>96.1247</td><td>91.9149</td></tr><tr><td>9</td><td>Phi</td><td>36.59</td><td>weight_sensitive</td><td>22.6984</td><td>1.83333</td><td>48.871</td><td>91.7046</td><td>83.1769</td></tr><tr><td>10</td><td>Grok</td><td>28.67</td><td>weight_sensitive</td><td>37.5893</td><td>25.1875</td><td>27.389</td><td>0</td><td>1.84211</td></tr><tr><td>11</td><td>Command</td><td>23.6</td><td>weight_sensitive</td><td>24.9707</td><td>0</td><td>0</td><td>90.9906</td><td>61.6667</td></tr><tr><td>12</td><td>Cohere</td><td>0</td><td>weight_sensitive</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr></table></div>
+<figure class='figure-panel'><a href='../figures/deep_analysis/company_frontier_scores.png'><img loading='lazy' alt='Company frontier scores' src='../figures/deep_analysis/company_frontier_scores.png'></a><figcaption>Company frontier scores</figcaption></figure>
+<p>The headline rank is only the entry point. The stacked component chart below shows why a family ranks where it ranks. That matters because two families can have similar headline indexes for very different reasons: one may be performance-heavy, another may be ecosystem-heavy or cost-efficient.</p>
+<figure class='figure-panel'><a href='../figures/deep_analysis/company_score_component_stack.png'><img loading='lazy' alt='Score component stack' src='../figures/deep_analysis/company_score_component_stack.png'></a><figcaption>Score component stack</figcaption></figure>
+<p>The evidence-depth scatter is the reviewer sanity check. A family with high score and high evidence count is more defensible than a family with a high score from sparse rows. Bubble size is tied to API catalog breadth, while color shows openness.</p>
+<figure class='figure-panel'><a href='../figures/deep_analysis/company_score_evidence_scatter.png'><img loading='lazy' alt='Score evidence scatter' src='../figures/deep_analysis/company_score_evidence_scatter.png'></a><figcaption>Score evidence scatter</figcaption></figure>
+</section>
+<section id='who-builds-the-next-best-model' class='report-section'>
+<div class='section-rule'></div>
+<h2>Who Builds The Next Best Model?</h2>
+<p>This table is not a prediction market. It is a Monte Carlo stress test over the scoring components: benchmark performance, release velocity, ecosystem pull, capability surface, cost and openness. <code>simulation_win_share</code> is the share of simulation draws won by each family, not a calibrated real-world probability. The corrected version separates <strong>frontier-quality leadership</strong> from <strong>open-ecosystem upside</strong>. The former asks who is most likely to make the raw best model; the latter asks who benefits if distribution and low cost matter more.</p>
+<p>2-year simulated leaders:</p>
+<div class='table-wrap'><table><tr><th>model_family</th><th>simulation_win_share</th><th>simulated_score_p10</th><th>simulated_score_p90</th></tr><tr><td>GPT</td><td>70.8%</td><td>74.22</td><td>82.02</td></tr><tr><td>Qwen</td><td>29.2%</td><td>71.93</td><td>79.77</td></tr><tr><td>Mistral</td><td>0.0%</td><td>42.09</td><td>49.96</td></tr><tr><td>Claude</td><td>0.0%</td><td>54.11</td><td>61.81</td></tr><tr><td>Llama</td><td>0.0%</td><td>36.48</td><td>45.61</td></tr><tr><td>DeepSeek</td><td>0.0%</td><td>39.48</td><td>47.68</td></tr><tr><td>Gemini</td><td>0.0%</td><td>51.96</td><td>59.7</td></tr><tr><td>Gemma</td><td>0.0%</td><td>30.47</td><td>38.9</td></tr><tr><td>Phi</td><td>0.0%</td><td>19.32</td><td>27.73</td></tr><tr><td>Grok</td><td>0.0%</td><td>30.72</td><td>38.27</td></tr></table></div>
+<p>10-year simulated leaders, frontier-quality scenario:</p>
+<div class='table-wrap'><table><tr><th>model_family</th><th>simulation_win_share</th><th>simulated_score_p10</th><th>simulated_score_p90</th></tr><tr><td>GPT</td><td>52.7%</td><td>71.34</td><td>82.92</td></tr><tr><td>Qwen</td><td>47.3%</td><td>70.95</td><td>82.43</td></tr><tr><td>Mistral</td><td>0.0%</td><td>44.27</td><td>56</td></tr><tr><td>Claude</td><td>0.0%</td><td>51.46</td><td>62.72</td></tr><tr><td>Llama</td><td>0.0%</td><td>41.63</td><td>54.4</td></tr><tr><td>DeepSeek</td><td>0.0%</td><td>43.13</td><td>55.03</td></tr><tr><td>Gemini</td><td>0.0%</td><td>46.83</td><td>58.53</td></tr><tr><td>Gemma</td><td>0.0%</td><td>34.26</td><td>46.07</td></tr><tr><td>Phi</td><td>0.0%</td><td>23.25</td><td>35.36</td></tr><tr><td>Grok</td><td>0.0%</td><td>26.92</td><td>38.35</td></tr></table></div>
+<p>10-year simulated leaders, open-ecosystem-upside scenario:</p>
+<div class='table-wrap'><table><tr><th>model_family</th><th>simulation_win_share</th><th>simulated_score_p10</th><th>simulated_score_p90</th></tr><tr><td>Qwen</td><td>74.1%</td><td>75.47</td><td>86.6</td></tr><tr><td>GPT</td><td>25.9%</td><td>71.13</td><td>82.78</td></tr><tr><td>Mistral</td><td>0.0%</td><td>55.1</td><td>67.17</td></tr><tr><td>Llama</td><td>0.0%</td><td>53.87</td><td>66.73</td></tr><tr><td>Claude</td><td>0.0%</td><td>49.36</td><td>60.81</td></tr><tr><td>DeepSeek</td><td>0.0%</td><td>54.04</td><td>66.26</td></tr><tr><td>Gemini</td><td>0.0%</td><td>41.12</td><td>53.13</td></tr><tr><td>Gemma</td><td>0.0%</td><td>46.31</td><td>58.95</td></tr><tr><td>Phi</td><td>0.0%</td><td>35.32</td><td>48.06</td></tr><tr><td>Grok</td><td>0.0%</td><td>20.36</td><td>32.09</td></tr></table></div>
+<figure class='figure-panel'><a href='../figures/deep_analysis/company_next_frontier_probabilities.png'><img loading='lazy' alt='Next frontier probabilities' src='../figures/deep_analysis/company_next_frontier_probabilities.png'></a><figcaption>Next frontier probabilities</figcaption></figure>
+<p>The scenario matrix compresses the same simulation into a reviewer-friendly view: each cell names the leading family under a scenario/horizon pair and reports its share of simulation draws. This makes it obvious when the answer changes because the question changed.</p>
+<figure class='figure-panel'><a href='../figures/deep_analysis/leadership_scenario_matrix.png'><img loading='lazy' alt='Leadership scenario matrix' src='../figures/deep_analysis/leadership_scenario_matrix.png'></a><figcaption>Leadership scenario matrix</figcaption></figure>
+</section>
+<section id='open-vs-closed-where-is-the-gap' class='report-section'>
+<div class='section-rule'></div>
+<h2>Open vs Closed: Where Is The Gap?</h2>
+<div class='table-wrap'><table><tr><th>category</th><th>closed_or_api</th><th>open_weight</th><th>open_closed_best_gap</th><th>open_closed_gap_pct_of_closed</th><th>comparison_note</th></tr><tr><td>text_to_image</td><td>1574.24</td><td>1212.6857458083412</td><td>361.56</td><td>0.2297</td><td>Comparable open-weight and closed/API rows observed in selected snapshot.</td></tr><tr><td>image_edit</td><td>1513.01</td><td>1272.2820948867309</td><td>240.73</td><td>0.1591</td><td>Comparable open-weight and closed/API rows observed in selected snapshot.</td></tr><tr><td>vision</td><td>1451.69</td><td>1341.839120952578</td><td>109.85</td><td>0.0757</td><td>Comparable open-weight and closed/API rows observed in selected snapshot.</td></tr><tr><td>webdev</td><td>1586.93</td><td>1491.3053126020395</td><td>95.62</td><td>0.0603</td><td>Comparable open-weight and closed/API rows observed in selected snapshot.</td></tr><tr><td>document</td><td>1527.83</td><td>1433.687985154499</td><td>94.14</td><td>0.0616</td><td>Comparable open-weight and closed/API rows observed in selected snapshot.</td></tr><tr><td>text</td><td>1619.78</td><td>1549.227871094854</td><td>70.55</td><td>0.0436</td><td>Comparable open-weight and closed/API rows observed in selected snapshot.</td></tr><tr><td>search</td><td>1255.86</td><td>n/a</td><td>n/a</td><td>0</td><td>No comparable open-weight or closed/API row in selected snapshot.</td></tr></table></div>
+<figure class='figure-panel'><a href='../figures/deep_analysis/open_closed_gap_by_category.png'><img loading='lazy' alt='Open closed gap by category' src='../figures/deep_analysis/open_closed_gap_by_category.png'></a><figcaption>Open closed gap by category</figcaption></figure>
+<p>The gap chart shows differences, but differences alone can hide whether both sides are high-quality. The paired rating chart below shows the actual open and closed best observed ratings by category where both sides exist.</p>
+<figure class='figure-panel'><a href='../figures/deep_analysis/open_closed_category_levels.png'><img loading='lazy' alt='Open closed category levels' src='../figures/deep_analysis/open_closed_category_levels.png'></a><figcaption>Open closed category levels</figcaption></figure>
+</section>
+<section id='price-performance-frontier' class='report-section'>
+<div class='section-rule'></div>
+<h2>Price-Performance Frontier</h2>
+<p>Raw best model and economically deployable model are not the same decision. This frontier is explicitly a family-level proxy: OpenRouter model prices are joined to the best observed LMArena rating for the model family, not to a direct benchmark for every listed model. It should be read as a deployability screen, not model-level proof.</p>
+<div class='table-wrap'><table><tr><th>canonical_model</th><th>model_family</th><th>access_class</th><th>blended_price_usd_per_1m</th><th>family_best_lmarena</th><th>quality_proxy_level</th><th>price_performance_index</th></tr><tr><td>OpenAI: gpt-oss-20b</td><td>GPT</td><td>open_weight</td><td>0.1015</td><td>1619.78</td><td>family_level_proxy</td><td>91.48</td></tr><tr><td>inclusionAI: Ling-2.6-flash</td><td>Other</td><td>unknown</td><td>0.023</td><td>1574.24</td><td>family_level_proxy</td><td>82.18</td></tr></table></div>
+<figure class='figure-panel'><a href='../figures/deep_analysis/price_performance_frontier.png'><img loading='lazy' alt='Price performance frontier' src='../figures/deep_analysis/price_performance_frontier.png'></a><figcaption>Price performance frontier</figcaption></figure>
+<p>The context-price map keeps three product dimensions visible at once: context window, blended token price and family-level rating proxy. It prevents a common mistake in AI market analysis: treating cheap, long-context and high-quality as one metric.</p>
+<figure class='figure-panel'><a href='../figures/deep_analysis/price_context_rating_map.png'><img loading='lazy' alt='Context price rating map' src='../figures/deep_analysis/price_context_rating_map.png'></a><figcaption>Context price rating map</figcaption></figure>
+</section>
+<section id='job-exposure-and-labor-pressure' class='report-section'>
+<div class='section-rule'></div>
+<h2>Job Exposure And Labor Pressure</h2>
+<p>The labor table joins Anthropic observed occupation exposure to wage/job companion data, task-level penetration, automation/augmentation mode shares, and keyword-derived task bottlenecks from O*NET text. The output is an occupation-level pressure index, not a prediction that a whole occupation vanishes.</p>
+<div class='table-wrap'><table><tr><th>title</th><th>near_term_disruption_index</th><th>substitution_pressure_index</th><th>augmentation_index</th><th>full_job_automation_feasibility_index</th><th>dominant_outcome</th><th>risk_label</th></tr><tr><td>Data Entry Keyers</td><td>60.16</td><td>68.88</td><td>51.54</td><td>37.72</td><td>replacement_candidate</td><td>very_high</td></tr><tr><td>Market Research Analysts and Marketing Specialists</td><td>59.55</td><td>56.36</td><td>67.43</td><td>38.97</td><td>replacement_candidate</td><td>high</td></tr><tr><td>Medical Transcriptionists</td><td>58.94</td><td>60.44</td><td>60.15</td><td>28.27</td><td>mixed_redesign</td><td>high</td></tr><tr><td>Technical Writers</td><td>58.6</td><td>55.78</td><td>59.26</td><td>36.26</td><td>replacement_candidate</td><td>high</td></tr><tr><td>Sales Representatives, Wholesale and Manufacturing, Except Technical and Scientific Products</td><td>54.97</td><td>55.94</td><td>56.77</td><td>34.77</td><td>mixed_redesign</td><td>high</td></tr><tr><td>Financial and Investment Analysts</td><td>53.75</td><td>40.35</td><td>66.37</td><td>27.24</td><td>augmentation_first</td><td>high</td></tr><tr><td>Statistical Assistants</td><td>53.55</td><td>47.71</td><td>59.62</td><td>31.6</td><td>augmentation_first</td><td>high</td></tr><tr><td>Human Resources Assistants, Except Payroll and Timekeeping</td><td>51.76</td><td>50.06</td><td>52.03</td><td>30.44</td><td>mixed_redesign</td><td>high</td></tr><tr><td>Mathematical Science Teachers, Postsecondary</td><td>50.86</td><td>43.32</td><td>53.09</td><td>26.39</td><td>augmentation_first</td><td>high</td></tr><tr><td>Social Science Research Assistants</td><td>50.61</td><td>44.68</td><td>55.18</td><td>27.3</td><td>augmentation_first</td><td>high</td></tr><tr><td>Engineering Teachers, Postsecondary</td><td>50.23</td><td>40.29</td><td>50.32</td><td>24.37</td><td>augmentation_first</td><td>high</td></tr><tr><td>Receptionists and Information Clerks</td><td>49.89</td><td>53.46</td><td>49.79</td><td>30.45</td><td>mixed_redesign</td><td>high</td></tr></table></div>
+<figure class='figure-panel'><a href='../figures/deep_analysis/job_exposure_top.png'><img loading='lazy' alt='Job exposure top' src='../figures/deep_analysis/job_exposure_top.png'></a><figcaption>Job exposure top</figcaption></figure>
+<figure class='figure-panel'><a href='../figures/deep_analysis/job_exposure_wage_scatter.png'><img loading='lazy' alt='Wage scatter' src='../figures/deep_analysis/job_exposure_wage_scatter.png'></a><figcaption>Wage scatter</figcaption></figure>
+</section>
+<section id='whole-job-replacement-feasibility' class='report-section'>
+<div class='section-rule'></div>
+<h2>Whole-Job Replacement Feasibility</h2>
+<p>The replacement feasibility index gates substitution pressure through physical, trust, regulatory and task-coverage bottlenecks. This is the section that answers the &quot;will AI take all jobs&quot; question more honestly: many occupations are touched; fewer are clean full-job replacement candidates.</p>
+<div class='table-wrap'><table><tr><th>title</th><th>job_family</th><th>full_job_automation_feasibility_index</th><th>substitution_pressure_index</th><th>human_bottleneck_index</th><th>dominant_outcome</th></tr><tr><td>Market Research Analysts and Marketing Specialists</td><td>Business and Financial Operations</td><td>38.97</td><td>56.36</td><td>0</td><td>replacement_candidate</td></tr><tr><td>Data Entry Keyers</td><td>Office and Administrative Support</td><td>37.72</td><td>68.88</td><td>0</td><td>replacement_candidate</td></tr><tr><td>Technical Writers</td><td>Arts, Design, Entertainment, Sports, and Media</td><td>36.26</td><td>55.78</td><td>0</td><td>replacement_candidate</td></tr><tr><td>Sales Representatives, Wholesale and Manufacturing, Except Technical and Scientific Products</td><td>Sales and Related</td><td>34.77</td><td>55.94</td><td>2.4</td><td>mixed_redesign</td></tr><tr><td>Office Clerks, General</td><td>Office and Administrative Support</td><td>32.08</td><td>51.56</td><td>1.22</td><td>mixed_redesign</td></tr><tr><td>Statistical Assistants</td><td>Office and Administrative Support</td><td>31.6</td><td>47.71</td><td>0.78</td><td>augmentation_first</td></tr><tr><td>Receptionists and Information Clerks</td><td>Office and Administrative Support</td><td>30.45</td><td>53.46</td><td>1.26</td><td>mixed_redesign</td></tr><tr><td>Human Resources Assistants, Except Payroll and Timekeeping</td><td>Office and Administrative Support</td><td>30.44</td><td>50.06</td><td>0</td><td>mixed_redesign</td></tr><tr><td>Secretaries and Administrative Assistants, Except Legal, Medical, and Executive</td><td>Office and Administrative Support</td><td>30.34</td><td>52.33</td><td>1.95</td><td>mixed_redesign</td></tr><tr><td>Medical Transcriptionists</td><td>Healthcare Support</td><td>28.27</td><td>60.44</td><td>9.95</td><td>mixed_redesign</td></tr><tr><td>Switchboard Operators, Including Answering Service</td><td>Office and Administrative Support</td><td>27.58</td><td>49.12</td><td>0.68</td><td>mixed_redesign</td></tr><tr><td>Social Science Research Assistants</td><td>Life, Physical, and Social Science</td><td>27.3</td><td>44.68</td><td>0.68</td><td>augmentation_first</td></tr></table></div>
+<figure class='figure-panel'><a href='../figures/deep_analysis/job_replacement_feasibility.png'><img loading='lazy' alt='Replacement feasibility' src='../figures/deep_analysis/job_replacement_feasibility.png'></a><figcaption>Replacement feasibility</figcaption></figure>
+</section>
+<section id='labor-clusters' class='report-section'>
+<div class='section-rule'></div>
+<h2>Labor Clusters</h2>
+<div class='table-wrap'><table><tr><th>labor_cluster_id</th><th>cluster_label</th><th>occupation_count</th><th>full_job_automation_feasibility_index</th><th>augmentation_index</th><th>human_bottleneck_index</th><th>example_occupations</th></tr><tr><td>2</td><td>replacement-prone clerical/transaction work</td><td>98</td><td>20.7162</td><td>46.4024</td><td>1.55796</td><td>Data Entry Keyers; Market Research Analysts and Marketing Specialists; Medical Transcriptionists; Technical Writers; Sales Representatives, Wholesale and Manufacturing, Except Technical and Scientific Products</td></tr><tr><td>0</td><td>mixed redesign work</td><td>138</td><td>14.3645</td><td>32.4154</td><td>2.20072</td><td>Dispatchers, Except Police, Fire, and Ambulance; Counter and Rental Clerks; Tax Preparers; Nursing Instructors and Teachers, Postsecondary; Procurement Clerks</td></tr><tr><td>4</td><td>augmentation-heavy expert work</td><td>27</td><td>10.737</td><td>32.2737</td><td>1.55037</td><td>Desktop Publishers; Special Effects Artists and Animators; Photographic Process Workers and Processing Machine Operators; Graphic Designers; Art Directors</td></tr><tr><td>6</td><td>mixed redesign work</td><td>215</td><td>9.09526</td><td>19.2143</td><td>1.94414</td><td>Multiple Machine Tool Setters, Operators, and Tenders, Metal and Plastic; Transportation Security Screeners; Ophthalmic Laboratory Technicians; Molders, Shapers, and Casters, Except Metal and Plastic; Ushers, Lobby Attendants, and Ticket Takers</td></tr><tr><td>5</td><td>mixed redesign work</td><td>103</td><td>7.69932</td><td>19.8668</td><td>7.65272</td><td>Insurance Appraisers, Auto Damage; Computer, Automated Teller, and Office Machine Repairers; Rail Yard Engineers, Dinkey Operators, and Hostlers; Amusement and Recreation Attendants; Bus and Truck Mechanics and Diesel Engine Specialists</td></tr><tr><td>3</td><td>augmentation-heavy expert work</td><td>124</td><td>4.73355</td><td>29.6729</td><td>2.4329</td><td>Lawyers; Atmospheric and Space Scientists; Chief Executives; Construction and Building Inspectors; Geoscientists, Except Hydrologists and Geographers</td></tr><tr><td>1</td><td>augmentation-heavy expert work</td><td>51</td><td>3.61902</td><td>26.5986</td><td>9.81039</td><td>Nurse Practitioners; Nurse Midwives; Genetic Counselors; Nurse Anesthetists; Pharmacists</td></tr></table></div>
+<p>Labor-weighted dominant outcome summary:</p>
+<div class='table-wrap'><table><tr><th>group</th><th>occupation_count</th><th>labor_weight_sum</th><th>weighted_disruption_index</th><th>weighted_replacement_feasibility</th><th>weighted_augmentation_index</th></tr><tr><td>replacement_candidate</td><td>3</td><td>796776</td><td>59.76</td><td>38.16</td><td>59.36</td></tr><tr><td>mixed_redesign</td><td>364</td><td>6.74605e+07</td><td>32.91</td><td>14.31</td><td>25.51</td></tr><tr><td>augmentation_first</td><td>389</td><td>7.54147e+07</td><td>31.08</td><td>8.58</td><td>33.5</td></tr></table></div>
+<figure class='figure-panel'><a href='../figures/deep_analysis/labor_cluster_profiles.png'><img loading='lazy' alt='Labor clusters' src='../figures/deep_analysis/labor_cluster_profiles.png'></a><figcaption>Labor clusters</figcaption></figure>
+<p>The labor-weighted outcome mix below is the report&#x27;s guardrail against overclaiming. It weights modeled outcomes by the best available public labor proxy so a handful of highly automatable occupations do not dominate the narrative.</p>
+<figure class='figure-panel'><a href='../figures/deep_analysis/labor_outcome_mix.png'><img loading='lazy' alt='Labor outcome mix' src='../figures/deep_analysis/labor_outcome_mix.png'></a><figcaption>Labor outcome mix</figcaption></figure>
+</section>
+<section id='2-5-and-10-year-forecasts' class='report-section'>
+<div class='section-rule'></div>
+<h2>2, 5 And 10 Year Forecasts</h2>
+<p>Base scenario subset:</p>
+<div class='table-wrap'><table><tr><th>target_year</th><th>metric</th><th>value</th><th>unit</th><th>method</th></tr><tr><td>2028</td><td>frontier_context_window_multiplier</td><td>6.23</td><td>x current API catalog trend</td><td>capped scenario from OpenRouter upper-tail slope; raw=6.23x capped=False</td></tr><tr><td>2028</td><td>frontier_output_price_factor</td><td>1</td><td>fraction of current low-price frontier API output cost</td><td>OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000</td></tr><tr><td>2028</td><td>open_weight_lmarena_gap_remaining</td><td>53.6</td><td>arena rating points</td><td>current open vs closed LMArena gap with scenario-specific closure speed</td></tr><tr><td>2028</td><td>share_of_us_occupation_tasks_materially_touched</td><td>0.104</td><td>share of task-weighted occupation activity</td><td>Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon</td></tr><tr><td>2031</td><td>frontier_context_window_multiplier</td><td>64</td><td>x current API catalog trend</td><td>capped scenario from OpenRouter upper-tail slope; raw=96.70x capped=True</td></tr><tr><td>2031</td><td>frontier_output_price_factor</td><td>1</td><td>fraction of current low-price frontier API output cost</td><td>OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000</td></tr><tr><td>2031</td><td>open_weight_lmarena_gap_remaining</td><td>28.2</td><td>arena rating points</td><td>current open vs closed LMArena gap with scenario-specific closure speed</td></tr><tr><td>2031</td><td>share_of_us_occupation_tasks_materially_touched</td><td>0.183</td><td>share of task-weighted occupation activity</td><td>Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon</td></tr><tr><td>2036</td><td>frontier_context_window_multiplier</td><td>64</td><td>x current API catalog trend</td><td>capped scenario from OpenRouter upper-tail slope; raw=9351.33x capped=True</td></tr><tr><td>2036</td><td>frontier_output_price_factor</td><td>1</td><td>fraction of current low-price frontier API output cost</td><td>OpenRouter lower-quintile output price slope; observed=0.039, scenario_assumed=0.000</td></tr><tr><td>2036</td><td>open_weight_lmarena_gap_remaining</td><td>5.6</td><td>arena rating points</td><td>current open vs closed LMArena gap with scenario-specific closure speed</td></tr><tr><td>2036</td><td>share_of_us_occupation_tasks_materially_touched</td><td>0.281</td><td>share of task-weighted occupation activity</td><td>Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon</td></tr></table></div>
+<p>The dashboard puts four scenario families on one page: context scale, output price, open-weight benchmark gap and task-share contact. The useful reading is not the exact number in 2036; it is which assumptions move together and which do not.</p>
+<figure class='figure-panel'><a href='../figures/deep_analysis/forecast_scenario_dashboard.png'><img loading='lazy' alt='Forecast scenario dashboard' src='../figures/deep_analysis/forecast_scenario_dashboard.png'></a><figcaption>Forecast scenario dashboard</figcaption></figure>
+<figure class='figure-panel'><a href='../figures/deep_analysis/labor_task_forecast.png'><img loading='lazy' alt='Labor task forecast' src='../figures/deep_analysis/labor_task_forecast.png'></a><figcaption>Labor task forecast</figcaption></figure>
+<figure class='figure-panel'><a href='../figures/deep_analysis/cost_forecast_scenarios.png'><img loading='lazy' alt='Cost forecast' src='../figures/deep_analysis/cost_forecast_scenarios.png'></a><figcaption>Cost forecast</figcaption></figure>
+<figure class='figure-panel'><a href='../figures/deep_analysis/open_closed_catchup.png'><img loading='lazy' alt='Open closed catchup' src='../figures/deep_analysis/open_closed_catchup.png'></a><figcaption>Open closed catchup</figcaption></figure>
+</section>
+<section id='historical-analogy' class='report-section'>
+<div class='section-rule'></div>
+<h2>Historical Analogy</h2>
+<p>AI looks less like a single prior wave and more like an uncomfortable hybrid: spreadsheet-style task rebundling, internet-style diffusion, cloud-style API economics, and electricity-style long-run production redesign.</p>
+<div class='table-wrap'><table><tr><th>wave</th><th>period</th><th>ai_similarity_score</th><th>interpretation</th></tr><tr><td>cloud_saas</td><td>2006-2022</td><td>99.17</td><td>Best analogy for enterprise adoption lags and API-first business-model shift.</td></tr><tr><td>internet</td><td>1993-2010</td><td>98.86</td><td>Best analogy for general-purpose diffusion, platform creation and strange second-order labor demand.</td></tr><tr><td>smartphones</td><td>2007-2020</td><td>97.44</td><td>Best analogy for consumer pull, app ecosystems and fast behavioral rewiring.</td></tr><tr><td>containerization</td><td>1956-1990</td><td>97.23</td><td>Best analogy for cost shock in a hidden infrastructure layer.</td></tr><tr><td>search_ads</td><td>1998-2015</td><td>96.53</td><td>Best analogy for advertising-funded discovery and winner-take-most information layers.</td></tr><tr><td>electricity</td><td>1882-1930</td><td>96.22</td><td>Best analogy for long-run production reorganization, not near-term speed.</td></tr><tr><td>spreadsheets</td><td>1979-1995</td><td>95.85</td><td>Best analogy for occupational task rebundling and sudden knowledge-worker productivity jumps.</td></tr><tr><td>industrial_robotics</td><td>1961-2020</td><td>89.11</td><td>Useful negative analogy: physical deployment is slower and more capital-locked than software AI.</td></tr></table></div>
+<figure class='figure-panel'><a href='../figures/deep_analysis/historical_analogy_index.png'><img loading='lazy' alt='Historical analogy' src='../figures/deep_analysis/historical_analogy_index.png'></a><figcaption>Historical analogy</figcaption></figure>
+</section>
+<section id='forecast-claims' class='report-section'>
+<div class='section-rule'></div>
+<h2>Forecast Claims</h2>
+<div class='table-wrap'><table><tr><th>claim_id</th><th>claim</th><th>evidence</th><th>confidence</th><th>analysis_captured_at</th></tr><tr><td>company-next-best-model</td><td>Qwen has the strongest composite signal for near-term frontier leadership, but the top open-weight ecosystem score is not necessarily the same family.</td><td>Composite of LMArena, SWE-bench, OpenRouter, Epoch, Hugging Face, GitHub and OpenAlex indicators.</td><td>medium</td><td>2026-05-16T11:27:28+00:00</td></tr><tr><td>jobs-augmentation-not-total-replacement</td><td>The labor signal is broad task contact, not full-job deletion: high-exposure occupations still retain bottlenecks from trust, regulation, physical work and accountability.</td><td>Anthropic Economic Index occupation exposure joined to O*NET task text, task collaboration modes and wage/job metadata.</td><td>medium-high</td><td>2026-05-16T11:27:28+00:00</td></tr><tr><td>open-source-catchup</td><td>Open-weight systems look structurally advantaged on ecosystem and cost but still need repeated frontier jumps to erase closed/API benchmark gaps.</td><td>OpenRouter price fields, Hugging Face downloads/files, LMArena access-class split and Epoch open-weight release metadata.</td><td>medium</td><td>2026-05-16T11:27:28+00:00</td></tr><tr><td>ten-year-forecast</td><td>The 10-year question is less whether AI touches most cognitive workflows and more whether institutions redesign jobs around verification, liability and human preference.</td><td>Scenario table combines capability trend, price decline, observed task exposure and bottleneck scoring.</td><td>speculative</td><td>2026-05-16T11:27:28+00:00</td></tr></table></div>
+</section>
+<section id='counterintuitive-findings' class='report-section'>
+<div class='section-rule'></div>
+<h2>Counterintuitive Findings</h2>
+<div class='table-wrap'><table><tr><th>finding</th><th>evidence</th><th>why_it_is_interesting</th><th>artifact</th><th>analysis_captured_at</th></tr><tr><td>Raw frontier leadership and open-distribution upside are different questions.</td><td>In the 10-year frontier-quality scenario, GPT leads (52.7% of simulation draws); in the open-ecosystem-upside scenario, Qwen leads (74.1% of simulation draws).</td><td>The previous single 10-year number was misleading because it mixed best-model simulation share with adoption economics.</td><td>company_next_frontier_probabilities.csv</td><td>2026-05-16T11:27:28+00:00</td></tr><tr><td>The open-vs-closed gap is not one gap.</td><td>The largest measured LMArena category gap is text_to_image at 361.6 rating points.</td><td>Open-source catchup can be true in one domain and false in another; a single headline benchmark hides where closed labs still have moat.</td><td>open_closed_gap_by_category.csv</td><td>2026-05-16T11:27:28+00:00</td></tr><tr><td>Cheap models can sit on the efficient frontier without being the raw best model.</td><td>Efficient frontier examples include OpenAI: gpt-oss-20b; inclusionAI: Ling-2.6-flash.</td><td>Enterprise adoption often follows sufficient capability per dollar, not absolute leaderboard rank.</td><td>price_performance_frontier.csv</td><td>2026-05-16T11:27:28+00:00</td></tr><tr><td>The top whole-job automation candidates are narrower than the top task-exposure jobs.</td><td>The highest replacement-feasibility occupation is Market Research Analysts and Marketing Specialists with feasibility index 39.0.</td><td>A job can be heavily touched by AI but still mostly redesigned around human review rather than deleted.</td><td>job_replacement_feasibility.csv</td><td>2026-05-16T11:27:28+00:00</td></tr><tr><td>Augmentation can be a larger labor-weighted mode than replacement.</td><td>Available labor-weight proxy: augmentation-first=75,414,668, replacement-candidate=796,776.</td><td>This pushes the labor forecast toward workflow redesign, wage compression and productivity dispersion before mass full automation.</td><td>labor_market_exposure_summary.csv</td><td>2026-05-16T11:27:28+00:00</td></tr></table></div>
+</section>
+<section id='method-notes' class='report-section'>
+<div class='section-rule'></div>
+<h2>Method Notes</h2>
+<ul>
+<li>Model-family scoring uses <code>data/dataset/</code>: LMArena full leaderboard rows, SWE-bench submissions, Open LLM Leaderboard metrics, OpenRouter prices/context, Epoch model metadata, Hugging Face rollups, GitHub model mentions and OpenAlex paper mentions.</li>
+<li>Labor scoring uses Anthropic Economic Index files from Hugging Face, including occupation exposure, task penetration, task automation/augmentation labels, O*NET task mappings/statements, and BLS wage/employment companion data.</li>
+<li>Scenario forecasts are not forecasts from a proprietary model. They are transparent transforms of observed slopes and pressure scores. Every scenario row includes a method field and the input diagnostics include caps/fallback policy.</li>
+<li>Leadership simulation shares are stochastic sensitivity analyses over explicit score components, not calibrated market probabilities.</li>
+<li>Labor-weighted summaries use the best available public companion weights; where only major-group BLS employment is available, the analysis allocates it across detailed occupations inside that group to avoid treating each detailed occupation as the whole major group.</li>
+<li>BLS web xlsx endpoints returned anti-bot 403 responses in this environment. The analysis therefore uses public BLS-derived companion files already included in Anthropic&#x27;s release rather than scraping around that restriction.</li>
+</ul>
+</section>
+<section id='generated-artifacts' class='report-section'>
+<div class='section-rule'></div>
+<h2>Generated Artifacts</h2>
+<ul>
+<li><code>data/analysis/company_frontier_scores.csv</code></li>
+<li><code>data/analysis/company_score_methodology.csv</code></li>
+<li><code>data/analysis/company_score_sensitivity.csv</code></li>
+<li><code>data/analysis/job_exposure_scores.csv</code></li>
+<li><code>data/analysis/capability_forecasts.csv</code></li>
+<li><code>data/analysis/forecast_input_diagnostics.csv</code></li>
+<li><code>data/analysis/company_next_frontier_probabilities.csv</code></li>
+<li><code>data/analysis/open_closed_gap_by_category.csv</code></li>
+<li><code>data/analysis/lmarena_category_leaders.csv</code></li>
+<li><code>data/analysis/price_performance_frontier.csv</code></li>
+<li><code>data/analysis/labor_cluster_profiles.csv</code></li>
+<li><code>data/analysis/labor_market_exposure_summary.csv</code></li>
+<li><code>data/analysis/job_replacement_feasibility.csv</code></li>
+<li><code>data/analysis/counterintuitive_findings.csv</code></li>
+<li><code>data/analysis/historical_analogy_index.csv</code></li>
+<li><code>data/analysis/forecast_claims.csv</code></li>
+<li><code>figures/deep_analysis/company_score_component_stack.png</code></li>
+<li><code>figures/deep_analysis/company_score_evidence_scatter.png</code></li>
+<li><code>figures/deep_analysis/leadership_scenario_matrix.png</code></li>
+<li><code>figures/deep_analysis/open_closed_category_levels.png</code></li>
+<li><code>figures/deep_analysis/price_context_rating_map.png</code></li>
+<li><code>figures/deep_analysis/labor_outcome_mix.png</code></li>
+<li><code>figures/deep_analysis/forecast_scenario_dashboard.png</code></li>
+<li><code>figures/deep_analysis/*.png</code></li>
+</ul>
+</section>
+<footer class='report-footer'>
+<a href='#top'>Back to top</a>
+<span>Generated from reproducible local analysis artifacts.</span>
+</footer>
+</main>
+</div>
+</body>
+</html>
