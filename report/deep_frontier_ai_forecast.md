@@ -1,28 +1,33 @@
 # Deep Frontier AI Analysis
 
-Reference date: **2026-05-15**. Generated at: **2026-05-16T17:13:09+00:00**.
+Reference date: **2026-05-15**. Generated at: **2026-07-12T19:42:51+00:00**.
 
-This report is deliberately data-heavy. It uses the local rich frontier-model dataset plus the public Anthropic Economic Index release files for occupation exposure, task penetration, O*NET task text and BLS wage/employment companion fields. The goal is not to claim precision about the future; it is to make the assumptions inspectable enough that the forecast can be argued with.
+This report is deliberately data-heavy. It uses the local rich frontier-model dataset, the public Anthropic Economic Index release files for occupation exposure, and a new domain benchmark layer covering coding, medicine, terminal agents, finance, legal reasoning, math, science/reasoning, language, vision and search/document work. The goal is not to claim precision about the future; it is to make the assumptions inspectable enough that the forecast can be argued with.
 
 ## Dashboard Snapshot
 
 This opening map is the fast path through the analysis. It turns the long report into a set of inspectable questions, each tied to a primary artifact and an evidence-strength label.
 
-| section        | question                                                        | headline                                           | metric                        | evidence_level   | primary_artifact                        |
-|:---------------|:----------------------------------------------------------------|:---------------------------------------------------|:------------------------------|:-----------------|:----------------------------------------|
-| Models         | Who leads the current frontier-family signal?                   | GPT                                                | 78.2 heuristic index          | observed         | company_frontier_scores.csv             |
-| Evidence       | Where is model-level evidence strongest?                        | GPT                                                | 120 direct benchmark matches  | direct_match     | family_coverage_matrix.csv              |
-| Forecast       | Who wins the 10-year frontier-quality stress test?              | GPT                                                | 58.7% simulation share        | scenario         | company_next_frontier_probabilities.csv |
-| Open Ecosystem | Who benefits if distribution, openness and cost matter more?    | Qwen                                               | 70.3% simulation share        | scenario         | company_next_frontier_probabilities.csv |
-| Open vs Closed | Where is the open-vs-closed gap largest?                        | text to image                                      | 361.6 arena rating points     | observed         | open_closed_gap_by_category.csv         |
-| Economics      | Which directly matched model sits highest on price-performance? | OpenAI: GPT-4.1 Nano                               | 92.2 direct index             | direct_match     | direct_model_price_performance.csv      |
-| Labor          | Which occupation has the highest near-term pressure index?      | Data Entry Keyers                                  | 60.2 disruption index         | observed         | job_exposure_scores.csv                 |
-| Labor          | Where is whole-job replacement most feasible after gates?       | Market Research Analysts and Marketing Specialists | 39.0 feasibility index        | observed         | job_replacement_feasibility.csv         |
-| Workflows      | Which business domain should a reader inspect first?            | finance analysis                                   | 38.9 disruption index         | family_proxy     | business_domain_ai_pressure.csv         |
-| Execution      | Which family shows the most visible recent release velocity?    | GPT                                                | 66 releases in 365 days       | observed         | release_cadence_by_family.csv           |
-| Coverage       | How fresh is the visible source layer?                          | 2026-05-15                                         | 1,327,480 source rows tracked | observed         | source_coverage_diagnostics.csv         |
-| Uncertainty    | How many family ranks are stable under evidence-scaled stress?  | 6 stable rank bands                                | 11 families stress-tested     | scenario         | rank_stability_intervals.csv            |
-| Risk           | What should a reviewer challenge first?                         | 3 high-severity assumptions                        | Named failure modes           | speculative      | claim_failure_modes.csv                 |
+| section         | question                                                         | headline                                           | metric                        | evidence_level   | primary_artifact                        |
+|:----------------|:-----------------------------------------------------------------|:---------------------------------------------------|:------------------------------|:-----------------|:----------------------------------------|
+| Models          | Who leads the current frontier-family signal?                    | GPT                                                | 78.2 heuristic index          | observed         | company_frontier_scores.csv             |
+| Domains         | Which capability field is improving fastest in the public panel? | Agentic terminal work                              | 12.0 points/year used         | scenario         | domain_improvement_velocity.csv         |
+| Coverage        | How many capability domains have broad benchmark coverage?       | 1 broad domains                                    | 115,938 normalized rows       | observed         | domain_benchmark_catalog.csv            |
+| Evidence        | Where is model-level evidence strongest?                         | GPT                                                | 120 direct benchmark matches  | direct_match     | family_coverage_matrix.csv              |
+| Forecast        | Who wins the 10-year frontier-quality stress test?               | GPT                                                | 58.6% simulation share        | scenario         | company_next_frontier_probabilities.csv |
+| Open Ecosystem  | Who benefits if distribution, openness and cost matter more?     | Qwen                                               | 70.2% simulation share        | scenario         | company_next_frontier_probabilities.csv |
+| Domain Forecast | Which field has the highest 2036 base-case frontier score?       | Software engineering                               | 97.4/100 forecast score       | scenario         | domain_capability_forecasts.csv         |
+| Open vs Closed  | Where is the open-vs-closed gap largest?                         | text to image                                      | 361.6 arena rating points     | observed         | open_closed_gap_by_category.csv         |
+| Economics       | Which directly matched model sits highest on price-performance?  | OpenAI: GPT-4.1 Nano                               | 92.2 direct index             | direct_match     | direct_model_price_performance.csv      |
+| Economics       | Is average message/task cost rising in the modeled workload mix? | 0.152 USD                                          | 577.1 index vs 2023           | scenario         | llm_message_cost_trends.csv             |
+| Fixed Task Cost | What happens to a thesis-quality fixed writing task?             | GPT                                                | 0.0002 USD in 2036            | scenario         | fixed_task_cost_curves.csv              |
+| Labor           | Which occupation has the highest near-term pressure index?       | Data Entry Keyers                                  | 60.2 disruption index         | observed         | job_exposure_scores.csv                 |
+| Labor           | Where is whole-job replacement most feasible after gates?        | Market Research Analysts and Marketing Specialists | 39.0 feasibility index        | observed         | job_replacement_feasibility.csv         |
+| Workflows       | Which business domain should a reader inspect first?             | finance analysis                                   | 38.1 disruption index         | family_proxy     | business_domain_ai_pressure.csv         |
+| Execution       | Which family shows the most visible recent release velocity?     | GPT                                                | 66 releases in 365 days       | observed         | release_cadence_by_family.csv           |
+| Coverage        | How fresh is the visible source layer?                           | 2026-05-15                                         | 1,327,480 source rows tracked | observed         | source_coverage_diagnostics.csv         |
+| Uncertainty     | How many family ranks are stable under evidence-scaled stress?   | 5 stable rank bands                                | 11 families stress-tested     | scenario         | rank_stability_intervals.csv            |
+| Risk            | What should a reviewer challenge first?                          | 3 high-severity assumptions                        | Named failure modes           | speculative      | claim_failure_modes.csv                 |
 
 ## How To Read This Report
 
@@ -30,9 +35,11 @@ The report is organized around three questions:
 
 1. **Who has the strongest frontier-family signal right now?** The answer is a composite heuristic, so the report shows both rank and component composition instead of hiding the weighting.
 2. **Where are the counterintuitive gaps?** Open-weight systems, low prices, context windows and benchmark ratings move on different axes. The plots keep those axes separate.
-3. **What happens when model capability meets labor structure?** Occupation exposure is not the same thing as replacement. The labor section separates task pressure, augmentation, bottlenecks and whole-job feasibility.
+3. **Which domains are improving fastest?** The domain panel keeps fields separate: coding and agentic terminal work should not be averaged blindly with medicine, legal reasoning or finance.
+4. **What happens when model capability meets labor structure?** Occupation exposure is not the same thing as replacement. The labor section separates task pressure, augmentation, bottlenecks and whole-job feasibility.
+5. **Are costs rising or falling?** The economics section separates workload-mix cost per message/task from fixed-task cost curves, because those can move in opposite directions.
 
-Every chart should be read as an audit surface. If a conclusion depends on one metric, the report names that metric and shows the caveat near the visualization.
+Every chart should be read as an audit surface. If a conclusion depends on one metric, the report names that metric and shows the caveat near the visualization. Domain rows with `forecast_enabled=false` are deliberately held flat: no comparable history means no extrapolation. The full remediation log is in `docs/statistical_audit.md`.
 
 Evidence badges used throughout the HTML view: `observed`, `direct_match`, `family_proxy`, `scenario`, `speculative`. They are labels for evidence strength, not decoration.
 
@@ -41,8 +48,10 @@ Evidence badges used throughout the HTML view: `observed`, `direct_match`, `fami
 1. **Near-term frontier-family leadership is concentrated, but not one-dimensional.** The highest heuristic index in this run is **GPT** with a frontier momentum heuristic index of **78.2**. The strongest openness/cost/ecosystem signal is **Qwen**, which is not automatically the same thing as best closed frontier performance.
 2. **The next-winner question is a simulation sensitivity exercise.** The table changes component weights thousands of times and injects evidence noise. Its shares are not calibrated probabilities.
 3. **Open vs closed is category-specific.** Some LMArena categories show narrow gaps; others preserve a clear closed/API advantage. "Open source caught up" is too crude.
-4. **The job story is not "all jobs disappear."** The highest-risk roles are task bundles where language, analysis, clerical transformation and directive delegation are already exposed. Jobs with physical work, trust, regulation or face-to-face accountability keep meaningful bottlenecks.
-5. **The 10-year question is institutional, not only technical.** In the base scenario, AI materially touches a large share of occupational tasks by 2036, but the binding constraint becomes verification, liability, workflow redesign and who owns the interface to work.
+4. **Field-level progress is uneven.** Coding, terminal-agent and language/document signals have denser coverage than legal and finance. The report extrapolates only domains with repeated observations of the same benchmark; other domains are marked `insufficient_history` and held flat.
+5. **The job story is not "all jobs disappear."** The highest-risk roles are task bundles where language, analysis, clerical transformation and directive delegation are already exposed. Jobs with physical work, trust, regulation or face-to-face accountability keep meaningful bottlenecks.
+6. **The 10-year labor path is a scenario, not an estimate.** The task-contact paths encode explicit adoption assumptions; they are useful for stress testing verification, liability and workflow redesign, not for predicting employment levels.
+7. **The cost view is synthetic.** Message/task paths combine assumed workload mixes with current catalog cohorts, while fixed-task paths use explicit quality and price scenarios. Neither is observed invoice history.
 
 ## Data Freshness And Coverage
 
@@ -67,8 +76,8 @@ Family coverage matrix:
 
 | model_family   | vendor    |   coverage_score |   direct_benchmark_match_count |   family_proxy_benchmark_count |   source_gap_count |
 |:---------------|:----------|-----------------:|-------------------------------:|-------------------------------:|-------------------:|
-| Claude         | Anthropic |           100    |                             48 |                             30 |                  0 |
 | Gemini         | Google    |           100    |                             24 |                             32 |                  0 |
+| Claude         | Anthropic |           100    |                             48 |                             30 |                  0 |
 | Phi            | Microsoft |           100    |                              6 |                              8 |                  0 |
 | Grok           | xAI       |           100    |                              3 |                             24 |                  0 |
 | GPT            | OpenAI    |            99.5  |                            120 |                             61 |                  0 |
@@ -83,6 +92,147 @@ Family coverage matrix:
 
 ![Family signal coverage heatmap](../figures/deep_analysis/family_signal_coverage_heatmap.png)
 
+## Capability Domains
+
+This is the new domain benchmark layer. It pulls together local benchmark sources and additional public sources downloaded during generation: LiveCodeBench, Open Medical-LLM Leaderboard result files, Terminal-Bench, FinanceBench, QFBench and Lexometrica LegalBench RU. Scores are normalized to a 0-100 frontier scale so fields can be compared without pretending that a medical QA percent, a legal composite, an arena rating and an agentic terminal score are the same measurement.
+
+Domain catalog:
+
+| domain_label                      |   normalized_result_rows |   source_count |   benchmark_count |   model_count | coverage_label   | latest_eval_date   | interpretation                                                                                    |
+|:----------------------------------|-------------------------:|---------------:|------------------:|--------------:|:-----------------|:-------------------|:--------------------------------------------------------------------------------------------------|
+| Software engineering              |                     3020 |              4 |                 4 |           391 | broad            | 2026-05-14         | Code generation, repository repair, web development and terminal software workflows.              |
+| Science and reasoning             |                    46146 |              2 |                36 |          1368 | moderate         | 2026-05-12         | Graduate-level science, GPQA-like reasoning, ARC/BBH/MuSR and broad reasoning suites.             |
+| Language and writing              |                    40009 |              2 |                 2 |           480 | moderate         | 2026-05-14         | General text quality, paraphrase, editing, summarization and subjective chat preference.          |
+| Instruction following             |                     1529 |              2 |                 2 |          1457 | moderate         | 2025-04-07         | Constraint following, output format obedience and prompt-level generalization.                    |
+| Finance and quantitative analysis |                       22 |              2 |                 3 |            13 | moderate         | 2026-05-07         | Financial QA, quantitative coding, risk, pricing, forecasting and professional finance tasks.     |
+| Mathematics                       |                    12060 |              1 |                 9 |          1339 | moderate         |                    | Competition math, quantitative reasoning and formal problem solving.                              |
+| Medicine and biomedical QA        |                     1873 |              1 |                10 |           184 | moderate         | 2025-01-29         | Medical question answering, biomedical literature reasoning and clinical knowledge subsets.       |
+| Vision and multimodal             |                    10947 |              1 |                 3 |           202 | thin             | 2026-05-12         | Image understanding, image editing, text-to-image and multimodal preference leaderboards.         |
+| Search and document work          |                      166 |              1 |                 1 |            24 | thin             | 2026-05-12         | Search, long-document handling, retrieval-facing work and document synthesis.                     |
+| Agentic terminal work             |                      146 |              1 |                 1 |            51 | thin             | 2026-05-15         | Long-horizon command-line tasks requiring planning, execution, debugging and environment control. |
+| Legal reasoning                   |                       20 |              1 |                 2 |            10 | thin             | 2026-03-01         | Legal issue spotting, rule application, citations and jurisdiction-specific legal reasoning.      |
+
+Representative high-scoring source rows:
+
+| source_name                    | domain_label          | benchmark          | task          | model_name      |   score_normalized_0_100 | eval_date   | limitations                                                                                       |
+|:-------------------------------|:----------------------|:-------------------|:--------------|:----------------|-------------------------:|:------------|:--------------------------------------------------------------------------------------------------|
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | vix           | Claude Opus 4.7 |                     90.2 | 2026-05-15  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | JJAgent       | Multiple        |                     87.1 | 2026-05-15  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | NexAU-AHE     | GPT-5.5         |                     84.7 | 2026-05-14  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | LemonHarness  | Multiple        |                     84.5 | 2026-05-14  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | Capy          | GPT-5.5         |                     83.1 | 2026-05-14  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | Polaris       | Multiple        |                     82.2 | 2026-05-14  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | Codex CLI     | GPT-5.5         |                     82   | 2026-04-23  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | ForgeCode     | GPT-5.4         |                     81.8 | 2026-03-12  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | WOZCODE       | Claude Opus 4.7 |                     80.2 | 2026-05-14  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | TongAgents    | Gemini 3.1 Pro  |                     80.2 | 2026-03-13  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | LemonHarness  | Multiple        |                     79.9 | 2026-05-14  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | ForgeCode     | Claude Opus 4.6 |                     79.8 | 2026-03-12  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | SageAgent     | GPT-5.3-Codex   |                     78.4 | 2026-03-13  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | ForgeCode     | Gemini 3.1 Pro  |                     78.4 | 2026-03-02  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | Droid         | GPT-5.3-Codex   |                     77.3 | 2026-02-24  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | Meta-Harness  | Claude Opus 4.6 |                     76.4 | 2026-05-14  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | CodeBrain-1.5 | GPT-5.3-Codex   |                     75.8 | 2026-02-10  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+| Terminal-Bench 2.0 leaderboard | Agentic terminal work | Terminal-Bench 2.0 | Codelia       | GPT-5.3-Codex   |                     75.7 | 2026-05-14  | Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone. |
+
+![Domain benchmark coverage](../figures/deep_analysis/domain_benchmark_coverage.png)
+
+![Domain source matrix](../figures/deep_analysis/domain_source_matrix.png)
+
+## Domain Improvement Velocity
+
+The velocity table estimates how quickly each field is improving in the public benchmark panel. When a domain has enough dated observations, the report uses its observed frontier slope. When the time series is too thin, it falls back to the cross-domain median and labels the slope source explicitly.
+
+| domain_label                      |   current_frontier_score |   annual_frontier_point_gain_used | slope_source                    |   years_observed | coverage_label   | forecast_confidence   |
+|:----------------------------------|-------------------------:|----------------------------------:|:--------------------------------|-----------------:|:-----------------|:----------------------|
+| Vision and multimodal             |                    97.31 |                             1.542 | median_within_benchmark_slope   |                3 | thin             | low                   |
+| Search and document work          |                    95.21 |                             0     | insufficient_comparable_history |                1 | thin             | insufficient_history  |
+| Science and reasoning             |                    95.17 |                             0     | median_within_benchmark_slope   |                2 | moderate         | insufficient_history  |
+| Legal reasoning                   |                    93.88 |                             0     | insufficient_comparable_history |                1 | thin             | insufficient_history  |
+| Language and writing              |                    87.71 |                             9.573 | median_within_benchmark_slope   |                4 | moderate         | low                   |
+| Instruction following             |                    85.71 |                             0     | median_within_benchmark_slope   |                2 | moderate         | insufficient_history  |
+| Agentic terminal work             |                    84.36 |                            12     | median_within_benchmark_slope   |                2 | thin             | low                   |
+| Software engineering              |                    79.87 |                             4.094 | median_within_benchmark_slope   |                4 | broad            | medium                |
+| Medicine and biomedical QA        |                    72.39 |                             0     | insufficient_comparable_history |                1 | moderate         | insufficient_history  |
+| Finance and quantitative analysis |                    64.89 |                             0     | insufficient_comparable_history |                1 | moderate         | insufficient_history  |
+| Mathematics                       |                    39.38 |                             0     | insufficient_comparable_history |                0 | moderate         | insufficient_history  |
+
+![Domain frontier trends](../figures/deep_analysis/domain_frontier_trends.png)
+
+![Domain current velocity](../figures/deep_analysis/domain_current_velocity.png)
+
+## Domain Capability Forecasts
+
+The domain forecast uses a bounded gap-closure model: a domain starts at its current normalized frontier score, closes a fraction of the remaining gap each year, and is capped below 100. This makes the forecast interpretable: the question is how quickly each field closes the remaining gap, not whether scores can grow without limit.
+
+Base scenario by domain and horizon:
+
+| domain_label                      |   target_year |   forecast_frontier_score |   current_frontier_score | confidence           | caveat                                                                                                                 |
+|:----------------------------------|--------------:|--------------------------:|-------------------------:|:---------------------|:-----------------------------------------------------------------------------------------------------------------------|
+| Vision and multimodal             |          2028 |                     98.17 |                    97.31 | low                  | The data mixes perception and generation; downstream reliability depends heavily on task framing.                      |
+| Vision and multimodal             |          2031 |                     98.97 |                    97.31 | low                  | The data mixes perception and generation; downstream reliability depends heavily on task framing.                      |
+| Vision and multimodal             |          2036 |                     99.5  |                    97.31 | low                  | The data mixes perception and generation; downstream reliability depends heavily on task framing.                      |
+| Search and document work          |          2028 |                     95.21 |                    95.21 | insufficient_history | Retrieval quality, source grounding and tool access can dominate model-only scores.                                    |
+| Search and document work          |          2031 |                     95.21 |                    95.21 | insufficient_history | Retrieval quality, source grounding and tool access can dominate model-only scores.                                    |
+| Search and document work          |          2036 |                     95.21 |                    95.21 | insufficient_history | Retrieval quality, source grounding and tool access can dominate model-only scores.                                    |
+| Science and reasoning             |          2028 |                     95.17 |                    95.17 | insufficient_history | This is a mixed domain; gains may come from either knowledge, search, reasoning-time or benchmark-specific training.   |
+| Science and reasoning             |          2031 |                     95.17 |                    95.17 | insufficient_history | This is a mixed domain; gains may come from either knowledge, search, reasoning-time or benchmark-specific training.   |
+| Science and reasoning             |          2036 |                     95.17 |                    95.17 | insufficient_history | This is a mixed domain; gains may come from either knowledge, search, reasoning-time or benchmark-specific training.   |
+| Legal reasoning                   |          2028 |                     93.88 |                    93.88 | insufficient_history | Legal performance is highly jurisdictional; benchmark score is not professional legal authority.                       |
+| Legal reasoning                   |          2031 |                     93.88 |                    93.88 | insufficient_history | Legal performance is highly jurisdictional; benchmark score is not professional legal authority.                       |
+| Legal reasoning                   |          2036 |                     93.88 |                    93.88 | insufficient_history | Legal performance is highly jurisdictional; benchmark score is not professional legal authority.                       |
+| Language and writing              |          2028 |                     97.09 |                    87.71 | low                  | Human preference and style vary; benchmark gains do not map one-to-one to brand-safe writing quality.                  |
+| Language and writing              |          2031 |                     99.5  |                    87.71 | low                  | Human preference and style vary; benchmark gains do not map one-to-one to brand-safe writing quality.                  |
+| Language and writing              |          2036 |                     99.5  |                    87.71 | low                  | Human preference and style vary; benchmark gains do not map one-to-one to brand-safe writing quality.                  |
+| Instruction following             |          2028 |                     85.71 |                    85.71 | insufficient_history | High scores can hide brittle behavior on a user's own constraints, so local evals remain important.                    |
+| Instruction following             |          2031 |                     85.71 |                    85.71 | insufficient_history | High scores can hide brittle behavior on a user's own constraints, so local evals remain important.                    |
+| Instruction following             |          2036 |                     85.71 |                    85.71 | insufficient_history | High scores can hide brittle behavior on a user's own constraints, so local evals remain important.                    |
+| Agentic terminal work             |          2028 |                     96.29 |                    84.36 | low                  | Agent scaffolding can dominate raw model quality, so model and agent should be separated when possible.                |
+| Agentic terminal work             |          2031 |                     99.5  |                    84.36 | low                  | Agent scaffolding can dominate raw model quality, so model and agent should be separated when possible.                |
+| Agentic terminal work             |          2036 |                     99.5  |                    84.36 | low                  | Agent scaffolding can dominate raw model quality, so model and agent should be separated when possible.                |
+| Software engineering              |          2028 |                     86.6  |                    79.87 | medium               | Coding benchmarks move quickly and are contamination-sensitive; use fresh task windows when possible.                  |
+| Software engineering              |          2031 |                     92.72 |                    79.87 | medium               | Coding benchmarks move quickly and are contamination-sensitive; use fresh task windows when possible.                  |
+| Software engineering              |          2036 |                     97.37 |                    79.87 | medium               | Coding benchmarks move quickly and are contamination-sensitive; use fresh task windows when possible.                  |
+| Medicine and biomedical QA        |          2028 |                     72.39 |                    72.39 | insufficient_history | Multiple-choice medical QA is not clinical deployment safety; human review and liability remain binding.               |
+| Medicine and biomedical QA        |          2031 |                     72.39 |                    72.39 | insufficient_history | Multiple-choice medical QA is not clinical deployment safety; human review and liability remain binding.               |
+| Medicine and biomedical QA        |          2036 |                     72.39 |                    72.39 | insufficient_history | Multiple-choice medical QA is not clinical deployment safety; human review and liability remain binding.               |
+| Finance and quantitative analysis |          2028 |                     64.89 |                    64.89 | insufficient_history | Benchmarks are sparse and often workflow-specific; treat forecasts as directional until more longitudinal data exists. |
+| Finance and quantitative analysis |          2031 |                     64.89 |                    64.89 | insufficient_history | Benchmarks are sparse and often workflow-specific; treat forecasts as directional until more longitudinal data exists. |
+| Finance and quantitative analysis |          2036 |                     64.89 |                    64.89 | insufficient_history | Benchmarks are sparse and often workflow-specific; treat forecasts as directional until more longitudinal data exists. |
+
+Threshold timing:
+
+| domain_label                      |   threshold_score | base_years_to_threshold   | estimated_threshold_year   | confidence           |
+|:----------------------------------|------------------:|:--------------------------|:---------------------------|:---------------------|
+| Vision and multimodal             |                90 | 0.0                       | 2026.0                     | low                  |
+| Vision and multimodal             |                95 | 0.0                       | 2026.0                     | low                  |
+| Search and document work          |                90 | 0.0                       | 2026.0                     | insufficient_history |
+| Search and document work          |                95 | 0.0                       | 2026.0                     | insufficient_history |
+| Science and reasoning             |                90 | 0.0                       | 2026.0                     | insufficient_history |
+| Science and reasoning             |                95 | 0.0                       | 2026.0                     | insufficient_history |
+| Legal reasoning                   |                90 | 0.0                       | 2026.0                     | insufficient_history |
+| Legal reasoning                   |                95 | n/a                       | n/a                        | insufficient_history |
+| Language and writing              |                90 | 0.29                      | 2027.0                     | low                  |
+| Language and writing              |                95 | 1.25                      | 2028.0                     | low                  |
+| Instruction following             |                90 | n/a                       | n/a                        | insufficient_history |
+| Instruction following             |                95 | n/a                       | n/a                        | insufficient_history |
+| Agentic terminal work             |                90 | 0.62                      | 2027.0                     | low                  |
+| Agentic terminal work             |                95 | 1.58                      | 2028.0                     | low                  |
+| Software engineering              |                90 | 3.44                      | 2030.0                     | medium               |
+| Software engineering              |                95 | 6.85                      | 2033.0                     | medium               |
+| Medicine and biomedical QA        |                90 | n/a                       | n/a                        | insufficient_history |
+| Medicine and biomedical QA        |                95 | n/a                       | n/a                        | insufficient_history |
+| Finance and quantitative analysis |                90 | n/a                       | n/a                        | insufficient_history |
+| Finance and quantitative analysis |                95 | n/a                       | n/a                        | insufficient_history |
+| Mathematics                       |                90 | n/a                       | n/a                        | insufficient_history |
+| Mathematics                       |                95 | n/a                       | n/a                        | insufficient_history |
+
+![Domain forecast base](../figures/deep_analysis/domain_forecast_base.png)
+
+![Domain forecast scenarios](../figures/deep_analysis/domain_forecast_scenarios.png)
+
+![Domain threshold timeline](../figures/deep_analysis/domain_threshold_timeline.png)
+
 ## Model Family Frontier Score
 
 The index ranks model families and product lines, not legal companies. It blends benchmark performance, release velocity, API surface, price, research/ecosystem pull and openness. It is not a universal truth; sensitivity outputs show which rankings are weight-sensitive.
@@ -91,15 +241,15 @@ The index ranks model families and product lines, not legal companies. It blends
 |-------:|:---------------|------------------------------------:|:--------------------|------------------------:|-----------------------------:|----------------------:|----------------------------:|---------------------:|
 |      1 | GPT            |                               78.25 | stable_top_tier     |                 69.2487 |                    100       |               87.1657 |                     91.7046 |             41.4415  |
 |      2 | Qwen           |                               78.05 | stable_top_tier     |                 74.6117 |                     86.7888  |               80.9259 |                     94.6247 |             97.9167  |
-|      3 | Mistral        |                               54.97 | weight_sensitive    |                 45.7925 |                     35.7759  |               70.6138 |                    100      |             95.1064  |
-|      4 | Claude         |                               54.1  | weight_sensitive    |                 69.9818 |                     35.8405  |               57.7862 |                     36.1209 |             55       |
-|      5 | Llama          |                               53.67 | weight_sensitive    |                 36.747  |                      2.8125  |               81.3439 |                    100      |             91.607   |
-|      5 | DeepSeek       |                               53.67 | weight_sensitive    |                 33.7632 |                     32.9634  |               78.004  |                     85.8923 |             92.2704  |
-|      7 | Gemini         |                               51.13 | weight_sensitive    |                 64.5602 |                     49.903   |               35.3614 |                     80.9676 |              0       |
-|      8 | Gemma          |                               45.14 | weight_sensitive    |                 38.4005 |                      8.50216 |               65.6807 |                     96.1247 |             91.9149  |
-|      9 | Phi            |                               34.3  | weight_sensitive    |                 22.6984 |                      0       |               48.871  |                     91.7046 |             83.1769  |
-|     10 | Grok           |                               28.4  | weight_sensitive    |                 37.5893 |                     23.4806  |               27.389  |                      0      |              1.84211 |
-|     11 | Command        |                                2.93 | weight_sensitive    |                  0      |                      0       |                0      |                      0      |             36.6667  |
+|      3 | Mistral        |                               59.62 | weight_sensitive    |                 60.7925 |                     35.7759  |               70.6138 |                    100      |             95.1064  |
+|      4 | Gemini         |                               59.26 | weight_sensitive    |                 77.0602 |                     49.903   |               60.3614 |                     80.9676 |              0       |
+|      5 | DeepSeek       |                               58.32 | weight_sensitive    |                 48.7632 |                     32.9634  |               78.004  |                     85.8923 |             92.2704  |
+|      6 | Claude         |                               57.97 | weight_sensitive    |                 82.4818 |                     35.8405  |               57.7862 |                     36.1209 |             55       |
+|      7 | Llama          |                               53.67 | weight_sensitive    |                 36.747  |                      2.8125  |               81.3439 |                    100      |             91.607   |
+|      8 | Gemma          |                               49.79 | weight_sensitive    |                 53.4005 |                      8.50216 |               65.6807 |                     96.1247 |             91.9149  |
+|      9 | Command        |                               45.08 | weight_sensitive    |                 50      |                     50       |               25      |                     50      |             41.6667  |
+|     10 | Phi            |                               38.95 | weight_sensitive    |                 37.6984 |                      0       |               48.871  |                     91.7046 |             83.1769  |
+|     11 | Grok           |                               38.62 | weight_sensitive    |                 65.0893 |                     23.4806  |               27.389  |                      0      |              1.84211 |
 
 ![Company frontier scores](../figures/deep_analysis/company_frontier_scores.png)
 
@@ -119,14 +269,14 @@ Reviewers often reason in terms of companies, but model families remain the clea
 |-------:|:----------|----------------------------------:|:------------------|---------------:|:---------------------|-----------------:|
 |      1 | OpenAI    |                             78.25 | GPT               |              1 | GPT                  |             1083 |
 |      2 | Alibaba   |                             78.05 | Qwen              |              1 | Qwen                 |            12932 |
-|      3 | Mistral   |                             54.97 | Mistral           |              1 | Mistral              |             2394 |
-|      4 | Anthropic |                             54.1  | Claude            |              1 | Claude               |              424 |
-|      5 | Meta      |                             53.68 | Llama             |              1 | Llama                |             8569 |
-|      6 | DeepSeek  |                             53.67 | DeepSeek          |              1 | DeepSeek             |             1187 |
-|      7 | Google    |                             49.29 | Gemini            |              2 | Gemini,Gemma         |             2307 |
-|      8 | Microsoft |                             34.3  | Phi               |              1 | Phi                  |             1372 |
-|      9 | xAI       |                             28.4  | Grok              |              1 | Grok                 |               55 |
-|     10 | Command   |                              2.93 | Command           |              1 | Command              |                3 |
+|      3 | Mistral   |                             59.62 | Mistral           |              1 | Mistral              |             2394 |
+|      4 | DeepSeek  |                             58.32 | DeepSeek          |              1 | DeepSeek             |             1187 |
+|      5 | Anthropic |                             57.97 | Claude            |              1 | Claude               |              424 |
+|      6 | Google    |                             56.35 | Gemini            |              2 | Gemini,Gemma         |             2307 |
+|      7 | Meta      |                             53.68 | Llama             |              1 | Llama                |             8569 |
+|      8 | Command   |                             45.08 | Command           |              1 | Command              |                3 |
+|      9 | Microsoft |                             38.95 | Phi               |              1 | Phi                  |             1372 |
+|     10 | xAI       |                             38.63 | Grok              |              1 | Grok                 |               55 |
 
 ![Vendor frontier scores](../figures/deep_analysis/vendor_frontier_scores.png)
 
@@ -142,44 +292,44 @@ This table is not a prediction market. It is a Monte Carlo stress test over the 
 |:---------------|:-----------------------|----------------------:|----------------------:|
 | GPT            | 77.6%                  |                 73.85 |                 81.7  |
 | Qwen           | 22.4%                  |                 70.51 |                 78.46 |
-| Mistral        | 0.0%                   |                 39.88 |                 47.95 |
-| Claude         | 0.0%                   |                 52.49 |                 60.46 |
-| Llama          | 0.0%                   |                 34.77 |                 43.94 |
-| DeepSeek       | 0.0%                   |                 37.68 |                 45.95 |
-| Gemini         | 0.0%                   |                 50.46 |                 58.3  |
-| Gemma          | 0.0%                   |                 27.61 |                 36.45 |
-| Phi            | 0.0%                   |                 16.6  |                 24.95 |
-| Grok           | 0.0%                   |                 30.11 |                 37.86 |
+| Mistral        | 0.0%                   |                 46.59 |                 55    |
+| Gemini         | 0.0%                   |                 57.91 |                 66.11 |
+| DeepSeek       | 0.0%                   |                 44.88 |                 52.81 |
+| Claude         | 0.0%                   |                 57.86 |                 66.27 |
+| Llama          | 0.0%                   |                 34.67 |                 43.91 |
+| Gemma          | 0.0%                   |                 34.28 |                 43.5  |
+| Command        | 0.0%                   |                 44.26 |                 51.65 |
+| Phi            | 0.0%                   |                 23.28 |                 31.95 |
 
 10-year simulated leaders, frontier-quality scenario:
 
 | model_family   | simulation_win_share   |   simulated_score_p10 |   simulated_score_p90 |
 |:---------------|:-----------------------|----------------------:|----------------------:|
-| GPT            | 58.7%                  |                 70.99 |                 82.47 |
-| Qwen           | 41.3%                  |                 69.61 |                 80.94 |
-| Mistral        | 0.0%                   |                 42.01 |                 54.09 |
-| Claude         | 0.0%                   |                 49.91 |                 61.47 |
-| Llama          | 0.0%                   |                 40.05 |                 52.69 |
-| DeepSeek       | 0.0%                   |                 41.25 |                 53.38 |
-| Gemini         | 0.0%                   |                 45.51 |                 56.99 |
-| Gemma          | 0.0%                   |                 31.02 |                 43.48 |
-| Phi            | 0.0%                   |                 20.39 |                 32.75 |
-| Grok           | 0.0%                   |                 26.49 |                 38.05 |
+| GPT            | 58.6%                  |                 70.99 |                 82.47 |
+| Qwen           | 41.2%                  |                 69.61 |                 80.94 |
+| Claude         | 0.1%                   |                 54.44 |                 66.16 |
+| Gemini         | 0.1%                   |                 52.83 |                 64.78 |
+| Mistral        | 0.0%                   |                 47.67 |                 59.78 |
+| DeepSeek       | 0.0%                   |                 47.2  |                 58.95 |
+| Llama          | 0.0%                   |                 40.13 |                 52.59 |
+| Gemma          | 0.0%                   |                 36.67 |                 49.24 |
+| Command        | 0.0%                   |                 41.1  |                 52.46 |
+| Phi            | 0.0%                   |                 25.99 |                 38.3  |
 
 10-year simulated leaders, open-ecosystem-upside scenario:
 
 | model_family   | simulation_win_share   |   simulated_score_p10 |   simulated_score_p90 |
 |:---------------|:-----------------------|----------------------:|----------------------:|
-| Qwen           | 70.3%                  |                 74.56 |                 85.67 |
+| Qwen           | 70.2%                  |                 74.56 |                 85.67 |
 | GPT            | 29.7%                  |                 70.94 |                 82.55 |
-| Llama          | 0.0%                   |                 52.67 |                 65.43 |
-| Mistral        | 0.0%                   |                 53.47 |                 65.76 |
-| Claude         | 0.0%                   |                 48.26 |                 59.65 |
-| DeepSeek       | 0.0%                   |                 52.87 |                 65.06 |
-| Gemini         | 0.0%                   |                 40.13 |                 52.39 |
-| Gemma          | 0.0%                   |                 44.43 |                 56.75 |
-| Phi            | 0.0%                   |                 33.07 |                 45.88 |
-| Grok           | 0.0%                   |                 20.19 |                 31.71 |
+| DeepSeek       | 0.1%                   |                 56.83 |                 68.62 |
+| Mistral        | 0.1%                   |                 57.29 |                 69.44 |
+| Llama          | 0.0%                   |                 52.72 |                 65.69 |
+| Gemini         | 0.0%                   |                 48.71 |                 61.04 |
+| Claude         | 0.0%                   |                 51.53 |                 62.88 |
+| Gemma          | 0.0%                   |                 48.19 |                 60.54 |
+| Command        | 0.0%                   |                 37.52 |                 48.51 |
+| Phi            | 0.0%                   |                 36.84 |                 49.38 |
 
 ![Next frontier probabilities](../figures/deep_analysis/company_next_frontier_probabilities.png)
 
@@ -251,6 +401,95 @@ Direct evidence price-performance rows:
 
 ![Direct vs proxy price performance](../figures/deep_analysis/direct_vs_proxy_price_performance.png)
 
+## LLM Cost Per Message vs Fixed Task Cost
+
+This section separates two claims that are often blended together. A **modeled average message/task** can become more expensive when users route more work to long-context, tool-heavy or agentic frontier runs. A **fixed task**, such as thesis-quality long-form writing under a stable token budget and quality threshold, can become cheaper when cheaper families become good enough. The tables below do not claim to observe private invoices or usage logs; they expose the assumptions behind the workload mix and the fixed-task thresholds.
+
+Modeled message/task cost by release cohort:
+
+|   year |   released_model_count |   low_cost_blended_price_usd_per_1m |   median_blended_price_usd_per_1m |   frontier_blended_price_usd_per_1m |   average_effective_tokens |   modeled_average_message_cost_usd |   message_cost_index_2023_100 |
+|-------:|-----------------------:|------------------------------------:|----------------------------------:|------------------------------------:|---------------------------:|-----------------------------------:|------------------------------:|
+|   2023 |                     10 |                            0.4788   |                            1.4125 |                             46.5    |                       4655 |                           0.026383 |                         100   |
+|   2024 |                     57 |                            0.209924 |                            0.847  |                             14.7    |                      14708 |                           0.078275 |                         296.7 |
+|   2025 |                    232 |                            0.21     |                            0.8252 |                              7.4125 |                      28153 |                           0.080733 |                         306   |
+|   2026 |                    321 |                            0.247    |                            1.02   |                              9.6    |                      43046 |                           0.152251 |                         577.1 |
+
+2026 workload profile components:
+
+| display_name           |   mix_share |   input_tokens |   output_tokens |   price_quantile |   profile_cost_usd |   weighted_cost_contribution_usd |
+|:-----------------------|------------:|---------------:|----------------:|-----------------:|-------------------:|---------------------------------:|
+| Simple chat or Q&A     |        0.32 |            900 |             500 |             0.2  |           0.000275 |                         8.8e-05  |
+| Knowledge-work message |        0.34 |           3500 |            1200 |             0.5  |           0.0032   |                         0.001088 |
+| Long-context analysis  |        0.22 |          45000 |            5000 |             0.75 |           0.08125  |                         0.017875 |
+| Agentic workflow run   |        0.12 |         220000 |           30000 |             0.9  |           1.11     |                         0.1332   |
+
+![LLM message cost trends](../figures/deep_analysis/llm_message_cost_trends.png)
+
+Current cheapest adequate fixed-task candidates:
+
+| display_name                     | domain_label                      | selected_model                 | selected_family   |   required_domain_score |   selected_domain_score |   forecast_task_cost_usd | adequacy_status                | human_gate                           |
+|:---------------------------------|:----------------------------------|:-------------------------------|:------------------|------------------------:|------------------------:|-------------------------:|:-------------------------------|:-------------------------------------|
+| Thesis-quality long-form writing | Language and writing              | OpenAI: gpt-oss-20b            | GPT               |                      88 |                  85.432 |                  0.0067  | best_available_below_threshold | advisor, fact and citation review    |
+| Repository issue resolution      | Software engineering              | Anthropic Claude Sonnet Latest | Claude            |                      82 |                  78.966 |                  1.635   | best_available_below_threshold | senior engineer review and tests     |
+| Financial analysis memo          | Finance and quantitative analysis | Anthropic: Claude 3 Haiku      | Claude            |                      65 |                  62.962 |                  0.02125 | best_available_below_threshold | assumption and control owner signoff |
+| Legal due-diligence memo         | Legal reasoning                   | Anthropic: Claude 3 Haiku      | Claude            |                      90 |                  90.5   |                  0.02875 | adequate                       | licensed legal review                |
+| Long-document synthesis          | Search and document work          | Anthropic: Claude 3 Haiku      | Claude            |                      84 |                 100     |                  0.04125 | adequate                       | source-grounding and factual review  |
+| Customer-support resolution      | Instruction following             | Meta: Llama 3.1 8B Instruct    | Llama             |                      78 |                  81.208 |                  0.00015 | adequate                       | policy, refund and safety review     |
+
+Base scenario fixed-task curves:
+
+| display_name                     |   target_year | selected_family   |   selected_domain_score |   forecast_task_cost_usd |   cost_factor_vs_current | adequacy_status                |
+|:---------------------------------|--------------:|:------------------|------------------------:|-------------------------:|-------------------------:|:-------------------------------|
+| Thesis-quality long-form writing |          2028 | GPT               |                  96.11  |                 0.001544 |                 0.2304   | adequate                       |
+| Thesis-quality long-form writing |          2031 | GPT               |                  98.854 |                 0.000171 |                 0.02548  | adequate                       |
+| Thesis-quality long-form writing |          2036 | GPT               |                  98.854 |                 0.000168 |                 0.025    | adequate                       |
+| Repository issue resolution      |          2028 | GPT               |                  82.627 |                 0.007834 |                 0.004791 | adequate                       |
+| Repository issue resolution      |          2031 | GPT               |                  89.585 |                 0.000866 |                 0.00053  | adequate                       |
+| Repository issue resolution      |          2036 | GPT               |                  94.872 |                 0.00085  |                 0.00052  | adequate                       |
+| Financial analysis memo          |          2028 | Claude            |                  62.962 |                 0.004896 |                 0.2304   | best_available_below_threshold |
+| Financial analysis memo          |          2031 | Claude            |                  62.962 |                 0.000541 |                 0.02548  | best_available_below_threshold |
+| Financial analysis memo          |          2036 | Claude            |                  62.962 |                 0.000531 |                 0.025    | best_available_below_threshold |
+| Legal due-diligence memo         |          2028 | Claude            |                  90.5   |                 0.006624 |                 0.2304   | adequate                       |
+| Legal due-diligence memo         |          2031 | Claude            |                  90.5   |                 0.000733 |                 0.02548  | adequate                       |
+| Legal due-diligence memo         |          2036 | Claude            |                  90.5   |                 0.000719 |                 0.025    | adequate                       |
+| Long-document synthesis          |          2028 | Claude            |                  99.5   |                 0.009504 |                 0.2304   | adequate                       |
+| Long-document synthesis          |          2031 | Claude            |                  99.5   |                 0.001051 |                 0.02548  | adequate                       |
+| Long-document synthesis          |          2036 | Claude            |                  99.5   |                 0.001031 |                 0.025    | adequate                       |
+| Customer-support resolution      |          2028 | Llama             |                  81.208 |                 3.5e-05  |                 0.2304   | adequate                       |
+| Customer-support resolution      |          2031 | Llama             |                  81.208 |                 4e-06    |                 0.02548  | adequate                       |
+| Customer-support resolution      |          2036 | Llama             |                  81.208 |                 4e-06    |                 0.025    | adequate                       |
+
+![Fixed task cost curves](../figures/deep_analysis/fixed_task_cost_curves.png)
+
+The divergence table is the explicit version of the user's hypothesis: frontier work-unit cost can rise because average tasks get harder, while fixed task cost can fall because capability diffuses into cheaper models.
+
+| scenario     |   target_year |   modeled_average_message_cost_usd |   message_cost_factor_vs_2026 |   median_fixed_task_cost_usd |   fixed_task_cost_factor_vs_2026 |   frontier_workload_complexity_multiplier |
+|:-------------|--------------:|-----------------------------------:|------------------------------:|-----------------------------:|---------------------------------:|------------------------------------------:|
+| conservative |          2028 |                           0.291059 |                        1.9117 |                     0.012147 |                          0.48588 |                                    1.9905 |
+| conservative |          2031 |                           0.383646 |                        2.5198 |                     0.003336 |                          0.13344 |                                    2.7877 |
+| conservative |          2036 |                           0.43726  |                        2.872  |                     0.000719 |                          0.02876 |                                    3.5149 |
+| base         |          2028 |                           0.414459 |                        2.7222 |                     0.006624 |                          0.26496 |                                    2.7222 |
+| base         |          2031 |                           0.661146 |                        4.3425 |                     0.000733 |                          0.02932 |                                    4.3425 |
+| base         |          2036 |                           0.780511 |                        5.1265 |                     0.000719 |                          0.02876 |                                    5.1265 |
+| aggressive   |          2028 |                           0.607352 |                        3.9892 |                     0.003726 |                          0.14904 |                                    3.5503 |
+| aggressive   |          2031 |                           1.1106   |                        7.2946 |                     0.000719 |                          0.02876 |                                    5.4509 |
+| aggressive   |          2036 |                           1.81779  |                       11.9394 |                     0.000719 |                          0.02876 |                                    6.6669 |
+
+![Cost task message divergence](../figures/deep_analysis/cost_task_message_divergence.png)
+
+![Fixed task quality cost ladder](../figures/deep_analysis/fixed_task_quality_cost_ladder.png)
+
+Cost evidence notes:
+
+| source_id                                  | name                                                                               | used_for                                                                                                                | url                                                        |
+|:-------------------------------------------|:-----------------------------------------------------------------------------------|:------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------|
+| openrouter_models_api                      | OpenRouter Models API                                                              | Current model price, context-window and modality catalog fields.                                                        | https://openrouter.ai/docs/guides/overview/models          |
+| epoch_llm_inference_price_trends           | Epoch AI LLM inference price trends                                                | External prior that quality-adjusted inference prices can fall faster than raw frontier price lists.                    | https://epoch.ai/data-insights/llm-inference-price-trends/ |
+| price_of_progress_arxiv_2511_23455         | The Price of Progress: Algorithmic Efficiency and the Falling Cost of AI Inference | Quality-adjusted fixed-task cost-decline prior.                                                                         | https://arxiv.org/abs/2511.23455                           |
+| agentic_token_consumption_arxiv_2604_22750 | How Do AI Agents Spend Your Money?                                                 | Token-amplification caveat for agentic coding and multi-step workflows.                                                 | https://arxiv.org/abs/2604.22750                           |
+| price_reversal_arxiv_2603_23971            | The Price Reversal Phenomenon                                                      | Caveat that listed price can be a weak proxy for realized cost when thinking tokens and retry variance differ by model. | https://arxiv.org/abs/2603.23971                           |
+| anthropic_economic_index_arxiv_2511_15080  | Anthropic Economic Index report: Uneven geographic and enterprise AI adoption      | External support for rising directive delegation and more autonomous AI task use.                                       | https://arxiv.org/abs/2511.15080                           |
+
 ## Job Exposure And Labor Pressure
 
 The labor table joins Anthropic observed occupation exposure to wage/job companion data, task-level penetration, automation/augmentation mode shares, and keyword-derived task bottlenecks from O*NET text. The output is an occupation-level pressure index, not a prediction that a whole occupation vanishes.
@@ -264,11 +503,11 @@ The labor table joins Anthropic observed occupation exposure to wage/job compani
 | Sales Representatives, Wholesale and Manufacturing, Except Technical and Scientific Products |                        54.97 |                         55.94 |                56.77 |                                   34.77 | mixed_redesign        | high         |
 | Financial and Investment Analysts                                                            |                        53.75 |                         40.35 |                66.37 |                                   27.24 | augmentation_first    | high         |
 | Statistical Assistants                                                                       |                        53.55 |                         47.71 |                59.62 |                                   31.6  | augmentation_first    | high         |
+| Computer Programmers                                                                         |                        52.61 |                         52.14 |                55.26 |                                   26.07 | mixed_redesign        | high         |
 | Human Resources Assistants, Except Payroll and Timekeeping                                   |                        51.76 |                         50.06 |                52.03 |                                   30.44 | mixed_redesign        | high         |
 | Mathematical Science Teachers, Postsecondary                                                 |                        50.86 |                         43.32 |                53.09 |                                   26.39 | augmentation_first    | high         |
 | Social Science Research Assistants                                                           |                        50.61 |                         44.68 |                55.18 |                                   27.3  | augmentation_first    | high         |
 | Engineering Teachers, Postsecondary                                                          |                        50.23 |                         40.29 |                50.32 |                                   24.37 | augmentation_first    | high         |
-| Receptionists and Information Clerks                                                         |                        49.89 |                         53.46 |                49.79 |                                   30.45 | mixed_redesign        | high         |
 
 ![Job exposure top](../figures/deep_analysis/job_exposure_top.png)
 
@@ -297,23 +536,23 @@ The replacement feasibility index gates substitution pressure through physical, 
 
 ## Labor Clusters
 
-|   labor_cluster_id | cluster_label                               |   occupation_count |   full_job_automation_feasibility_index |   augmentation_index |   human_bottleneck_index | example_occupations                                                                                                                                                                                                                                  |
-|-------------------:|:--------------------------------------------|-------------------:|----------------------------------------:|---------------------:|-------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-|                  2 | replacement-prone clerical/transaction work |                 98 |                                20.7162  |              46.4024 |                  1.55796 | Data Entry Keyers; Market Research Analysts and Marketing Specialists; Medical Transcriptionists; Technical Writers; Sales Representatives, Wholesale and Manufacturing, Except Technical and Scientific Products                                    |
-|                  0 | mixed redesign work                         |                138 |                                14.3645  |              32.4154 |                  2.20072 | Dispatchers, Except Police, Fire, and Ambulance; Counter and Rental Clerks; Tax Preparers; Nursing Instructors and Teachers, Postsecondary; Procurement Clerks                                                                                       |
-|                  4 | augmentation-heavy expert work              |                 27 |                                10.737   |              32.2737 |                  1.55037 | Desktop Publishers; Special Effects Artists and Animators; Photographic Process Workers and Processing Machine Operators; Graphic Designers; Art Directors                                                                                           |
-|                  6 | mixed redesign work                         |                215 |                                 9.09526 |              19.2143 |                  1.94414 | Multiple Machine Tool Setters, Operators, and Tenders, Metal and Plastic; Transportation Security Screeners; Ophthalmic Laboratory Technicians; Molders, Shapers, and Casters, Except Metal and Plastic; Ushers, Lobby Attendants, and Ticket Takers |
-|                  5 | mixed redesign work                         |                103 |                                 7.69932 |              19.8668 |                  7.65272 | Insurance Appraisers, Auto Damage; Computer, Automated Teller, and Office Machine Repairers; Rail Yard Engineers, Dinkey Operators, and Hostlers; Amusement and Recreation Attendants; Bus and Truck Mechanics and Diesel Engine Specialists         |
-|                  3 | augmentation-heavy expert work              |                124 |                                 4.73355 |              29.6729 |                  2.4329  | Lawyers; Atmospheric and Space Scientists; Chief Executives; Construction and Building Inspectors; Geoscientists, Except Hydrologists and Geographers                                                                                                |
-|                  1 | augmentation-heavy expert work              |                 51 |                                 3.61902 |              26.5986 |                  9.81039 | Nurse Practitioners; Nurse Midwives; Genetic Counselors; Nurse Anesthetists; Pharmacists                                                                                                                                                             |
+|   labor_cluster_id | cluster_label                               |   occupation_count |   full_job_automation_feasibility_index |   augmentation_index |   human_bottleneck_index | example_occupations                                                                                                                                                                                                                          |
+|-------------------:|:--------------------------------------------|-------------------:|----------------------------------------:|---------------------:|-------------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|                  2 | replacement-prone clerical/transaction work |                113 |                                20.4247  |              44.8353 |                  1.31115 | Data Entry Keyers; Market Research Analysts and Marketing Specialists; Technical Writers; Sales Representatives, Wholesale and Manufacturing, Except Technical and Scientific Products; Financial and Investment Analysts                    |
+|                  0 | augmentation-heavy expert work              |                 28 |                                10.9904  |              32.3325 |                  1.56679 | Desktop Publishers; Special Effects Artists and Animators; Photographic Process Workers and Processing Machine Operators; Prepress Technicians and Workers; Graphic Designers                                                                |
+|                  4 | mixed redesign work                         |                298 |                                10.799   |              22.9227 |                  2.07715 | Power Plant Operators; Baggage Porters and Bellhops; Hosts and Hostesses, Restaurant, Lounge, and Coffee Shop; Couriers and Messengers; Library Technicians                                                                                  |
+|                  5 | mixed redesign work                         |                 16 |                                10.0306  |              32.4838 |                  7.43938 | Medical Transcriptionists; Medical Records Specialists; Medical Secretaries and Administrative Assistants; Judicial Law Clerks; Court Reporters and Simultaneous Captioners                                                                  |
+|                  6 | mixed redesign work                         |                104 |                                 7.67019 |              19.8389 |                  7.65317 | Insurance Appraisers, Auto Damage; Computer, Automated Teller, and Office Machine Repairers; Rail Yard Engineers, Dinkey Operators, and Hostlers; Amusement and Recreation Attendants; Bus and Truck Mechanics and Diesel Engine Specialists |
+|                  1 | augmentation-heavy expert work              |                152 |                                 5.75487 |              29.4653 |                  2.2102  | Title Examiners, Abstractors, and Searchers; Compensation and Benefits Managers; Magnetic Resonance Imaging Technologists; Production, Planning, and Expediting Clerks; Purchasing Managers                                                  |
+|                  3 | augmentation-heavy expert work              |                 45 |                                 3.45956 |              27.58   |                  9.87867 | Nurse Practitioners; Nurse Midwives; Genetic Counselors; Special Education Teachers, Preschool; Nurse Anesthetists                                                                                                                           |
 
 Labor-weighted dominant outcome summary:
 
 | group                 |   occupation_count |   labor_weight_sum |   weighted_disruption_index |   weighted_replacement_feasibility |   weighted_augmentation_index |
 |:----------------------|-------------------:|-------------------:|----------------------------:|-----------------------------------:|------------------------------:|
-| replacement_candidate |                  3 |   796776           |                       59.76 |                              38.16 |                         59.36 |
-| mixed_redesign        |                364 |        6.74605e+07 |                       32.91 |                              14.31 |                         25.51 |
-| augmentation_first    |                389 |        7.54147e+07 |                       31.08 |                               8.58 |                         33.5  |
+| replacement_candidate |                  3 |    22337.6         |                       59.66 |                              38.31 |                         61.4  |
+| mixed_redesign        |                364 |        2.96894e+06 |                       33.73 |                              14.76 |                         27.53 |
+| augmentation_first    |                389 |        4.21343e+06 |                       32.69 |                               9.76 |                         36.22 |
 
 ![Labor clusters](../figures/deep_analysis/labor_cluster_profiles.png)
 
@@ -327,14 +566,14 @@ The domain layer translates occupation-level pressure into business language. It
 
 | business_domain           | pressure_label   |   disruption_index |   augmentation_index |   replacement_feasibility_index |   human_bottleneck_index | example_occupations                                                                                                                                                                                                      |
 |:--------------------------|:-----------------|-------------------:|---------------------:|--------------------------------:|-------------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| finance_analysis          | moderate         |              38.91 |                39.74 |                           15.46 |                     1.58 | Market Research Analysts and Marketing Specialists; Financial and Investment Analysts; Accountants and Auditors; Loan Officers                                                                                           |
-| marketing_content         | moderate         |              34.82 |                33.3  |                           12.93 |                     1.27 | Technical Writers; Public Relations Specialists; Real Estate Brokers; Real Estate Sales Agents                                                                                                                           |
-| software_engineering      | moderate         |              33.81 |                32.14 |                           12.44 |                     3.93 | Social Science Research Assistants; Secretaries and Administrative Assistants, Except Legal, Medical, and Executive; Interviewers, Except Eligibility and Loan; Office Clerks, General                                   |
-| customer_support          | moderate         |              32.76 |                29.95 |                           12.79 |                     2.79 | Sales Representatives, Wholesale and Manufacturing, Except Technical and Scientific Products; Receptionists and Information Clerks; Customer Service Representatives; Switchboard Operators, Including Answering Service |
-| legal_compliance          | moderate         |              31.26 |                28.01 |                            9.55 |                     3.1  | Paralegals and Legal Assistants; Administrative Law Judges, Adjudicators, and Hearing Officers; Judges, Magistrate Judges, and Magistrates; Property, Real Estate, and Community Association Managers                    |
-| operations_back_office    | moderate         |              30.2  |                24.04 |                           11.11 |                     3.28 | Data Entry Keyers; Statistical Assistants; Human Resources Assistants, Except Payroll and Timekeeping; Political Scientists                                                                                              |
-| education                 | moderate         |              28.91 |                23.28 |                            8.97 |                     3.74 | Mathematical Science Teachers, Postsecondary; Engineering Teachers, Postsecondary; English Language and Literature Teachers, Postsecondary; Health Specialties Teachers, Postsecondary                                   |
-| healthcare_administration | moderate         |              27.73 |                28.43 |                            4.35 |                     7.52 | Medical Transcriptionists; Nurse Practitioners; Medical Records Specialists; Magnetic Resonance Imaging Technologists                                                                                                    |
+| finance_analysis          | moderate         |              38.13 |                39.65 |                           14.24 |                     1.42 | Market Research Analysts and Marketing Specialists; Financial and Investment Analysts; Accountants and Auditors; Loan Officers                                                                                           |
+| marketing_content         | moderate         |              36.29 |                34.67 |                           14.34 |                     1.21 | Technical Writers; Public Relations Specialists; Real Estate Brokers; Real Estate Sales Agents                                                                                                                           |
+| software_engineering      | moderate         |              34.98 |                35.76 |                           12.74 |                     3.13 | Computer Programmers; Social Science Research Assistants; Secretaries and Administrative Assistants, Except Legal, Medical, and Executive; Interviewers, Except Eligibility and Loan                                     |
+| legal_compliance          | moderate         |              32.82 |                29.97 |                           10.41 |                     3.11 | Paralegals and Legal Assistants; Administrative Law Judges, Adjudicators, and Hearing Officers; Judges, Magistrate Judges, and Magistrates; Property, Real Estate, and Community Association Managers                    |
+| customer_support          | moderate         |              31.55 |                29.36 |                           11.93 |                     3.11 | Sales Representatives, Wholesale and Manufacturing, Except Technical and Scientific Products; Receptionists and Information Clerks; Customer Service Representatives; Switchboard Operators, Including Answering Service |
+| operations_back_office    | moderate         |              30.12 |                25.13 |                           10.86 |                     3.52 | Data Entry Keyers; Statistical Assistants; Human Resources Assistants, Except Payroll and Timekeeping; Political Scientists                                                                                              |
+| education                 | moderate         |              29.77 |                25.61 |                            9.36 |                     3.42 | Mathematical Science Teachers, Postsecondary; Engineering Teachers, Postsecondary; English Language and Literature Teachers, Postsecondary; Health Specialties Teachers, Postsecondary                                   |
+| healthcare_administration | moderate         |              29.09 |                30.08 |                            5.52 |                     7.75 | Medical Transcriptionists; Medical Records Specialists; Nurse Practitioners; Magnetic Resonance Imaging Technologists                                                                                                    |
 
 Workflow examples:
 
@@ -355,20 +594,20 @@ Workflow examples:
 
 Base scenario subset:
 
-|   target_year | metric                                          |   value | unit                                                   | method                                                                               |
-|--------------:|:------------------------------------------------|--------:|:-------------------------------------------------------|:-------------------------------------------------------------------------------------|
-|          2028 | frontier_context_window_multiplier              |   6.23  | x current API catalog trend                            | capped scenario from OpenRouter upper-tail slope; raw=6.23x capped=False             |
-|          2028 | frontier_output_price_factor                    |   1     | fraction of current low-price frontier API output cost | OpenRouter lower-quintile output price slope; observed=0.036, scenario_assumed=0.000 |
-|          2028 | open_weight_lmarena_gap_remaining               |  53.6   | arena rating points                                    | current open vs closed LMArena gap with scenario-specific closure speed              |
-|          2028 | share_of_us_occupation_tasks_materially_touched |   0.104 | share of task-weighted occupation activity             | Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon   |
-|          2031 | frontier_context_window_multiplier              |  64     | x current API catalog trend                            | capped scenario from OpenRouter upper-tail slope; raw=96.70x capped=True             |
-|          2031 | frontier_output_price_factor                    |   1     | fraction of current low-price frontier API output cost | OpenRouter lower-quintile output price slope; observed=0.036, scenario_assumed=0.000 |
-|          2031 | open_weight_lmarena_gap_remaining               |  28.2   | arena rating points                                    | current open vs closed LMArena gap with scenario-specific closure speed              |
-|          2031 | share_of_us_occupation_tasks_materially_touched |   0.183 | share of task-weighted occupation activity             | Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon   |
-|          2036 | frontier_context_window_multiplier              |  64     | x current API catalog trend                            | capped scenario from OpenRouter upper-tail slope; raw=9351.33x capped=True           |
-|          2036 | frontier_output_price_factor                    |   1     | fraction of current low-price frontier API output cost | OpenRouter lower-quintile output price slope; observed=0.036, scenario_assumed=0.000 |
-|          2036 | open_weight_lmarena_gap_remaining               |   5.6   | arena rating points                                    | current open vs closed LMArena gap with scenario-specific closure speed              |
-|          2036 | share_of_us_occupation_tasks_materially_touched |   0.281 | share of task-weighted occupation activity             | Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon   |
+|   target_year | metric                                          |   value | unit                                                   | method                                                                                                    |
+|--------------:|:------------------------------------------------|--------:|:-------------------------------------------------------|:----------------------------------------------------------------------------------------------------------|
+|          2028 | frontier_context_window_multiplier              |  6.23   | x current API catalog trend                            | capped scenario from OpenRouter upper-tail slope; raw=6.23x capped=False                                  |
+|          2028 | frontier_output_price_factor                    |  0.4365 | fraction of current low-price frontier API output cost | Explicit price-decline scenario; current-catalog release-cohort diagnostic=0.036, scenario_assumed=-0.180 |
+|          2028 | open_weight_lmarena_gap_remaining               | 53.6    | arena rating points                                    | current open vs closed LMArena gap with scenario-specific closure speed                                   |
+|          2028 | share_of_us_occupation_tasks_materially_touched |  0.104  | share of task-weighted occupation activity             | Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon                        |
+|          2031 | frontier_context_window_multiplier              | 64      | x current API catalog trend                            | capped scenario from OpenRouter upper-tail slope; raw=96.70x capped=True                                  |
+|          2031 | frontier_output_price_factor                    |  0.1259 | fraction of current low-price frontier API output cost | Explicit price-decline scenario; current-catalog release-cohort diagnostic=0.036, scenario_assumed=-0.180 |
+|          2031 | open_weight_lmarena_gap_remaining               | 28.2    | arena rating points                                    | current open vs closed LMArena gap with scenario-specific closure speed                                   |
+|          2031 | share_of_us_occupation_tasks_materially_touched |  0.183  | share of task-weighted occupation activity             | Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon                        |
+|          2036 | frontier_context_window_multiplier              | 64      | x current API catalog trend                            | capped scenario from OpenRouter upper-tail slope; raw=9351.33x capped=True                                |
+|          2036 | frontier_output_price_factor                    |  0.05   | fraction of current low-price frontier API output cost | Explicit price-decline scenario; current-catalog release-cohort diagnostic=0.036, scenario_assumed=-0.180 |
+|          2036 | open_weight_lmarena_gap_remaining               |  5.6    | arena rating points                                    | current open vs closed LMArena gap with scenario-specific closure speed                                   |
+|          2036 | share_of_us_occupation_tasks_materially_touched |  0.281  | share of task-weighted occupation activity             | Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon                        |
 
 The dashboard puts four scenario families on one page: context scale, output price, open-weight benchmark gap and task-share contact. The useful reading is not the exact number in 2036; it is which assumptions move together and which do not.
 
@@ -386,17 +625,17 @@ The uncertainty view stress-tests component weights and evidence depth. These in
 
 | model_family   |   current_rank |   score_p10 |   score_p50 |   score_p90 |   best_rank |   median_rank |   worst_rank | rank_stability_label   |
 |:---------------|---------------:|------------:|------------:|------------:|------------:|--------------:|-------------:|:-----------------------|
-| GPT            |              1 |       75.48 |       78.06 |       80.49 |           1 |             1 |            2 | stable                 |
-| Qwen           |              2 |       76    |       77.91 |       80.07 |           1 |             2 |            2 | stable                 |
-| Claude         |              4 |       51.41 |       54.14 |       57.21 |           3 |             4 |            8 | moderate               |
-| Mistral        |              3 |       51.32 |       54.78 |       57.86 |           3 |             4 |            7 | moderate               |
-| Llama          |              5 |       49.6  |       53.47 |       57.43 |           3 |             5 |            7 | moderate               |
-| DeepSeek       |              5 |       50.01 |       53.62 |       56.72 |           3 |             5 |            7 | moderate               |
-| Gemini         |              7 |       48.04 |       51.5  |       54.85 |           3 |             7 |            8 | moderate               |
-| Gemma          |              8 |       41.39 |       44.84 |       48.84 |           6 |             8 |            9 | stable                 |
-| Phi            |              9 |       30.7  |       34.36 |       38    |           9 |             9 |           10 | stable                 |
-| Grok           |             10 |       24.58 |       28.99 |       32.82 |           8 |            10 |           11 | stable                 |
-| Command        |             11 |        4.23 |       10.3  |       19.05 |          10 |            11 |           11 | stable                 |
+| GPT            |              1 |       73.83 |       77.77 |       81.71 |           1 |             1 |            2 | stable                 |
+| Qwen           |              2 |       74.08 |       77.84 |       81.57 |           1 |             2 |            2 | stable                 |
+| Mistral        |              3 |       54.32 |       59.1  |       63.98 |           3 |             4 |            8 | moderate               |
+| Gemini         |              4 |       54.83 |       59.64 |       64.52 |           3 |             4 |            9 | moderate               |
+| Claude         |              6 |       53.63 |       57.97 |       62.46 |           3 |             5 |            8 | moderate               |
+| DeepSeek       |              5 |       54    |       58.27 |       62.73 |           3 |             5 |            8 | moderate               |
+| Llama          |              7 |       48.7  |       53.64 |       58.48 |           3 |             7 |            9 | moderate               |
+| Gemma          |              8 |       44.54 |       49.37 |       54.86 |           3 |             8 |           10 | stable                 |
+| Command        |              9 |       36.51 |       45.33 |       53.9  |           3 |             9 |           11 | moderate               |
+| Grok           |             11 |       34.4  |       39.06 |       44.38 |           7 |            10 |           11 | stable                 |
+| Phi            |             10 |       34.25 |       39.14 |       44.56 |           8 |            10 |           11 | stable                 |
 
 ![Frontier rank uncertainty](../figures/deep_analysis/frontier_rank_uncertainty.png)
 
@@ -462,20 +701,20 @@ AI looks less like a single prior wave and more like an uncomfortable hybrid: sp
 
 | claim_id                                | claim                                                                                                                                                                       | evidence                                                                                                                  | confidence   | analysis_captured_at      |
 |:----------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------|:-------------|:--------------------------|
-| company-next-best-model                 | GPT has the strongest composite signal for near-term frontier leadership, but the top open-weight ecosystem score is not necessarily the same family.                       | Composite of LMArena, SWE-bench, OpenRouter, Epoch, Hugging Face, GitHub and OpenAlex indicators.                         | medium       | 2026-05-16T17:13:09+00:00 |
-| jobs-augmentation-not-total-replacement | The labor signal is broad task contact, not full-job deletion: high-exposure occupations still retain bottlenecks from trust, regulation, physical work and accountability. | Anthropic Economic Index occupation exposure joined to O*NET task text, task collaboration modes and wage/job metadata.   | medium-high  | 2026-05-16T17:13:09+00:00 |
-| open-source-catchup                     | Open-weight systems look structurally advantaged on ecosystem and cost but still need repeated frontier jumps to erase closed/API benchmark gaps.                           | OpenRouter price fields, Hugging Face downloads/files, LMArena access-class split and Epoch open-weight release metadata. | medium       | 2026-05-16T17:13:09+00:00 |
-| ten-year-forecast                       | The 10-year question is less whether AI touches most cognitive workflows and more whether institutions redesign jobs around verification, liability and human preference.   | Scenario table combines capability trend, price decline, observed task exposure and bottleneck scoring.                   | speculative  | 2026-05-16T17:13:09+00:00 |
+| company-next-best-model                 | GPT has the strongest composite signal for near-term frontier leadership, but the top open-weight ecosystem score is not necessarily the same family.                       | Composite of LMArena, SWE-bench, OpenRouter, Epoch, Hugging Face, GitHub and OpenAlex indicators.                         | medium       | 2026-07-12T19:42:51+00:00 |
+| jobs-augmentation-not-total-replacement | The labor signal is broad task contact, not full-job deletion: high-exposure occupations still retain bottlenecks from trust, regulation, physical work and accountability. | Anthropic Economic Index occupation exposure joined to O*NET task text, task collaboration modes and wage/job metadata.   | medium-high  | 2026-07-12T19:42:51+00:00 |
+| open-source-catchup                     | Open-weight systems look structurally advantaged on ecosystem and cost but still need repeated frontier jumps to erase closed/API benchmark gaps.                           | OpenRouter price fields, Hugging Face downloads/files, LMArena access-class split and Epoch open-weight release metadata. | medium       | 2026-07-12T19:42:51+00:00 |
+| ten-year-forecast                       | The 10-year question is less whether AI touches most cognitive workflows and more whether institutions redesign jobs around verification, liability and human preference.   | Scenario table combines capability trend, price decline, observed task exposure and bottleneck scoring.                   | speculative  | 2026-07-12T19:42:51+00:00 |
 
 ## Counterintuitive Findings
 
 | finding                                                                               | evidence                                                                                                                                                        | why_it_is_interesting                                                                                                                    | artifact                                | analysis_captured_at      |
 |:--------------------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------|:----------------------------------------|:--------------------------|
-| Raw frontier leadership and open-distribution upside are different questions.         | In the 10-year frontier-quality scenario, GPT leads (58.7% of simulation draws); in the open-ecosystem-upside scenario, Qwen leads (70.3% of simulation draws). | The previous single 10-year number was misleading because it mixed best-model simulation share with adoption economics.                  | company_next_frontier_probabilities.csv | 2026-05-16T17:13:09+00:00 |
-| The open-vs-closed gap is not one gap.                                                | The largest measured LMArena category gap is text_to_image at 361.6 rating points.                                                                              | Open-source catchup can be true in one domain and false in another; a single headline benchmark hides where closed labs still have moat. | open_closed_gap_by_category.csv         | 2026-05-16T17:13:09+00:00 |
-| Cheap models can sit on the efficient frontier without being the raw best model.      | Efficient frontier examples include OpenAI: gpt-oss-20b; inclusionAI: Ling-2.6-flash.                                                                           | Enterprise adoption often follows sufficient capability per dollar, not absolute leaderboard rank.                                       | price_performance_frontier.csv          | 2026-05-16T17:13:09+00:00 |
-| The top whole-job automation candidates are narrower than the top task-exposure jobs. | The highest replacement-feasibility occupation is Market Research Analysts and Marketing Specialists with feasibility index 39.0.                               | A job can be heavily touched by AI but still mostly redesigned around human review rather than deleted.                                  | job_replacement_feasibility.csv         | 2026-05-16T17:13:09+00:00 |
-| Augmentation can be a larger labor-weighted mode than replacement.                    | Available labor-weight proxy: augmentation-first=75,414,668, replacement-candidate=796,776.                                                                     | This pushes the labor forecast toward workflow redesign, wage compression and productivity dispersion before mass full automation.       | labor_market_exposure_summary.csv       | 2026-05-16T17:13:09+00:00 |
+| Raw frontier leadership and open-distribution upside are different questions.         | In the 10-year frontier-quality scenario, GPT leads (58.6% of simulation draws); in the open-ecosystem-upside scenario, Qwen leads (70.2% of simulation draws). | The previous single 10-year number was misleading because it mixed best-model simulation share with adoption economics.                  | company_next_frontier_probabilities.csv | 2026-07-12T19:42:51+00:00 |
+| The open-vs-closed gap is not one gap.                                                | The largest measured LMArena category gap is text_to_image at 361.6 rating points.                                                                              | Open-source catchup can be true in one domain and false in another; a single headline benchmark hides where closed labs still have moat. | open_closed_gap_by_category.csv         | 2026-07-12T19:42:51+00:00 |
+| Cheap models can sit on the efficient frontier without being the raw best model.      | Efficient frontier examples include OpenAI: gpt-oss-20b; inclusionAI: Ling-2.6-flash.                                                                           | Enterprise adoption often follows sufficient capability per dollar, not absolute leaderboard rank.                                       | price_performance_frontier.csv          | 2026-07-12T19:42:51+00:00 |
+| The top whole-job automation candidates are narrower than the top task-exposure jobs. | The highest replacement-feasibility occupation is Market Research Analysts and Marketing Specialists with feasibility index 39.0.                               | A job can be heavily touched by AI but still mostly redesigned around human review rather than deleted.                                  | job_replacement_feasibility.csv         | 2026-07-12T19:42:51+00:00 |
+| Augmentation can be a larger labor-weighted mode than replacement.                    | Available labor-weight proxy: augmentation-first=4,213,430, replacement-candidate=22,338.                                                                       | This pushes the labor forecast toward workflow redesign, wage compression and productivity dispersion before mass full automation.       | labor_market_exposure_summary.csv       | 2026-07-12T19:42:51+00:00 |
 
 ## Where This Analysis Is Weak
 
@@ -495,8 +734,8 @@ Under-observed family audit:
 |:---------------|:----------|-------------------------------:|-----------------:|:----------------|:-------------------------------------------------------------------------|
 | Command        | Command   |                              0 |             0    | True            | few_direct_model_matches,low_source_coverage,below_median_evidence_depth |
 | GPT            | OpenAI    |                            120 |            99.5  | True            | below_median_evidence_depth                                              |
-| Claude         | Anthropic |                             48 |           100    | True            | below_median_evidence_depth                                              |
 | Gemini         | Google    |                             24 |           100    | True            | below_median_evidence_depth                                              |
+| Claude         | Anthropic |                             48 |           100    | True            | below_median_evidence_depth                                              |
 | Grok           | xAI       |                              3 |           100    | True            | below_median_evidence_depth                                              |
 | Gemma          | Google    |                             15 |            96.3  | False           | none                                                                     |
 | Llama          | Meta      |                             81 |            98.08 | False           | none                                                                     |
@@ -508,11 +747,15 @@ Under-observed family audit:
 ## Method Notes
 
 - Model-family scoring uses `data/dataset/`: LMArena full leaderboard rows, SWE-bench submissions, Open LLM Leaderboard metrics, OpenRouter prices/context, Epoch model metadata, Hugging Face rollups, GitHub model mentions and OpenAlex paper mentions.
+- Domain scoring adds downloaded public benchmark sources under `data/raw/domain_benchmarks/`: LiveCodeBench, Open Medical-LLM, Terminal-Bench, FinanceBench, QFBench and Lexometrica. These are normalized into `domain_benchmark_results.csv`.
 - Direct model evidence uses conservative name matching across exact, normalized exact, alias, family-only and unmatched classes. Family-only rows are audit evidence, not direct model proof.
 - Vendor scoring maps model families to legal vendors and combines flagship-family signal with evidence-weighted portfolio breadth.
 - Rank stability and forecast bands are stress tests and scenario envelopes. They are not calibrated confidence intervals.
 - Labor scoring uses Anthropic Economic Index files from Hugging Face, including occupation exposure, task penetration, task automation/augmentation labels, O*NET task mappings/statements, and BLS wage/employment companion data.
 - Scenario forecasts are not forecasts from a proprietary model. They are transparent transforms of observed slopes and pressure scores. Every scenario row includes a method field and the input diagnostics include caps/fallback policy.
+- Domain forecasts use bounded gap closure from dated public benchmark frontier trends. When a domain lacks enough longitudinal evidence, the forecast uses a cross-domain fallback and marks confidence as low.
+- Cost-per-message analysis is a workload-mix model over listed API price cohorts, not observed billing data. It separates low-cost chat, knowledge work, long-context analysis and agentic workflow runs.
+- Fixed-task cost curves hold task token budgets and quality thresholds stable, then ask which current or future adequate family proxy is cheapest. They should be read as deployability screens, not direct model guarantees.
 - Leadership simulation shares are stochastic sensitivity analyses over explicit score components, not calibrated market probabilities.
 - Labor-weighted summaries use the best available public companion weights; where only major-group BLS employment is available, the analysis allocates it across detailed occupations inside that group to avoid treating each detailed occupation as the whole major group.
 - BLS web xlsx endpoints returned anti-bot 403 responses in this environment. The analysis therefore uses public BLS-derived companion files already included in Anthropic's release rather than scraping around that restriction.
@@ -521,10 +764,22 @@ Under-observed family audit:
 
 - `data/analysis/company_frontier_scores.csv`
 - `data/analysis/dashboard_key_findings.csv`
+- `data/analysis/domain_benchmark_catalog.csv`
+- `data/analysis/domain_benchmark_results.csv`
+- `data/analysis/domain_capability_frontier.csv`
+- `data/analysis/domain_improvement_velocity.csv`
+- `data/analysis/domain_capability_forecasts.csv`
+- `data/analysis/domain_forecast_thresholds.csv`
 - `data/analysis/company_score_methodology.csv`
 - `data/analysis/company_score_sensitivity.csv`
 - `data/analysis/model_benchmark_match_audit.csv`
 - `data/analysis/direct_model_price_performance.csv`
+- `data/analysis/llm_message_cost_trends.csv`
+- `data/analysis/llm_message_cost_profile_components.csv`
+- `data/analysis/fixed_task_cost_candidates.csv`
+- `data/analysis/fixed_task_cost_curves.csv`
+- `data/analysis/cost_divergence_scenarios.csv`
+- `data/analysis/cost_external_evidence.csv`
 - `data/analysis/vendor_frontier_scores.csv`
 - `data/analysis/vendor_score_components.csv`
 - `data/analysis/source_coverage_diagnostics.csv`
@@ -552,12 +807,23 @@ Under-observed family audit:
 - `data/analysis/forecast_claims.csv`
 - `figures/deep_analysis/company_score_component_stack.png`
 - `figures/deep_analysis/company_score_evidence_scatter.png`
+- `figures/deep_analysis/domain_benchmark_coverage.png`
+- `figures/deep_analysis/domain_source_matrix.png`
+- `figures/deep_analysis/domain_frontier_trends.png`
+- `figures/deep_analysis/domain_current_velocity.png`
+- `figures/deep_analysis/domain_forecast_base.png`
+- `figures/deep_analysis/domain_forecast_scenarios.png`
+- `figures/deep_analysis/domain_threshold_timeline.png`
 - `figures/deep_analysis/leadership_scenario_matrix.png`
 - `figures/deep_analysis/open_closed_category_levels.png`
 - `figures/deep_analysis/price_context_rating_map.png`
 - `figures/deep_analysis/labor_outcome_mix.png`
 - `figures/deep_analysis/forecast_scenario_dashboard.png`
 - `figures/deep_analysis/direct_vs_proxy_price_performance.png`
+- `figures/deep_analysis/llm_message_cost_trends.png`
+- `figures/deep_analysis/fixed_task_cost_curves.png`
+- `figures/deep_analysis/cost_task_message_divergence.png`
+- `figures/deep_analysis/fixed_task_quality_cost_ladder.png`
 - `figures/deep_analysis/vendor_frontier_scores.png`
 - `figures/deep_analysis/family_vs_vendor_rank_shift.png`
 - `figures/deep_analysis/source_coverage_dashboard.png`

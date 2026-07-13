@@ -1,0 +1,5 @@
+year,released_model_count,low_cost_blended_price_usd_per_1m,median_blended_price_usd_per_1m,frontier_blended_price_usd_per_1m,simple_chat_share,knowledge_work_share,long_context_share,agentic_workflow_share,average_effective_tokens,modeled_average_message_cost_usd,message_cost_index_2023_100,method,analysis_captured_at
+2023,10,0.4788,1.4125,46.5,0.7,0.25,0.05,0.0,4655.0,0.026383,100.0,"Weighted scenario mix of simple chat, knowledge work, long-context analysis and agentic workflow runs.",2026-07-12T19:42:51+00:00
+2024,57,0.209924,0.847,14.7,0.57,0.3,0.1,0.03,14708.0,0.078275,296.7,"Weighted scenario mix of simple chat, knowledge work, long-context analysis and agentic workflow runs.",2026-07-12T19:42:51+00:00
+2025,232,0.21,0.8252,7.4125,0.43,0.33,0.17,0.07,28153.0,0.080733,306.0,"Weighted scenario mix of simple chat, knowledge work, long-context analysis and agentic workflow runs.",2026-07-12T19:42:51+00:00
+2026,321,0.247,1.02,9.6,0.32,0.34,0.22,0.12,43046.0,0.152251,577.1,"Weighted scenario mix of simple chat, knowledge work, long-context analysis and agentic workflow runs.",2026-07-12T19:42:51+00:00

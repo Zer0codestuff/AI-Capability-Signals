@@ -23,3 +23,17 @@ This project favors source preservation over fragile live scraping. Each fetch w
 - Forecast bands are scenario envelopes across conservative, base, and aggressive settings; they should not be described as statistical uncertainty bands.
 - Business-domain views are occupation-derived translation layers. They help non-technical review but do not replace the underlying occupation-level evidence.
 - Release-calendar/oracle outputs are demoted exploratory checks. Slow-moving planetary features are dominated by the sample year distribution and are not treated as causal signals.
+
+## Statistical Guardrails
+
+- The analysis is an as-of snapshot at the reference date. Rows dated after that cutoff are excluded from analytical panels.
+- Ingestion time, dataset `lastModified`, and report-generation time are not evaluation dates. Undated SWE-bench and Open LLM Leaderboard rows remain usable as cross-sectional evidence but are ineligible for trend estimation.
+- Historical LMArena rows are repeated leaderboard snapshots. Scores are normalized within each category and publication snapshot, then collapsed to one model/benchmark/year observation before estimating a frontier.
+- Domain histories are benchmark-first panels: each benchmark contributes one annual frontier value. Raw row count never acts as an implicit statistical weight.
+- Domain velocity is the median within-benchmark slope among benchmarks observed in at least two years. Domains without comparable longitudinal history receive no borrowed cross-domain slope and are held flat in scenario tables.
+- Domain forecasts are bounded scenario extrapolations, not calibrated predictive intervals. `forecast_enabled=false` means the project found insufficient comparable history and deliberately refused to extrapolate.
+- Missing public evidence is neutral in min-max components rather than scored as zero capability. Coverage and effective evidence counts are reported separately.
+- BLS major-group employment totals are allocated across unmatched detailed occupations instead of being copied onto every occupation. Growth-rate fields are never used as population weights.
+- OpenRouter is a current catalog. Grouping current prices by model release year is a cross-sectional cohort diagnostic, not a historical price series; forward price paths therefore use explicit scenario assumptions.
+
+These guardrails reduce pseudo-replication and temporal leakage, but they do not turn heterogeneous public benchmarks into a causal or calibrated forecasting dataset.

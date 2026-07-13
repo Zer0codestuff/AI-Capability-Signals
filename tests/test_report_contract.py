@@ -32,9 +32,18 @@ class ReportContractTests(unittest.TestCase):
         self.assertIn("Dashboard Snapshot", text)
         self.assertIn("dashboard_key_findings.csv", text)
         self.assertIn("How To Read This Report", text)
+        self.assertIn("Capability Domains", text)
+        self.assertIn("Domain Improvement Velocity", text)
+        self.assertIn("Domain Capability Forecasts", text)
+        self.assertIn("domain_benchmark_results.csv", text)
+        self.assertIn("domain_capability_forecasts.csv", text)
         self.assertIn("company_score_component_stack.png", text)
         self.assertIn("forecast_scenario_dashboard.png", text)
         self.assertIn("Direct Model Evidence vs Family Proxy", text)
+        self.assertIn("LLM Cost Per Message vs Fixed Task Cost", text)
+        self.assertIn("llm_message_cost_trends.csv", text)
+        self.assertIn("fixed_task_cost_curves.csv", text)
+        self.assertIn("cost_divergence_scenarios.csv", text)
         self.assertIn("Family Ranking vs Vendor Portfolio Ranking", text)
         self.assertIn("Data Freshness And Coverage", text)
         self.assertIn("Uncertainty And Rank Stability", text)
@@ -79,9 +88,18 @@ class ReportContractTests(unittest.TestCase):
             self.assertIn(marker, text)
         self.assertGreaterEqual(text.count("class='figure-panel'"), 15)
         self.assertGreaterEqual(text.count("class='table-wrap'"), 10)
+        self.assertIn("domain benchmark velocity", text)
         self.assertNotIn("win_probability", text)
         self.assertTrue((ROOT / "report" / "assets" / "report.js").exists())
         self.assertTrue((ROOT / "report" / "assets" / "report.css").exists())
+
+    def test_pdf_report_is_current_and_reproducible(self):
+        pdf = ROOT / "report" / "deep_frontier_ai_forecast.pdf"
+        renderer = ROOT / "scripts" / "render_report_pdf.py"
+        self.assertTrue(pdf.exists())
+        self.assertGreater(pdf.stat().st_size, 1_000_000)
+        self.assertTrue(renderer.exists())
+        self.assertIn("render_report_pdf.py", (ROOT / "Makefile").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

@@ -33,6 +33,12 @@ uv run python -m frontier_ai.deep_analysis --overwrite-sources
 uv run python -m unittest discover -s tests
 ```
 
+Regenerate the landscape PDF after the Markdown report:
+
+```bash
+make pdf
+```
+
 Use `--skip-reports` on `frontier_ai.deep_analysis` only when you want the derived tables and figures without rewriting the Markdown/HTML deep-dive report. The core pipeline no longer rewrites the README, tests, or notebook stubs as a side effect.
 
 ## Main Outputs
@@ -52,6 +58,8 @@ This repository publishes code, tests, documentation, small derived analysis CSV
 Third-party source data keeps its original license and terms. See `THIRD_PARTY_DATA.md` and `docs/data_policy.md` before redistributing any generated dataset package.
 
 ## Method Notes
+
+The severe statistical review, evidence, fixes, and remaining limitations are documented in [`docs/statistical_audit.md`](docs/statistical_audit.md).
 
 - `frontier_momentum_heuristic_index` is a transparent composite index, not a calibrated truth score.
 - `company_score_methodology.csv` records components, source signals, transforms, weights, and rationale.
@@ -75,9 +83,13 @@ Third-party source data keeps its original license and terms. See `THIRD_PARTY_D
 
 ## Known Limitations
 
+- The checked-in analytical snapshot has reference date 2026-05-15. It is reproducible, not current to the day; refresh the upstream layers before making current-market claims.
 - Public source catalogs drift; all current-model and price claims are snapshot-dependent.
 - Entity classification is explicit and tested, but still heuristic when source metadata is vague.
 - Benchmarks are not directly comparable across tasks, prompts, judge methods, and submission rules.
 - Direct model matching is conservative but still name-based; inspect `model_benchmark_match_audit.csv` before treating a row as model-level proof.
 - Forecast scenarios are capped transparent assumptions, not calibrated predictions.
+- Domain trends require repeated observations of the same benchmark. Domains without comparable longitudinal history are held flat rather than borrowing progress rates from unrelated domains.
+- LMArena history contains repeated leaderboard snapshots; the analysis collapses these benchmark-first so snapshot frequency and raw row count do not masquerade as independent evidence.
+- Message-cost “trends” are synthetic workload-mix scenarios over catalog cohorts, not observed invoices or a historical price panel.
 - Large generated datasets are excluded from git by design; reproducibility depends on public-source availability and cached local snapshots.

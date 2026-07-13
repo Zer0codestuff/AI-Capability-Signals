@@ -3,6 +3,8 @@ import unittest
 
 import pandas as pd
 
+from frontier_ai.deep_analysis import REFERENCE_DATE, minmax
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -11,11 +13,23 @@ class DeepAnalysisContractTests(unittest.TestCase):
         required = [
             "company_frontier_scores",
             "dashboard_key_findings",
+            "domain_benchmark_catalog",
+            "domain_benchmark_results",
+            "domain_capability_frontier",
+            "domain_improvement_velocity",
+            "domain_capability_forecasts",
+            "domain_forecast_thresholds",
             "company_score_components",
             "company_score_methodology",
             "company_score_sensitivity",
             "model_benchmark_match_audit",
             "direct_model_price_performance",
+            "llm_message_cost_trends",
+            "llm_message_cost_profile_components",
+            "fixed_task_cost_candidates",
+            "fixed_task_cost_curves",
+            "cost_divergence_scenarios",
+            "cost_external_evidence",
             "vendor_frontier_scores",
             "vendor_score_components",
             "source_coverage_diagnostics",
@@ -104,6 +118,18 @@ class DeepAnalysisContractTests(unittest.TestCase):
         self.assertIn("quality_proxy_level", direct.columns)
         self.assertGreater(len(direct), 10)
         self.assertFalse(direct["quality_proxy_level"].eq("family_level_proxy").any())
+        message_cost = pd.read_csv(ROOT / "data" / "analysis" / "llm_message_cost_trends.csv")
+        self.assertIn("modeled_average_message_cost_usd", message_cost.columns)
+        self.assertTrue(message_cost["modeled_average_message_cost_usd"].gt(0).all())
+        self.assertGreater(message_cost.sort_values("year").tail(1)["message_cost_index_2023_100"].iloc[0], 100)
+        fixed_tasks = pd.read_csv(ROOT / "data" / "analysis" / "fixed_task_cost_curves.csv")
+        self.assertIn("thesis_quality_longform", set(fixed_tasks["task_profile"]))
+        self.assertEqual({0, 2, 5, 10}, set(fixed_tasks["horizon_years"]))
+        self.assertTrue(fixed_tasks["forecast_task_cost_usd"].gt(0).all())
+        divergence = pd.read_csv(ROOT / "data" / "analysis" / "cost_divergence_scenarios.csv")
+        self.assertEqual(set(divergence["scenario"]), {"conservative", "base", "aggressive"})
+        self.assertEqual(set(divergence["horizon_years"]), {2, 5, 10})
+        self.assertIn("frontier_workload_complexity_multiplier", divergence.columns)
         vendors = pd.read_csv(ROOT / "data" / "analysis" / "vendor_frontier_scores.csv")
         self.assertIn("vendor_frontier_portfolio_score", vendors.columns)
         self.assertIn("OpenAI", set(vendors["vendor"]))
@@ -205,6 +231,10 @@ class DeepAnalysisContractTests(unittest.TestCase):
             "price_performance_frontier.png",
             "price_context_rating_map.png",
             "direct_vs_proxy_price_performance.png",
+            "llm_message_cost_trends.png",
+            "fixed_task_cost_curves.png",
+            "cost_task_message_divergence.png",
+            "fixed_task_quality_cost_ladder.png",
             "vendor_frontier_scores.png",
             "family_vs_vendor_rank_shift.png",
             "source_coverage_dashboard.png",
@@ -217,12 +247,80 @@ class DeepAnalysisContractTests(unittest.TestCase):
             "labor_cluster_profiles.png",
             "labor_outcome_mix.png",
             "job_replacement_feasibility.png",
+            "domain_benchmark_coverage.png",
+            "domain_source_matrix.png",
+            "domain_frontier_trends.png",
+            "domain_current_velocity.png",
+            "domain_forecast_base.png",
+            "domain_forecast_scenarios.png",
+            "domain_threshold_timeline.png",
         ]:
             path = ROOT / "figures" / "deep_analysis" / name
             self.assertTrue(path.exists(), name)
             self.assertGreater(path.stat().st_size, 10_000, name)
         self.assertTrue((ROOT / "report" / "deep_frontier_ai_forecast.md").exists())
         self.assertTrue((ROOT / "report" / "deep_frontier_ai_forecast.html").exists())
+
+    def test_domain_benchmark_panel_is_interpretable(self):
+        catalog = pd.read_csv(ROOT / "data" / "analysis" / "domain_benchmark_catalog.csv")
+        expected_domains = {
+            "software_engineering",
+            "medicine",
+            "mathematics",
+            "science_reasoning",
+            "instruction_following",
+            "language_writing",
+            "vision_multimodal",
+            "search_document",
+            "finance_quant",
+            "legal_reasoning",
+        }
+        self.assertTrue(expected_domains.issubset(set(catalog["domain"])))
+        self.assertIn("coverage_label", catalog.columns)
+        self.assertTrue(set(catalog["coverage_label"]).issubset({"broad", "moderate", "thin"}))
+        self.assertGreater(catalog["normalized_result_rows"].sum(), 10_000)
+        results = pd.read_csv(ROOT / "data" / "analysis" / "domain_benchmark_results.csv", low_memory=False)
+        for source in ["livecodebench_leaderboard", "open_medical_llm_leaderboard", "terminal_bench_2_0"]:
+            self.assertIn(source, set(results["source_id"]))
+        self.assertTrue(results["score_normalized_0_100"].between(0, 100).all())
+        velocity = pd.read_csv(ROOT / "data" / "analysis" / "domain_improvement_velocity.csv")
+        self.assertIn("annual_gap_closure_rate_base", velocity.columns)
+        self.assertTrue(velocity["annual_gap_closure_rate_base"].between(0, 1).all())
+        forecasts = pd.read_csv(ROOT / "data" / "analysis" / "domain_capability_forecasts.csv")
+        self.assertEqual(set(forecasts["scenario"]), {"conservative", "base", "aggressive"})
+        self.assertEqual(set(forecasts["horizon_years"]), {2, 5, 10})
+        self.assertTrue(forecasts["forecast_frontier_score"].between(0, 100).all())
+
+    def test_statistical_guardrails_prevent_temporal_and_row_count_leakage(self):
+        results = pd.read_csv(ROOT / "data" / "analysis" / "domain_benchmark_results.csv", low_memory=False)
+        self.assertTrue({"date_provenance", "temporal_eligible", "as_of_eligible", "effective_observation_id"}.issubset(results.columns))
+        dated = pd.to_datetime(results["eval_date"], errors="coerce", utc=True)
+        self.assertTrue(dated.dropna().le(pd.Timestamp(REFERENCE_DATE, tz="UTC")).all())
+        undated_sources = results[results["source_id"].isin(["swebench_submissions", "open_llm_leaderboard_results"])]
+        self.assertFalse(undated_sources["temporal_eligible"].astype(bool).any())
+
+        catalog = pd.read_csv(ROOT / "data" / "analysis" / "domain_benchmark_catalog.csv")
+        self.assertTrue((catalog["effective_observations"] <= catalog["normalized_result_rows"]).all())
+        velocity = pd.read_csv(ROOT / "data" / "analysis" / "domain_improvement_velocity.csv")
+        no_history = velocity["longitudinal_benchmark_count"].eq(0)
+        self.assertTrue(velocity.loc[no_history, "annual_frontier_point_gain_used"].eq(0).all())
+        self.assertFalse(velocity.loc[no_history, "forecast_enabled"].astype(bool).any())
+
+        forecasts = pd.read_csv(ROOT / "data" / "analysis" / "domain_capability_forecasts.csv")
+        disabled = forecasts[~forecasts["forecast_enabled"].astype(bool)]
+        self.assertTrue(disabled["forecast_frontier_score"].round(6).eq(disabled["current_frontier_score"].round(6)).all())
+
+    def test_missing_evidence_is_neutral_and_employment_weights_are_not_duplicated_totals(self):
+        scaled = minmax(pd.Series([1.0, 2.0, float("nan")]))
+        self.assertEqual(float(scaled.iloc[2]), 50.0)
+        jobs = pd.read_csv(ROOT / "data" / "analysis" / "job_exposure_scores.csv")
+        self.assertIn("employment_weight_provenance", jobs.columns)
+        self.assertTrue(set(jobs["employment_weight_provenance"].dropna()).issubset({"exact_title", "allocated_major_group", "missing"}))
+        allocated = jobs[jobs["employment_weight_provenance"].eq("allocated_major_group")]
+        self.assertGreater(len(allocated), 100)
+        # Allocated detailed rows should not each carry a full 5-10M worker
+        # major-group total.
+        self.assertLess(allocated["bls_employment"].max(), 2_000_000)
 
 
 if __name__ == "__main__":

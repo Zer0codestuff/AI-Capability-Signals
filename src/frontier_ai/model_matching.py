@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any, Iterable
 
 from frontier_ai.pipeline import clean_text
@@ -74,6 +75,56 @@ class ModelMatch:
         return self.confidence in {"exact", "normalized_exact", "alias_match"}
 
 
+class PreparedModelMatcher:
+    """Precompute candidate aliases once for repeated catalog matching."""
+
+    def __init__(self, candidates: Iterable[dict[str, Any]]):
+        self.candidates = list(candidates)
+        self.records = []
+        self.exact: dict[str, int] = {}
+        self.by_family: dict[str, list[int]] = {}
+        for index, candidate in enumerate(self.candidates):
+            name = clean_text(candidate.get("model_name"))
+            family = clean_text(candidate.get("family"))
+            family_alias = normalize_model_name(family)
+            aliases = normalized_aliases(name, candidate.get("model_id"), family)
+            substantive = frozenset(alias for alias in aliases if alias != family_alias)
+            self.records.append((candidate, substantive))
+            self.exact.setdefault(name.lower(), index)
+            self.by_family.setdefault(family, []).append(index)
+
+    def match(self, query_name: Any, query_id: Any, query_family: str) -> ModelMatch:
+        raw_queries = {clean_text(query_name).lower(), clean_text(query_id).lower()}
+        for raw in raw_queries:
+            if raw in self.exact:
+                candidate = self.candidates[self.exact[raw]]
+                return _match("exact", candidate, raw)
+
+        family_alias = normalize_model_name(query_family)
+        query_aliases = frozenset(
+            alias for alias in normalized_aliases(query_name, query_id, query_family) if alias != family_alias
+        )
+        for index, (candidate, aliases) in enumerate(self.records):
+            overlap = query_aliases.intersection(aliases)
+            if overlap:
+                return _match("normalized_exact", candidate, sorted(overlap)[0])
+
+        family_indexes = self.by_family.get(query_family, [])
+        for index in family_indexes:
+            candidate, aliases = self.records[index]
+            overlap = query_aliases.intersection(aliases)
+            if overlap:
+                return _match("alias_match", candidate, sorted(overlap)[0])
+        if family_indexes:
+            candidate = max(
+                (self.candidates[index] for index in family_indexes),
+                key=lambda row: float(row.get("sort_score") or 0),
+            )
+            return _match("family_only", candidate, query_family)
+        return ModelMatch("unmatched", "", "", "", None)
+
+
+@lru_cache(maxsize=65_536)
 def normalize_model_name(value: Any) -> str:
     text = clean_text(value).lower()
     if ":" in text:
@@ -93,7 +144,8 @@ def normalize_model_name(value: Any) -> str:
     return collapsed
 
 
-def normalized_aliases(name: Any, model_id: Any = "", family: str = "") -> set[str]:
+@lru_cache(maxsize=65_536)
+def normalized_aliases(name: Any, model_id: Any = "", family: str = "") -> frozenset[str]:
     raw_parts = [clean_text(name), clean_text(model_id)]
     aliases = {normalize_model_name(part) for part in raw_parts if clean_text(part)}
     text = " ".join(raw_parts).lower()
@@ -102,10 +154,11 @@ def normalized_aliases(name: Any, model_id: Any = "", family: str = "") -> set[s
         if token in text:
             aliases.add(normalize_model_name(token))
     aliases.update(_version_aliases(text, family))
-    return {alias for alias in aliases if alias}
+    return frozenset(alias for alias in aliases if alias)
 
 
-def _version_aliases(text: str, family: str) -> set[str]:
+@lru_cache(maxsize=65_536)
+def _version_aliases(text: str, family: str) -> frozenset[str]:
     aliases: set[str] = set()
     patterns = {
         "GPT": [r"\bgpt[-_ ]?([0-9]+(?:\.[0-9]+)?)", r"\b(o[0-9])\b"],
@@ -127,7 +180,7 @@ def _version_aliases(text: str, family: str) -> set[str]:
                 aliases.add(normalize_model_name(f"{family} {' '.join(parts)}"))
             if family:
                 aliases.add(normalize_model_name(family))
-    return aliases
+    return frozenset(aliases)
 
 
 def find_best_model_match(

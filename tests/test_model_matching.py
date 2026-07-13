@@ -1,9 +1,15 @@
 import unittest
 
-from frontier_ai.model_matching import find_best_model_match, normalize_model_name, normalized_aliases
+from frontier_ai.model_matching import PreparedModelMatcher, find_best_model_match, normalize_model_name, normalized_aliases
 
 
 class ModelMatchingTests(unittest.TestCase):
+    def test_prepared_matcher_preserves_match_result(self):
+        candidates = [{"model_name": "claude-sonnet-4-5-20250929", "family": "Claude", "sort_score": 80}]
+        expected = find_best_model_match("Claude Sonnet 4.5", "anthropic/claude-sonnet-4.5", "Claude", candidates)
+        actual = PreparedModelMatcher(candidates).match("Claude Sonnet 4.5", "anthropic/claude-sonnet-4.5", "Claude")
+        self.assertEqual((actual.confidence, actual.benchmark_model_name), (expected.confidence, expected.benchmark_model_name))
+
     def test_exact_match(self):
         match = find_best_model_match(
             "gpt-5.5",

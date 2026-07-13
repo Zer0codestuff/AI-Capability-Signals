@@ -2,26 +2,30 @@ from __future__ import annotations
 
 import argparse
 import html
+import io
 import json
 import math
 import re
 import textwrap
 from collections import defaultdict
 from datetime import UTC, datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import requests
 
-from frontier_ai.model_matching import MATCH_CONFIDENCE_ORDER, find_best_model_match, normalize_model_name
+from frontier_ai.model_matching import MATCH_CONFIDENCE_ORDER, PreparedModelMatcher, normalize_model_name
 from frontier_ai.pipeline import ROOT, classify_access, classify_family, clean_text, slug, write_run_manifest
 
 DATASET = ROOT / "data" / "dataset"
 ANALYSIS = ROOT / "data" / "analysis"
 RAW_AEI = ROOT / "data" / "raw" / "anthropic_economic_index"
+RAW_DOMAIN = ROOT / "data" / "raw" / "domain_benchmarks"
 FIGURES = ROOT / "figures" / "deep_analysis"
 REPORT = ROOT / "report"
 DOCS = ROOT / "docs"
@@ -30,6 +34,15 @@ CAPTURED_AT = datetime.now(UTC).replace(microsecond=0).isoformat()
 REFERENCE_DATE = "2026-05-15"
 
 AEI_BASE = "https://huggingface.co/datasets/Anthropic/EconomicIndex/resolve/main"
+LIVE_CODE_BENCH_SPACE = "https://huggingface.co/spaces/livecodebench/leaderboard/resolve/main/static/js/main.e4a5e9e9.js"
+LIVE_CODE_BENCH_API = "https://huggingface.co/api/spaces/livecodebench/leaderboard"
+OPEN_MEDICAL_RESULTS_API = "https://huggingface.co/api/datasets/openlifescienceai/results"
+OPEN_MEDICAL_RESULTS_RESOLVE = "https://huggingface.co/datasets/openlifescienceai/results/resolve/main"
+TERMINAL_BENCH_20_URL = "https://www.tbench.ai/leaderboard/terminal-bench/2.0"
+FINANCEBENCH_RESULTS_API = "https://huggingface.co/api/datasets/financebench/results"
+FINANCEBENCH_RESOLVE = "https://huggingface.co/datasets/financebench/results/resolve/main"
+QFBENCH_URL = "https://qfbench.com/"
+LEXOMETRICA_URL = "https://lexometrica.com/bench/"
 AEI_FILES = {
     "job_exposure": "labor_market_impacts/job_exposure.csv",
     "task_penetration": "labor_market_impacts/task_penetration.csv",
@@ -149,9 +162,198 @@ BUSINESS_DOMAIN_RULES = {
     "operations_back_office": ["office", "administrative", "clerical", "operations", "logistics", "coordinator", "data entry"],
 }
 
+CAPABILITY_DOMAINS = {
+    "software_engineering": {
+        "label": "Software engineering",
+        "interpretation": "Code generation, repository repair, web development and terminal software workflows.",
+        "forecast_caveat": "Coding benchmarks move quickly and are contamination-sensitive; use fresh task windows when possible.",
+    },
+    "agentic_terminal": {
+        "label": "Agentic terminal work",
+        "interpretation": "Long-horizon command-line tasks requiring planning, execution, debugging and environment control.",
+        "forecast_caveat": "Agent scaffolding can dominate raw model quality, so model and agent should be separated when possible.",
+    },
+    "medicine": {
+        "label": "Medicine and biomedical QA",
+        "interpretation": "Medical question answering, biomedical literature reasoning and clinical knowledge subsets.",
+        "forecast_caveat": "Multiple-choice medical QA is not clinical deployment safety; human review and liability remain binding.",
+    },
+    "mathematics": {
+        "label": "Mathematics",
+        "interpretation": "Competition math, quantitative reasoning and formal problem solving.",
+        "forecast_caveat": "Some math benchmarks saturate quickly, so hard fresh sets matter more than legacy averages.",
+    },
+    "science_reasoning": {
+        "label": "Science and reasoning",
+        "interpretation": "Graduate-level science, GPQA-like reasoning, ARC/BBH/MuSR and broad reasoning suites.",
+        "forecast_caveat": "This is a mixed domain; gains may come from either knowledge, search, reasoning-time or benchmark-specific training.",
+    },
+    "instruction_following": {
+        "label": "Instruction following",
+        "interpretation": "Constraint following, output format obedience and prompt-level generalization.",
+        "forecast_caveat": "High scores can hide brittle behavior on a user's own constraints, so local evals remain important.",
+    },
+    "language_writing": {
+        "label": "Language and writing",
+        "interpretation": "General text quality, paraphrase, editing, summarization and subjective chat preference.",
+        "forecast_caveat": "Human preference and style vary; benchmark gains do not map one-to-one to brand-safe writing quality.",
+    },
+    "vision_multimodal": {
+        "label": "Vision and multimodal",
+        "interpretation": "Image understanding, image editing, text-to-image and multimodal preference leaderboards.",
+        "forecast_caveat": "The data mixes perception and generation; downstream reliability depends heavily on task framing.",
+    },
+    "search_document": {
+        "label": "Search and document work",
+        "interpretation": "Search, long-document handling, retrieval-facing work and document synthesis.",
+        "forecast_caveat": "Retrieval quality, source grounding and tool access can dominate model-only scores.",
+    },
+    "finance_quant": {
+        "label": "Finance and quantitative analysis",
+        "interpretation": "Financial QA, quantitative coding, risk, pricing, forecasting and professional finance tasks.",
+        "forecast_caveat": "Benchmarks are sparse and often workflow-specific; treat forecasts as directional until more longitudinal data exists.",
+    },
+    "legal_reasoning": {
+        "label": "Legal reasoning",
+        "interpretation": "Legal issue spotting, rule application, citations and jurisdiction-specific legal reasoning.",
+        "forecast_caveat": "Legal performance is highly jurisdictional; benchmark score is not professional legal authority.",
+    },
+}
+
+MESSAGE_WORKLOAD_PROFILES = [
+    {
+        "profile": "simple_chat",
+        "display_name": "Simple chat or Q&A",
+        "input_tokens": 900,
+        "output_tokens": 500,
+        "price_quantile": 0.20,
+        "complexity_label": "low",
+    },
+    {
+        "profile": "knowledge_work_message",
+        "display_name": "Knowledge-work message",
+        "input_tokens": 3_500,
+        "output_tokens": 1_200,
+        "price_quantile": 0.50,
+        "complexity_label": "medium",
+    },
+    {
+        "profile": "long_context_analysis",
+        "display_name": "Long-context analysis",
+        "input_tokens": 45_000,
+        "output_tokens": 5_000,
+        "price_quantile": 0.75,
+        "complexity_label": "high",
+    },
+    {
+        "profile": "agentic_workflow",
+        "display_name": "Agentic workflow run",
+        "input_tokens": 220_000,
+        "output_tokens": 30_000,
+        "price_quantile": 0.90,
+        "complexity_label": "frontier_agentic",
+    },
+]
+
+MESSAGE_MIX_BY_YEAR = {
+    2023: {"simple_chat": 0.70, "knowledge_work_message": 0.25, "long_context_analysis": 0.05, "agentic_workflow": 0.00},
+    2024: {"simple_chat": 0.57, "knowledge_work_message": 0.30, "long_context_analysis": 0.10, "agentic_workflow": 0.03},
+    2025: {"simple_chat": 0.43, "knowledge_work_message": 0.33, "long_context_analysis": 0.17, "agentic_workflow": 0.07},
+    2026: {"simple_chat": 0.32, "knowledge_work_message": 0.34, "long_context_analysis": 0.22, "agentic_workflow": 0.12},
+}
+
+FIXED_TASK_PROFILES = [
+    {
+        "task_profile": "thesis_quality_longform",
+        "display_name": "Thesis-quality long-form writing",
+        "domain": "language_writing",
+        "required_domain_score": 88.0,
+        "input_tokens": 60_000,
+        "output_tokens": 35_000,
+        "human_gate": "advisor, fact and citation review",
+    },
+    {
+        "task_profile": "software_issue_resolution",
+        "display_name": "Repository issue resolution",
+        "domain": "software_engineering",
+        "required_domain_score": 82.0,
+        "input_tokens": 320_000,
+        "output_tokens": 45_000,
+        "human_gate": "senior engineer review and tests",
+    },
+    {
+        "task_profile": "finance_analysis_memo",
+        "display_name": "Financial analysis memo",
+        "domain": "finance_quant",
+        "required_domain_score": 65.0,
+        "input_tokens": 45_000,
+        "output_tokens": 8_000,
+        "human_gate": "assumption and control owner signoff",
+    },
+    {
+        "task_profile": "legal_due_diligence_memo",
+        "display_name": "Legal due-diligence memo",
+        "domain": "legal_reasoning",
+        "required_domain_score": 90.0,
+        "input_tokens": 55_000,
+        "output_tokens": 12_000,
+        "human_gate": "licensed legal review",
+    },
+    {
+        "task_profile": "long_document_synthesis",
+        "display_name": "Long-document synthesis",
+        "domain": "search_document",
+        "required_domain_score": 84.0,
+        "input_tokens": 120_000,
+        "output_tokens": 9_000,
+        "human_gate": "source-grounding and factual review",
+    },
+    {
+        "task_profile": "customer_support_resolution",
+        "display_name": "Customer-support resolution",
+        "domain": "instruction_following",
+        "required_domain_score": 78.0,
+        "input_tokens": 5_000,
+        "output_tokens": 1_000,
+        "human_gate": "policy, refund and safety review",
+    },
+]
+
+QUALITY_ADJUSTED_COST_PRIORS = {
+    "conservative": {
+        "annual_factor": 0.65,
+        "frontier_price_factor": 0.98,
+        "note": "Deployment-friction case; task cost falls, but slower than pure benchmark price-performance estimates.",
+    },
+    "base": {
+        "annual_factor": 0.48,
+        "frontier_price_factor": 1.00,
+        "note": "Middle case between observed API price competition and benchmark-level quality-adjusted cost declines.",
+    },
+    "aggressive": {
+        "annual_factor": 0.36,
+        "frontier_price_factor": 1.06,
+        "note": "Fast capability diffusion; frontier workload still uses larger reasoning/context budgets.",
+    },
+}
+
+BENCHMARK_DOMAIN_KEYWORDS = [
+    ("medicine", ["medqa", "medmcqa", "pubmedqa", "mmlu_anatomy", "mmlu_clinical", "medical", "medicine", "biology", "genetics"]),
+    ("software_engineering", ["swebench", "swe-bench", "livecodebench", "lcb", "humaneval", "mbpp", "code", "coding", "webdev"]),
+    ("agentic_terminal", ["terminal-bench", "terminal_bench", "terminal bench", "terminal", "agentic"]),
+    ("finance_quant", ["finance", "qfbench", "quantitativefinance", "quantitative finance", "black-scholes", "var", "risk"]),
+    ("legal_reasoning", ["legal", "lexometrica", "lawbench", "legalbench", "casehold"]),
+    ("mathematics", ["math", "gsm8k", "aime", "algebra", "geometry", "number theory", "precalculus", "counting"]),
+    ("science_reasoning", ["gpqa", "arc_challenge", "arc", "science", "bbh", "musr", "reasoning", "critic", "hle"]),
+    ("instruction_following", ["ifeval", "instruction", "format", "constraint"]),
+    ("vision_multimodal", ["vision", "image", "mmmu", "multimodal", "text_to_image", "image_edit"]),
+    ("search_document", ["search", "document", "retrieval", "long context", "long-context", "rag"]),
+    ("language_writing", ["language", "text", "paraphrase", "story", "writing", "summarization", "chat"]),
+]
+
 
 def ensure_dirs() -> None:
-    for path in [ANALYSIS, RAW_AEI, FIGURES, REPORT, DOCS]:
+    for path in [ANALYSIS, RAW_AEI, RAW_DOMAIN, FIGURES, REPORT, DOCS]:
         path.mkdir(parents=True, exist_ok=True)
 
 
@@ -184,7 +386,12 @@ def filter_public_entities(df: pd.DataFrame) -> pd.DataFrame:
     ]
     if not cols or df.empty:
         return df
-    text = df[cols].map(lambda value: "" if pd.isna(value) else str(value)).agg(" ".join, axis=1).str.lower()
+    # Vectorized concatenation is dramatically faster than constructing one
+    # Python Series per row on million-row leaderboard tables.
+    text = pd.Series("", index=df.index, dtype="string")
+    for col in cols:
+        text = text.str.cat(df[col].astype("string").fillna(""), sep=" ")
+    text = text.str.lower()
     pattern = "|".join(EXCLUDED_PUBLIC_ENTITY_PATTERNS)
     return df[~text.str.contains(pattern, regex=True, na=False)].copy()
 
@@ -233,7 +440,7 @@ def numeric(series: pd.Series) -> pd.Series:
     return pd.to_numeric(series, errors="coerce")
 
 
-def minmax(series: pd.Series, invert: bool = False, log: bool = False) -> pd.Series:
+def minmax(series: pd.Series, invert: bool = False, log: bool = False, missing_value: float = 50.0) -> pd.Series:
     values = numeric(series).replace([np.inf, -np.inf], np.nan)
     if log:
         values = np.log1p(values.clip(lower=0))
@@ -245,7 +452,10 @@ def minmax(series: pd.Series, invert: bool = False, log: bool = False) -> pd.Ser
         out = (values - lo) / (hi - lo) * 100
     if invert:
         out = 100 - out
-    return out.fillna(0).clip(0, 100)
+    # Missing public evidence is not evidence of zero capability.  Use a neutral
+    # value so sparse families are not mechanically pushed to the bottom; the
+    # separate coverage diagnostics expose the uncertainty instead.
+    return out.fillna(missing_value).clip(0, 100)
 
 
 def soc_base(value: Any) -> str:
@@ -259,6 +469,7 @@ def sentence_join(items: list[str], limit: int = 4) -> str:
     return "; ".join(cleaned[:limit])
 
 
+@lru_cache(maxsize=65_536)
 def family_from_text(*parts: Any) -> str:
     text = " ".join(clean_text(p) for p in parts)
     family = classify_family(text)
@@ -271,10 +482,146 @@ def family_from_text(*parts: Any) -> str:
     return family
 
 
+@lru_cache(maxsize=65_536)
+def access_from_text(name: Any, organization: Any = "", license_value: Any = "") -> str:
+    return classify_access(name, organization, str(license_value), str(license_value))
+
+
 def normalize_name(value: Any) -> str:
     text = clean_text(value).lower()
     text = re.sub(r"[^a-z0-9]+", "", text)
     return text
+
+
+def cached_text(source_id: str, url: str, overwrite: bool = False, timeout: int = 120) -> str:
+    suffix = ".json" if url.endswith(".json") or "/api/" in url else ".html" if url.endswith("/") or "." not in Path(url).suffix else Path(url).suffix
+    if suffix not in {".json", ".html", ".js", ".txt"}:
+        suffix = ".dat"
+    path = RAW_DOMAIN / f"{slug(source_id)}{suffix}"
+    if path.exists() and not overwrite:
+        return path.read_text(encoding="utf-8")
+    response = requests.get(url, headers={"User-Agent": "frontier-ai-domain-benchmark-analysis/0.1"}, timeout=timeout)
+    response.raise_for_status()
+    path.write_text(response.text, encoding="utf-8")
+    return response.text
+
+
+def cached_bytes(source_id: str, url: str, overwrite: bool = False, timeout: int = 120) -> bytes:
+    suffix = Path(url).suffix or ".bin"
+    path = RAW_DOMAIN / f"{slug(source_id)}{suffix}"
+    if path.exists() and not overwrite:
+        return path.read_bytes()
+    response = requests.get(url, headers={"User-Agent": "frontier-ai-domain-benchmark-analysis/0.1"}, timeout=timeout)
+    response.raise_for_status()
+    path.write_bytes(response.content)
+    return response.content
+
+
+def strip_html(value: str) -> str:
+    text = re.sub(r"<[^>]+>", " ", value)
+    text = html.unescape(text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def parse_percent(value: Any) -> float:
+    text = clean_text(value).replace("%", "")
+    text = re.sub(r"[^0-9.\-]", "", text)
+    return float(text) if text not in {"", ".", "-"} else np.nan
+
+
+@lru_cache(maxsize=32_768)
+def parse_any_date(value: Any) -> str:
+    text = clean_text(value)
+    if not text:
+        return ""
+    parsed = pd.to_datetime(text, errors="coerce", utc=True)
+    if pd.isna(parsed):
+        number = pd.to_numeric(pd.Series([text]), errors="coerce").iloc[0]
+        if pd.notna(number):
+            unit = "ms" if float(number) > 10_000_000_000 else "s"
+            parsed = pd.to_datetime(float(number), unit=unit, errors="coerce", utc=True)
+    return parsed.date().isoformat() if pd.notna(parsed) else ""
+
+
+def domain_label(domain: str) -> str:
+    return CAPABILITY_DOMAINS.get(domain, {}).get("label", domain.replace("_", " ").title())
+
+
+def infer_capability_domain(*parts: Any) -> str:
+    text = " ".join(clean_text(part).lower().replace("-", "_") for part in parts)
+    for domain, keywords in BENCHMARK_DOMAIN_KEYWORDS:
+        if any(keyword.replace("-", "_") in text for keyword in keywords):
+            return domain
+    return "science_reasoning"
+
+
+def normalize_benchmark_score(score: Any, score_unit: str = "") -> float:
+    try:
+        value = float(score)
+    except (TypeError, ValueError):
+        return np.nan
+    unit = clean_text(score_unit).lower()
+    if "rating" in unit or "elo" in unit:
+        return float(value)
+    if "fraction" in unit or (0 <= float(value) <= 1 and "%" not in unit and "percent" not in unit):
+        return float(value) * 100
+    return float(value)
+
+
+def append_domain_row(
+    rows: list[dict[str, Any]],
+    *,
+    source_id: str,
+    source_name: str,
+    benchmark: str,
+    domain: str,
+    task: str,
+    model_name: Any,
+    score: Any,
+    score_unit: str,
+    source_url: str,
+    eval_date: Any = "",
+    vendor: Any = "",
+    model_family: Any = "",
+    evidence_level: str = "observed",
+    sample_size: Any = np.nan,
+    benchmark_weight: float = 1.0,
+    limitations: str = "",
+    date_provenance: str = "evaluation_date",
+    temporal_eligible: bool = True,
+) -> None:
+    try:
+        raw_score = float(score)
+    except (TypeError, ValueError):
+        return
+    if not np.isfinite(raw_score):
+        return
+    family = clean_text(model_family) or frontier_family_from_model(model_name, "", vendor)
+    rows.append(
+        {
+            "source_id": source_id,
+            "source_name": source_name,
+            "benchmark": clean_text(benchmark),
+            "domain": domain,
+            "domain_label": domain_label(domain),
+            "task": clean_text(task),
+            "model_name": clean_text(model_name),
+            "model_family": family,
+            "vendor": clean_text(vendor) or FAMILY_VENDOR_MAP.get(family, family),
+            "score": float(raw_score),
+            "score_unit": score_unit,
+            "score_normalized_0_100": normalize_benchmark_score(raw_score, score_unit),
+            "eval_date": parse_any_date(eval_date),
+            "source_url": source_url,
+            "evidence_level": evidence_level,
+            "sample_size": sample_size,
+            "benchmark_weight": benchmark_weight,
+            "limitations": limitations,
+            "date_provenance": date_provenance,
+            "temporal_eligible": bool(temporal_eligible),
+        }
+    )
 
 
 def safe_divide(numerator: pd.Series, denominator: pd.Series, fallback: float = 0.0) -> pd.Series:
@@ -288,6 +635,7 @@ def positive_min(series: pd.Series) -> float:
     return float(values.min()) if len(values) else np.nan
 
 
+@lru_cache(maxsize=32_768)
 def frontier_family_from_model(name: Any = "", model_id: Any = "", vendor: Any = "") -> str:
     text = " ".join(clean_text(part).lower() for part in [name, model_id, vendor])
     checks = [
@@ -356,6 +704,8 @@ def apply_family_score_components(scores: pd.DataFrame) -> pd.DataFrame:
         if col not in scores.columns:
             scores[col] = 0
     scores["evidence_count"] = scores[evidence_cols].fillna(0).sum(axis=1)
+    scores["evidence_source_count"] = scores[evidence_cols].fillna(0).gt(0).sum(axis=1)
+    scores["effective_evidence_count"] = scores[evidence_cols].fillna(0).clip(lower=0).map(np.log1p).sum(axis=1).round(3)
     return scores
 
 
@@ -368,6 +718,17 @@ def build_company_frontier_scores() -> tuple[pd.DataFrame, pd.DataFrame]:
     hf = read_csv_table("huggingface_model_rollups")
     github_mentions = read_csv_table("github_model_mentions")
     openalex_mentions = read_csv_table("openalex_model_mentions")
+
+    reference = pd.Timestamp(REFERENCE_DATE)
+    if "release_date" in openrouter:
+        release = pd.to_datetime(openrouter["release_date"], errors="coerce")
+        openrouter = openrouter[release.isna() | release.le(reference)].copy()
+    if "release_date" in epoch:
+        release = pd.to_datetime(epoch["release_date"], errors="coerce")
+        epoch = epoch[release.isna() | release.le(reference)].copy()
+    if "leaderboard_publish_date" in lmarena:
+        published = pd.to_datetime(lmarena["leaderboard_publish_date"], errors="coerce")
+        lmarena = lmarena[published.isna() | published.le(reference)].copy()
 
     families = set(FRONTIER_FAMILIES)
     openrouter["model_family"] = [
@@ -383,9 +744,7 @@ def build_company_frontier_scores() -> tuple[pd.DataFrame, pd.DataFrame]:
 
     arena = lmarena.copy()
     arena["family"] = [family_from_text(n, o) for n, o in zip(arena.get("model_name", ""), arena.get("organization", ""))]
-    arena["access_class"] = [
-        classify_access(n, o, str(lic), str(lic)) for n, o, lic in zip(arena.get("model_name", ""), arena.get("organization", ""), arena.get("license", ""))
-    ]
+    arena["access_class"] = [access_from_text(n, o, lic) for n, o, lic in zip(arena.get("model_name", ""), arena.get("organization", ""), arena.get("license", ""))]
     arena["rating"] = numeric(arena["rating"])
     arena_group = arena.groupby("family", dropna=False).agg(
         lmarena_best=("rating", "max"),
@@ -578,7 +937,19 @@ def build_job_exposure_scores(aei: dict[str, pd.DataFrame]) -> tuple[pd.DataFram
             on="job_family_key",
             how="left",
         )
-        jobs["bls_employment"] = numeric(jobs["bls_employment"]).fillna(numeric(jobs["bls_major_group_employment"]))
+        # The BLS file contains major-group totals, not occupation-level totals.
+        # Repeating the full group total on every detailed occupation multiplies
+        # employment by the number of occupations.  Allocate the group total
+        # evenly only where an exact title match is unavailable, preserving the
+        # aggregate order of magnitude without pretending it is observed detail.
+        family_counts = jobs.groupby("job_family_key")["soc_base"].transform("nunique").clip(lower=1)
+        jobs["bls_employment_exact"] = numeric(jobs["bls_employment"])
+        jobs["bls_employment"] = jobs["bls_employment_exact"].fillna(
+            numeric(jobs["bls_major_group_employment"]) / family_counts
+        )
+        jobs["employment_weight_provenance"] = np.where(
+            jobs["bls_employment_exact"].notna(), "exact_title", np.where(jobs["bls_employment"].notna(), "allocated_major_group", "missing")
+        )
 
     soc_col, task_col = infer_task_columns(mappings)
     task_features = pd.DataFrame()
@@ -704,7 +1075,11 @@ def log_slope_by_year(df: pd.DataFrame, date_col: str, value_col: str, q: float 
     work[date_col] = pd.to_datetime(work[date_col], errors="coerce")
     work[value_col] = numeric(work[value_col])
     work = work.dropna()
-    work = work[(work[date_col].dt.year >= 2018) & (work[value_col] > 0)]
+    work = work[
+        (work[date_col].dt.year >= 2018)
+        & (work[date_col] <= pd.Timestamp(REFERENCE_DATE))
+        & (work[value_col] > 0)
+    ]
     if work.empty:
         return 0.0, pd.DataFrame()
     yearly = work.groupby(work[date_col].dt.year)[value_col].quantile(q).reset_index()
@@ -733,6 +1108,7 @@ def build_capability_forecasts(company_scores: pd.DataFrame, job_scores: pd.Data
 
     openrouter["release_year"] = pd.to_datetime(openrouter["release_date"], errors="coerce").dt.year
     price_work = openrouter.dropna(subset=["release_year", "output_usd_per_1m"]).copy()
+    price_work = price_work[price_work["release_year"].le(pd.Timestamp(REFERENCE_DATE).year)]
     price_work = price_work[price_work["output_usd_per_1m"] > 0]
     if len(price_work) >= 8:
         price_yearly = price_work.groupby("release_year")["output_usd_per_1m"].quantile(0.20).reset_index()
@@ -743,12 +1119,14 @@ def build_capability_forecasts(company_scores: pd.DataFrame, job_scores: pd.Data
     else:
         price_yearly = pd.DataFrame({"release_year": [2024, 2025, 2026], "output_usd_per_1m": [12, 4, 1.5]})
         price_slope = -0.35
-    price_assumed_slope = min(price_slope, 0.0)
+    # OpenRouter is a current catalog. Grouping today's prices by model release
+    # year is cross-sectional survivor/cohort evidence, not a historical price
+    # series. Keep the slope as a diagnostic only and use explicit scenario
+    # assumptions for forward price paths.
+    price_assumed_slope = -0.18  # Base scenario; conservative/aggressive values are -0.08/-0.30.
 
     lmarena = lmarena.copy()
-    lmarena["access_class"] = [
-        classify_access(n, o, str(lic), str(lic)) for n, o, lic in zip(lmarena.get("model_name", ""), lmarena.get("organization", ""), lmarena.get("license", ""))
-    ]
+    lmarena["access_class"] = [access_from_text(n, o, lic) for n, o, lic in zip(lmarena.get("model_name", ""), lmarena.get("organization", ""), lmarena.get("license", ""))]
     best_open = numeric(lmarena.loc[lmarena["access_class"].isin(["open_weight", "likely_open_weight"]), "rating"]).max()
     best_closed = numeric(lmarena.loc[lmarena["access_class"].eq("closed_or_api"), "rating"]).max()
     open_gap = float(best_closed - best_open) if np.isfinite(best_open) and np.isfinite(best_closed) else 45.0
@@ -758,9 +1136,9 @@ def build_capability_forecasts(company_scores: pd.DataFrame, job_scores: pd.Data
     p90_substitution = float(job_scores["substitution_pressure_index"].quantile(0.90) / 100)
 
     scenarios = {
-        "conservative": {"compute": 0.55, "context": 0.45, "price": 0.55, "adoption": 0.55, "gap": 0.45, "compute_cap": 80, "context_cap": 16},
-        "base": {"compute": 1.00, "context": 1.00, "price": 1.00, "adoption": 1.00, "gap": 1.00, "compute_cap": 400, "context_cap": 64},
-        "aggressive": {"compute": 1.45, "context": 1.50, "price": 1.35, "adoption": 1.55, "gap": 1.35, "compute_cap": 1200, "context_cap": 128},
+        "conservative": {"compute": 0.55, "context": 0.45, "price_slope": -0.08, "adoption": 0.55, "gap": 0.45, "compute_cap": 80, "context_cap": 16},
+        "base": {"compute": 1.00, "context": 1.00, "price_slope": -0.18, "adoption": 1.00, "gap": 1.00, "compute_cap": 400, "context_cap": 64},
+        "aggressive": {"compute": 1.45, "context": 1.50, "price_slope": -0.30, "adoption": 1.55, "gap": 1.35, "compute_cap": 1200, "context_cap": 128},
     }
     rows = []
     diagnostics = [
@@ -789,18 +1167,19 @@ def build_capability_forecasts(company_scores: pd.DataFrame, job_scores: pd.Data
             "fit_start_year": int(price_yearly["release_year"].min()) if not price_yearly.empty else None,
             "fit_end_year": int(price_yearly["release_year"].max()) if not price_yearly.empty else None,
             "raw_log10_slope_per_year": price_slope,
-            "observed_log10_slope_per_year": price_slope,
+            "observed_log10_slope_per_year": np.nan,
             "scenario_assumed_log10_slope_per_year": price_assumed_slope,
-            "fallback_or_cap_policy": "Uses the observed lower-quintile slope when it is negative; otherwise assumes no price decline. Price factor floors at 0.05.",
+            "fallback_or_cap_policy": "Current catalog grouped by release cohort is not a historical price series; forward paths use explicit -0.08/-0.18/-0.30 log10 scenario assumptions. Price factor floors at 0.05.",
         },
     ]
     for scenario, mult in scenarios.items():
         for horizon in [2, 5, 10]:
-            raw_compute_gain = 10 ** (max(compute_slope, 0.12) * horizon * mult["compute"])
-            raw_context_gain = 10 ** (max(context_slope, 0.08) * horizon * mult["context"])
+            raw_compute_gain = 10 ** (max(compute_slope, 0.0) * horizon * mult["compute"])
+            raw_context_gain = 10 ** (max(context_slope, 0.0) * horizon * mult["context"])
             compute_gain, compute_capped = capped_growth(raw_compute_gain, mult["compute_cap"])
             context_gain, context_capped = capped_growth(raw_context_gain, mult["context_cap"])
-            price_factor = max(0.05, 10 ** (price_assumed_slope * horizon * mult["price"]))
+            scenario_price_slope = float(mult["price_slope"])
+            price_factor = max(0.05, 10 ** (scenario_price_slope * horizon))
             open_gap_remaining = max(0, open_gap * (1 - min(0.92, 0.12 * horizon * mult["gap"])))
             labor_tasks = min(0.88, (median_exposure * 0.24 + p90_substitution * 0.18) * horizon ** 0.62 * mult["adoption"])
             rows.extend(
@@ -830,7 +1209,7 @@ def build_capability_forecasts(company_scores: pd.DataFrame, job_scores: pd.Data
                         "metric": "frontier_output_price_factor",
                         "value": round(price_factor, 4),
                         "unit": "fraction of current low-price frontier API output cost",
-                        "method": f"OpenRouter lower-quintile output price slope; observed={price_slope:.3f}, scenario_assumed={price_assumed_slope:.3f}",
+                        "method": f"Explicit price-decline scenario; current-catalog release-cohort diagnostic={price_slope:.3f}, scenario_assumed={scenario_price_slope:.3f}",
                     },
                     {
                         "scenario": scenario,
@@ -905,6 +1284,639 @@ def build_capability_forecasts(company_scores: pd.DataFrame, job_scores: pd.Data
     return write_table(forecasts, "capability_forecasts"), write_table(history, "capability_frontier_history"), write_table(claims, "forecast_claims")
 
 
+def livecodebench_rows(overwrite_sources: bool = False) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    cached_text("livecodebench_space_api", LIVE_CODE_BENCH_API, overwrite=overwrite_sources)
+    js = cached_text("livecodebench_leaderboard_js", LIVE_CODE_BENCH_SPACE, overwrite=overwrite_sources, timeout=180)
+    match = re.search(r"Ji=JSON\.parse\('(.+?)'\),", js)
+    if not match:
+        return rows
+    payload = json.loads(bytes(match.group(1), "utf-8").decode("unicode_escape"))
+    performances = pd.DataFrame(payload.get("performances", []))
+    models = pd.DataFrame(payload.get("models", []))
+    if performances.empty or models.empty:
+        return rows
+    models["release_date_iso"] = models["release_date"].map(parse_any_date)
+    release_map = dict(zip(models["model_repr"], models["release_date_iso"]))
+    link_map = dict(zip(models["model_repr"], models.get("link", pd.Series("", index=models.index))))
+    performances["pass@1"] = numeric(performances["pass@1"])
+    grouped = performances.groupby(["model", "difficulty"], dropna=False).agg(
+        pass_at_1=("pass@1", "mean"),
+        questions=("question_id", "nunique"),
+        first_problem_date=("date", "min"),
+        last_problem_date=("date", "max"),
+    ).reset_index()
+    overall = performances.groupby("model", dropna=False).agg(
+        pass_at_1=("pass@1", "mean"),
+        questions=("question_id", "nunique"),
+        first_problem_date=("date", "min"),
+        last_problem_date=("date", "max"),
+    ).reset_index()
+    overall["difficulty"] = "all"
+    grouped = pd.concat([overall, grouped], ignore_index=True)
+    for _, row in grouped.iterrows():
+        model = row["model"]
+        append_domain_row(
+            rows,
+            source_id="livecodebench_leaderboard",
+            source_name="LiveCodeBench leaderboard",
+            benchmark="LiveCodeBench code generation",
+            domain="software_engineering",
+            task=f"code_generation_{row['difficulty']}",
+            model_name=model,
+            score=row["pass_at_1"],
+            score_unit="percent_pass_at_1",
+            source_url=link_map.get(model) or "https://livecodebench.github.io/",
+            eval_date=release_map.get(model) or parse_any_date(row["last_problem_date"]),
+            evidence_level="observed",
+            sample_size=row["questions"],
+            benchmark_weight=1.15 if row["difficulty"] == "all" else 0.72,
+            limitations="LiveCodeBench is coding-specific and time-windowed; model release dates are used when present.",
+            date_provenance="model_release_or_benchmark_window",
+            temporal_eligible=bool(release_map.get(model) or parse_any_date(row["last_problem_date"])),
+        )
+    return rows
+
+
+def open_medical_rows(overwrite_sources: bool = False) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    listing = json.loads(cached_text("open_medical_results_api", OPEN_MEDICAL_RESULTS_API, overwrite=overwrite_sources, timeout=120))
+    siblings = [item.get("rfilename", "") for item in listing.get("siblings", []) if str(item.get("rfilename", "")).endswith(".json")]
+    for filename in siblings:
+        raw_path = RAW_DOMAIN / "open_medical_results" / filename
+        raw_path.parent.mkdir(parents=True, exist_ok=True)
+        if raw_path.exists() and not overwrite_sources:
+            text = raw_path.read_text(encoding="utf-8")
+        else:
+            url = f"{OPEN_MEDICAL_RESULTS_RESOLVE}/{quote(filename)}"
+            response = requests.get(url, headers={"User-Agent": "frontier-ai-domain-benchmark-analysis/0.1"}, timeout=90)
+            if not response.ok:
+                continue
+            text = response.text
+            raw_path.write_text(text, encoding="utf-8")
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        config = payload.get("config", {})
+        model_name = config.get("model_name", filename.split("/results_", 1)[0])
+        eval_date_match = re.search(r"results[_\w/.-]*?(\d{4}[-_]\d{2}[-_]\d{2}(?:[ T_]\d{2}[:_-]\d{2}[:_-]\d{2})?)", filename)
+        eval_date = eval_date_match.group(1).replace("_", "-") if eval_date_match else listing.get("lastModified", "")
+        for benchmark, metrics in payload.get("results", {}).items():
+            if not isinstance(metrics, dict):
+                continue
+            metric_name = next((key for key in ["acc,none", "exact_match,none", "score"] if key in metrics), next(iter(metrics), ""))
+            score = metrics.get(metric_name)
+            append_domain_row(
+                rows,
+                source_id="open_medical_llm_leaderboard",
+                source_name="Open Medical-LLM Leaderboard",
+                benchmark=benchmark,
+                domain="medicine",
+                task=benchmark.replace("mmlu_", "mmlu medical: "),
+                model_name=model_name,
+                score=score,
+                score_unit="fraction_accuracy",
+                source_url="https://huggingface.co/spaces/openlifescienceai/open_medical_llm_leaderboard",
+                eval_date=eval_date,
+                evidence_level="observed",
+                sample_size=np.nan,
+                benchmark_weight=1.10 if benchmark in {"medqa_4options", "medmcqa", "pubmedqa"} else 0.82,
+                limitations="Medical QA accuracy is not a clinical safety or deployment-readiness score.",
+                date_provenance="evaluation_filename" if eval_date_match else "dataset_snapshot",
+                temporal_eligible=bool(eval_date_match),
+            )
+    return rows
+
+
+def terminal_bench_rows(overwrite_sources: bool = False) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    page = cached_text("terminal_bench_2_0_leaderboard", TERMINAL_BENCH_20_URL, overwrite=overwrite_sources, timeout=120)
+    for row_html in re.findall(r"<tr[^>]*>(.*?)</tr>", page, flags=re.S):
+        cells = [strip_html(cell) for cell in re.findall(r"<td[^>]*>(.*?)</td>", row_html, flags=re.S)]
+        if cells and cells[0] == "":
+            cells = cells[1:]
+        if len(cells) < 7:
+            continue
+        rank, agent, model, date, agent_org, model_org, accuracy = cells[:7]
+        score_match = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*%", accuracy)
+        if not score_match:
+            continue
+        append_domain_row(
+            rows,
+            source_id="terminal_bench_2_0",
+            source_name="Terminal-Bench 2.0 leaderboard",
+            benchmark="Terminal-Bench 2.0",
+            domain="agentic_terminal",
+            task=agent,
+            model_name=model,
+            vendor=model_org,
+            score=float(score_match.group(1)),
+            score_unit="percent_accuracy",
+            source_url=TERMINAL_BENCH_20_URL,
+            eval_date=date,
+            evidence_level="observed",
+            sample_size=89,
+            benchmark_weight=1.18,
+            limitations="Agent, scaffold and model are entangled; do not attribute the whole score to model weights alone.",
+            date_provenance="leaderboard_submission_date",
+        )
+    return rows
+
+
+def finance_benchmark_rows(overwrite_sources: bool = False) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    listing = json.loads(cached_text("financebench_results_api", FINANCEBENCH_RESULTS_API, overwrite=overwrite_sources, timeout=90))
+    for split in ["train", "valid", "test"]:
+        filename = f"data/{split}-00000-of-00001.parquet"
+        url = f"{FINANCEBENCH_RESOLVE}/{filename}"
+        try:
+            blob = cached_bytes(f"financebench_results_{split}", url, overwrite=overwrite_sources, timeout=90)
+            frame = pd.read_parquet(io.BytesIO(blob))
+        except Exception:
+            continue
+        if {"org", "model", "average"}.issubset(frame.columns):
+            for _, row in frame.iterrows():
+                append_domain_row(
+                    rows,
+                    source_id="financebench_results",
+                    source_name="FinanceBench public results",
+                    benchmark="FinanceBench",
+                    domain="finance_quant",
+                    task=split,
+                    model_name=row["model"],
+                    vendor=row.get("org", "financebench"),
+                    score=row["average"],
+                    score_unit="fraction_average",
+                    source_url="https://huggingface.co/datasets/financebench/results",
+                    eval_date=listing.get("lastModified", ""),
+                    evidence_level="observed",
+                    sample_size=len(frame),
+                    benchmark_weight=0.82,
+                    limitations="Small public result set; useful as a finance RAG signal, not a full domain trend.",
+                    date_provenance="dataset_snapshot",
+                    temporal_eligible=False,
+                )
+    return rows
+
+
+def qfbench_rows(overwrite_sources: bool = False) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    page = cached_text("qfbench_homepage", QFBENCH_URL, overwrite=overwrite_sources, timeout=120)
+    cards = re.findall(
+        r"#<!-- -->(\d+).*?text-\[11px\][^>]*>([^<]+)</span>.*?text-\[15px\][^>]*>(.*?)</p>.*?via <!-- -->(.*?)</p>.*?>([0-9]+(?:\.[0-9]+)?)<!-- -->%</span>.*?pass@3 <!-- -->([0-9]+(?:\.[0-9]+)?)",
+        page,
+        flags=re.S,
+    )
+    for rank, date, model, agent, pass1, pass3 in cards[:30]:
+        append_domain_row(
+            rows,
+            source_id="qfbench_v11",
+            source_name="QFBench V11 leaderboard",
+            benchmark="QFBench V11",
+            domain="finance_quant",
+            task=f"{strip_html(agent)} pass@1",
+            model_name=strip_html(model),
+            score=float(pass1),
+            score_unit="percent_pass_at_1",
+            source_url=QFBENCH_URL,
+            eval_date=date,
+            evidence_level="observed",
+            sample_size=87,
+            benchmark_weight=1.05,
+            limitations="Agent and model are bundled; benchmark targets quantitative finance coding rather than all financial work.",
+            date_provenance="leaderboard_submission_date",
+        )
+        append_domain_row(
+            rows,
+            source_id="qfbench_v11",
+            source_name="QFBench V11 leaderboard",
+            benchmark="QFBench V11 pass@3",
+            domain="finance_quant",
+            task=f"{strip_html(agent)} pass@3",
+            model_name=strip_html(model),
+            score=float(pass3),
+            score_unit="percent_pass_at_3",
+            source_url=QFBENCH_URL,
+            eval_date=date,
+            evidence_level="observed",
+            sample_size=87,
+            benchmark_weight=0.65,
+            limitations="pass@3 captures recovery from repeated attempts; it is not one-shot productivity.",
+            date_provenance="leaderboard_submission_date",
+        )
+    return rows
+
+
+def legal_benchmark_rows(overwrite_sources: bool = False) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    page = cached_text("lexometrica_legal_benchmark", LEXOMETRICA_URL, overwrite=overwrite_sources, timeout=90)
+    text = strip_html(page)
+    ranking_pattern = re.compile(
+        r"(\d+)\s+([A-Za-z. ]+?)\s+([A-Za-z0-9.\-+ ]+?)\s+(0\.\d+|1\.00)\s+(\d+)%\s+(\d+)%\s+(0\.\d+|1\.00)"
+    )
+    for rank, provider, model, primary, safety, citations, composite in ranking_pattern.findall(text):
+        if int(rank) > 30:
+            continue
+        append_domain_row(
+            rows,
+            source_id="lexometrica_legal_ru_v1",
+            source_name="Lexometrica Ground Truth LegalBench RU",
+            benchmark="Lexometrica legal-ru-v1 composite",
+            domain="legal_reasoning",
+            task="IRAC legal reasoning composite",
+            model_name=model,
+            vendor=provider,
+            score=float(composite),
+            score_unit="fraction_composite",
+            source_url=LEXOMETRICA_URL,
+            eval_date="2026-03-01",
+            evidence_level="observed",
+            sample_size=30,
+            benchmark_weight=0.95,
+            limitations="Russian legal domain; black-box task set and jurisdiction-specific results.",
+            date_provenance="benchmark_release_date",
+        )
+        append_domain_row(
+            rows,
+            source_id="lexometrica_legal_ru_v1",
+            source_name="Lexometrica Ground Truth LegalBench RU",
+            benchmark="Lexometrica legal-ru-v1 citations",
+            domain="legal_reasoning",
+            task="citation validity",
+            model_name=model,
+            vendor=provider,
+            score=float(citations),
+            score_unit="percent_citations_ok",
+            source_url=LEXOMETRICA_URL,
+            eval_date="2026-03-01",
+            evidence_level="observed",
+            sample_size=30,
+            benchmark_weight=0.55,
+            limitations="Citation form is not the same as legal correctness.",
+            date_provenance="benchmark_release_date",
+        )
+    return rows
+
+
+def local_domain_benchmark_rows() -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+
+    lmarena = read_csv_table("lmarena_full").copy()
+    if not lmarena.empty:
+        lmarena["rating"] = numeric(lmarena["rating"])
+        lmarena["domain"] = [infer_capability_domain(category) for category in lmarena.get("category", "")]
+        # Arena rows are historical leaderboard snapshots.  Normalize within a
+        # snapshot, not over the entire archive, otherwise later snapshots and
+        # frequently listed models dominate the scale.
+        lmarena["score_normalized_local"] = (
+            lmarena.groupby(["category", "leaderboard_publish_date"])["rating"].rank(method="average", pct=True) * 100
+        )
+        sample = lmarena.groupby(["model_name", "organization", "category", "leaderboard_publish_date", "domain"], dropna=False).agg(
+            rating=("rating", "max"),
+            score_norm=("score_normalized_local", "max"),
+            vote_count=("vote_count", "max"),
+            source_url=("source_url", "first"),
+        ).reset_index()
+        for _, row in sample.iterrows():
+            append_domain_row(
+                rows,
+                source_id="lmarena_full",
+                source_name="LMArena full leaderboard",
+                benchmark=f"LMArena {row['category']}",
+                domain=row["domain"],
+                task=row["category"],
+                model_name=row["model_name"],
+                vendor=row.get("organization", ""),
+                score=row["score_norm"],
+                score_unit="percentile_normalized_rating",
+                source_url=row.get("source_url", "https://lmarena.ai/"),
+                eval_date=row["leaderboard_publish_date"],
+                evidence_level="observed",
+                sample_size=row.get("vote_count", np.nan),
+                benchmark_weight=1.0,
+                limitations="Arena preference rating is normalized within category; it is not an absolute accuracy score.",
+                date_provenance="leaderboard_snapshot_date",
+            )
+
+    livebench = read_csv_table("livebench_judgments").copy()
+    if not livebench.empty:
+        livebench["score"] = numeric(livebench["score"])
+        livebench["eval_date"] = pd.to_datetime(numeric(livebench["tstamp"]), unit="s", errors="coerce", utc=True).dt.date.astype(str)
+        grouped = livebench.groupby(["model", "category", "task", "eval_date"], dropna=False).agg(score=("score", "mean"), judgments=("question_id", "count")).reset_index()
+        for _, row in grouped.iterrows():
+            domain = infer_capability_domain(row["category"], row["task"])
+            append_domain_row(
+                rows,
+                source_id="livebench_judgments",
+                source_name="LiveBench judgments",
+                benchmark=f"LiveBench {row['category']}",
+                domain=domain,
+                task=row["task"],
+                model_name=row["model"],
+                score=row["score"],
+                score_unit="fraction_judgment_score",
+                source_url="https://huggingface.co/datasets/livebench/model_judgment",
+                eval_date=row["eval_date"],
+                evidence_level="observed",
+                sample_size=row["judgments"],
+                benchmark_weight=1.0,
+                limitations="Judgment rows are task-level and may not reflect a complete model capability profile.",
+                date_provenance="judgment_timestamp",
+            )
+
+    swe = read_csv_table("swebench_submissions").copy()
+    if not swe.empty:
+        for _, row in swe.iterrows():
+            append_domain_row(
+                rows,
+                source_id="swebench_submissions",
+                source_name="SWE-bench submissions",
+                benchmark="SWE-bench",
+                domain="software_engineering",
+                task=row.get("system_name", "repository issue resolution"),
+                model_name=row.get("model"),
+                vendor=row.get("org", ""),
+                score=row.get("score"),
+                score_unit="percent_resolved",
+                source_url=row.get("source_url", "https://www.swebench.com/"),
+                eval_date="",
+                evidence_level="observed",
+                sample_size=row.get("total", np.nan),
+                benchmark_weight=1.12,
+                limitations="Submission-level benchmark; agent harness and scaffolding can affect score.",
+                date_provenance="missing",
+                temporal_eligible=False,
+            )
+
+    openllm = read_csv_table("openllm_leaderboard_metrics_long").copy()
+    if not openllm.empty:
+        openllm = openllm[~openllm["metric"].astype(str).str.contains("stderr|alias", case=False, na=False)].copy()
+        openllm["value"] = numeric(openllm["value"])
+        openllm = openllm[openllm["value"].between(0, 1, inclusive="both")]
+        grouped = openllm.groupby(["model_name", "model_path", "benchmark"], dropna=False).agg(
+            value=("value", "mean"),
+            metric_count=("metric", "count"),
+            source_url=("source_url", "first"),
+        ).reset_index()
+        for _, row in grouped.iterrows():
+            domain = infer_capability_domain(row["benchmark"])
+            append_domain_row(
+                rows,
+                source_id="open_llm_leaderboard_results",
+                source_name="Open LLM Leaderboard results",
+                benchmark=row["benchmark"],
+                domain=domain,
+                task=row["benchmark"].replace("leaderboard_", ""),
+                model_name=row["model_name"],
+                score=row["value"],
+                score_unit="fraction_metric_mean",
+                source_url=row.get("source_url", "https://huggingface.co/open-llm-leaderboard"),
+                eval_date="",
+                evidence_level="observed",
+                sample_size=row.get("metric_count", np.nan),
+                benchmark_weight=0.78,
+                limitations="Open-weight leaderboard rows are broad but not always directly comparable to closed frontier APIs.",
+                date_provenance="missing",
+                temporal_eligible=False,
+            )
+    return rows
+
+
+def build_domain_benchmark_analysis(overwrite_sources: bool = False) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    rows = local_domain_benchmark_rows()
+    for loader in [
+        livecodebench_rows,
+        open_medical_rows,
+        terminal_bench_rows,
+        finance_benchmark_rows,
+        qfbench_rows,
+        legal_benchmark_rows,
+    ]:
+        try:
+            rows.extend(loader(overwrite_sources=overwrite_sources))
+        except Exception as exc:
+            rows.append(
+                {
+                    "source_id": loader.__name__,
+                    "source_name": loader.__name__,
+                    "benchmark": "download_failed",
+                    "domain": "science_reasoning",
+                    "domain_label": domain_label("science_reasoning"),
+                    "task": "download_failed",
+                    "model_name": "n/a",
+                    "model_family": "Other",
+                    "vendor": "n/a",
+                    "score": np.nan,
+                    "score_unit": "n/a",
+                    "score_normalized_0_100": np.nan,
+                    "eval_date": "",
+                    "source_url": "",
+                    "evidence_level": "speculative",
+                    "sample_size": np.nan,
+                    "benchmark_weight": 0.0,
+                    "limitations": f"Loader failed: {exc}",
+                    "date_provenance": "missing",
+                    "temporal_eligible": False,
+                }
+            )
+    results = pd.DataFrame(rows)
+    if results.empty:
+        results = pd.DataFrame(columns=["source_id", "source_name", "benchmark", "domain", "domain_label", "task", "model_name", "model_family", "vendor", "score", "score_unit", "score_normalized_0_100", "eval_date", "source_url", "evidence_level", "sample_size", "benchmark_weight", "limitations", "date_provenance", "temporal_eligible"])
+    results = filter_public_entities(results)
+    results["score_normalized_0_100"] = numeric(results["score_normalized_0_100"]).clip(0, 100)
+    results["eval_date_dt"] = pd.to_datetime(results["eval_date"], errors="coerce", utc=True)
+    results["eval_year"] = results["eval_date_dt"].dt.year
+    reference_ts = pd.Timestamp(REFERENCE_DATE, tz="UTC")
+    results["as_of_eligible"] = results["eval_date_dt"].isna() | results["eval_date_dt"].le(reference_ts)
+    results["temporal_eligible"] = results.get("temporal_eligible", False).fillna(False).astype(bool) & results["eval_date_dt"].notna() & results["eval_date_dt"].le(reference_ts)
+    results = results[results["score_normalized_0_100"].notna()].copy()
+    results = results[results["model_family"].ne("Command")].copy()
+    results = results[results["as_of_eligible"]].copy()
+
+    effective_keys = ["source_id", "benchmark", "task", "model_name", "eval_date"]
+    results["effective_observation_id"] = pd.util.hash_pandas_object(
+        results[effective_keys].fillna("").astype(str), index=False
+    ).astype(str)
+
+    coverage = results.groupby("domain", as_index=False).agg(
+        domain_label=("domain_label", "first"),
+        normalized_result_rows=("score_normalized_0_100", "count"),
+        effective_observations=("effective_observation_id", "nunique"),
+        source_count=("source_id", "nunique"),
+        benchmark_count=("benchmark", "nunique"),
+        model_count=("model_name", "nunique"),
+        family_count=("model_family", "nunique"),
+        dated_rows=("eval_date_dt", lambda s: int(s.notna().sum())),
+        temporal_rows=("temporal_eligible", "sum"),
+        earliest_eval_date=("eval_date_dt", lambda s: s.dropna().min().date().isoformat() if s.notna().any() else ""),
+        latest_eval_date=("eval_date_dt", lambda s: s.dropna().max().date().isoformat() if s.notna().any() else ""),
+        median_score=("score_normalized_0_100", "median"),
+        p90_score=("score_normalized_0_100", lambda s: float(np.quantile(s.dropna(), 0.90)) if s.notna().any() else np.nan),
+    )
+    coverage["interpretation"] = coverage["domain"].map(lambda d: CAPABILITY_DOMAINS.get(d, {}).get("interpretation", ""))
+    coverage["forecast_caveat"] = coverage["domain"].map(lambda d: CAPABILITY_DOMAINS.get(d, {}).get("forecast_caveat", ""))
+    coverage["coverage_label"] = np.select(
+        [
+            coverage["source_count"].ge(3) & coverage["benchmark_count"].ge(3) & coverage["model_count"].ge(25),
+            (coverage["source_count"].ge(2) & coverage["benchmark_count"].ge(2)) | (coverage["benchmark_count"].ge(5) & coverage["model_count"].ge(25)),
+        ],
+        ["broad", "moderate"],
+        default="thin",
+    )
+
+    # Build one annual observation per model/benchmark, then one frontier value
+    # per benchmark.  This prevents historical snapshots and large leaderboards
+    # from receiving tens of thousands of implicit votes.
+    dated = results[results["temporal_eligible"]].dropna(subset=["eval_year"]).copy()
+    dated = dated[(dated["eval_year"] >= 2023) & (dated["eval_year"] <= 2026)]
+    dated = dated.sort_values("eval_date_dt").drop_duplicates(
+        ["domain", "source_id", "benchmark", "task", "model_name", "eval_year"], keep="last"
+    )
+    benchmark_year = dated.groupby(["domain", "domain_label", "source_id", "benchmark", "eval_year"], as_index=False).agg(
+        frontier_score=("score_normalized_0_100", lambda s: float(np.quantile(s.dropna(), 0.95)) if s.notna().any() else np.nan),
+        best_score=("score_normalized_0_100", "max"),
+        median_score=("score_normalized_0_100", "median"),
+        result_rows=("score_normalized_0_100", "count"),
+        benchmark_weight=("benchmark_weight", "median"),
+    )
+    frontier = benchmark_year.groupby(["domain", "domain_label", "eval_year"], as_index=False).agg(
+        frontier_score=("frontier_score", "mean"),
+        best_score=("best_score", "max"),
+        median_score=("median_score", "median"),
+        result_rows=("result_rows", "sum"),
+        source_count=("source_id", "nunique"),
+        benchmark_count=("benchmark", "nunique"),
+    )
+    frontier = frontier.sort_values(["domain", "eval_year"])
+
+    velocity_rows = []
+    for _, coverage_row in coverage.iterrows():
+        domain = coverage_row["domain"]
+        group = frontier[frontier["domain"].eq(domain)].copy()
+        group = group.dropna(subset=["frontier_score"]).sort_values("eval_year")
+        domain_panel = benchmark_year[benchmark_year["domain"].eq(domain)]
+        slopes = []
+        for _, benchmark_group in domain_panel.groupby(["source_id", "benchmark"]):
+            benchmark_group = benchmark_group.sort_values("eval_year")
+            if benchmark_group["eval_year"].nunique() >= 2:
+                slopes.append(float(np.polyfit(benchmark_group["eval_year"], benchmark_group["frontier_score"], 1)[0]))
+        slope = float(np.median(slopes)) if slopes else np.nan
+        source = "median_within_benchmark_slope" if slopes else "insufficient_comparable_history"
+        latest_by_benchmark = domain_panel.sort_values("eval_year").groupby(["source_id", "benchmark"], as_index=False).tail(1)
+        current = float(latest_by_benchmark["frontier_score"].mean()) if len(latest_by_benchmark) else float(coverage_row["p90_score"])
+        current = float(np.clip(current, 0, 99.5)) if np.isfinite(current) else 45.0
+        velocity_rows.append(
+            {
+                "domain": domain,
+                "domain_label": domain_label(domain),
+                "current_frontier_score": round(current, 2),
+                "annual_frontier_point_gain_observed": round(slope, 3) if np.isfinite(slope) else np.nan,
+                "slope_source": source,
+                "years_observed": int(group["eval_year"].nunique()) if len(group) else 0,
+                "longitudinal_benchmark_count": len(slopes),
+                "source_count": int(coverage_row["source_count"]),
+                "benchmark_count": int(coverage_row["benchmark_count"]),
+                "model_count": int(coverage_row["model_count"]),
+                "coverage_label": coverage_row["coverage_label"],
+                "interpretation": coverage_row["interpretation"],
+                "forecast_caveat": coverage_row["forecast_caveat"],
+            }
+        )
+    velocity = pd.DataFrame(velocity_rows)
+    if not velocity.empty:
+        velocity["annual_frontier_point_gain_used"] = numeric(velocity["annual_frontier_point_gain_observed"]).clip(lower=0.0, upper=12.0).fillna(0.0).round(3)
+        velocity["forecast_enabled"] = velocity["longitudinal_benchmark_count"].ge(1) & numeric(velocity["annual_frontier_point_gain_observed"]).gt(0)
+        velocity["annual_gap_closure_rate_base"] = (
+            velocity["annual_frontier_point_gain_used"] / (100 - numeric(velocity["current_frontier_score"]).clip(upper=98.5)).clip(lower=8)
+        ).clip(0.035, 0.72).round(4)
+        velocity["forecast_confidence"] = np.select(
+            [
+                velocity["coverage_label"].eq("broad") & velocity["longitudinal_benchmark_count"].ge(2),
+                velocity["forecast_enabled"],
+            ],
+            ["medium", "low"],
+            default="insufficient_history",
+        )
+        velocity = velocity.sort_values(["current_frontier_score", "source_count"], ascending=False)
+
+    scenarios = {"conservative": 0.55, "base": 1.0, "aggressive": 1.45}
+    forecast_rows = []
+    threshold_rows = []
+    for _, row in velocity.iterrows():
+        current = float(row["current_frontier_score"])
+        rate = float(row["annual_gap_closure_rate_base"])
+        enabled = bool(row["forecast_enabled"])
+        for scenario, mult in scenarios.items():
+            for horizon in [2, 5, 10]:
+                forecast = 100 - (100 - current) * math.exp(-(rate * mult) * horizon) if enabled else current
+                forecast_rows.append(
+                    {
+                        "domain": row["domain"],
+                        "domain_label": row["domain_label"],
+                        "scenario": scenario,
+                        "horizon_years": horizon,
+                        "target_year": 2026 + horizon,
+                        "forecast_frontier_score": round(min(99.5, forecast), 2),
+                        "current_frontier_score": current,
+                        "annual_gap_closure_rate": round(rate * mult, 4),
+                        "confidence": row["forecast_confidence"],
+                        "forecast_enabled": enabled,
+                        "method": "Bounded exponential gap-closure scenario from within-benchmark longitudinal trends." if enabled else "No extrapolation: insufficient comparable longitudinal benchmark history.",
+                        "caveat": row["forecast_caveat"],
+                    }
+                )
+        for threshold in [80, 90, 95]:
+            if current >= threshold:
+                years = 0.0
+            elif current >= 99.0 or not enabled or rate <= 0:
+                years = np.nan
+            else:
+                years = -math.log((100 - threshold) / max(0.1, 100 - current)) / max(rate, 0.001)
+            threshold_rows.append(
+                {
+                    "domain": row["domain"],
+                    "domain_label": row["domain_label"],
+                    "threshold_score": threshold,
+                    "base_years_to_threshold": round(years, 2) if np.isfinite(years) else np.nan,
+                    "estimated_threshold_year": int(2026 + math.ceil(years)) if np.isfinite(years) else np.nan,
+                    "confidence": row["forecast_confidence"],
+                    "forecast_enabled": enabled,
+                    "caveat": row["forecast_caveat"],
+                }
+            )
+    forecasts = pd.DataFrame(forecast_rows)
+    thresholds = pd.DataFrame(threshold_rows)
+
+    catalog = coverage[
+        [
+            "domain",
+            "domain_label",
+            "normalized_result_rows",
+            "effective_observations",
+            "source_count",
+            "benchmark_count",
+            "model_count",
+            "family_count",
+            "earliest_eval_date",
+            "latest_eval_date",
+            "temporal_rows",
+            "coverage_label",
+            "interpretation",
+            "forecast_caveat",
+        ]
+    ].sort_values(["coverage_label", "source_count", "normalized_result_rows"], ascending=[True, False, False])
+
+    return (
+        write_table(catalog, "domain_benchmark_catalog"),
+        write_table(results.drop(columns=["eval_date_dt"], errors="ignore"), "domain_benchmark_results"),
+        write_table(frontier, "domain_capability_frontier"),
+        write_table(velocity, "domain_improvement_velocity"),
+        write_table(forecasts, "domain_capability_forecasts"),
+        write_table(thresholds, "domain_forecast_thresholds"),
+    )
+
+
 def build_historical_analogy_index() -> pd.DataFrame:
     waves = pd.DataFrame(
         [
@@ -940,9 +1952,7 @@ def build_open_closed_gap_by_category() -> tuple[pd.DataFrame, pd.DataFrame]:
     lmarena = read_csv_table("lmarena_full")
     lmarena = lmarena.copy()
     lmarena["model_family"] = [family_from_text(n, o) for n, o in zip(lmarena.get("model_name", ""), lmarena.get("organization", ""))]
-    lmarena["access_class"] = [
-        classify_access(n, o, str(lic), str(lic)) for n, o, lic in zip(lmarena.get("model_name", ""), lmarena.get("organization", ""), lmarena.get("license", ""))
-    ]
+    lmarena["access_class"] = [access_from_text(n, o, lic) for n, o, lic in zip(lmarena.get("model_name", ""), lmarena.get("organization", ""), lmarena.get("license", ""))]
     lmarena["access_bucket"] = np.where(lmarena["access_class"].isin(["open_weight", "likely_open_weight"]), "open_weight", "closed_or_api")
     lmarena["rating"] = numeric(lmarena["rating"])
     grouped = lmarena.groupby(["category", "access_bucket"], as_index=False).agg(
@@ -1138,14 +2148,14 @@ def build_model_benchmark_match_audit() -> pd.DataFrame:
         for name, mid, vendor in zip(openrouter.get("canonical_model", ""), openrouter.get("openrouter_id", ""), openrouter.get("vendor", ""))
     ]
     candidate_tables = benchmark_candidate_tables()
+    matchers = {source: PreparedModelMatcher(candidates) for source, candidates in candidate_tables.items()}
     rows = []
     for _, model in openrouter.iterrows():
-        for source, candidates in candidate_tables.items():
-            match = find_best_model_match(
+        for source, matcher in matchers.items():
+            match = matcher.match(
                 model.get("canonical_model"),
                 model.get("openrouter_id"),
                 clean_text(model.get("model_family")),
-                candidates,
             )
             record = match.benchmark_record or {}
             rows.append(
@@ -1277,6 +2287,381 @@ def build_direct_model_price_performance(match_audit: pd.DataFrame, proxy_fronti
         "source_url",
     ]
     return write_table(work[cols].sort_values("direct_price_performance_index", ascending=False), "direct_model_price_performance")
+
+
+def build_model_price_panel() -> pd.DataFrame:
+    openrouter = read_csv_table("openrouter_models_catalog").copy()
+    openrouter["model_family"] = [
+        frontier_family_from_model(name, mid, vendor)
+        for name, mid, vendor in zip(openrouter.get("canonical_model", ""), openrouter.get("openrouter_id", ""), openrouter.get("vendor", ""))
+    ]
+    openrouter["release_date_dt"] = pd.to_datetime(openrouter["release_date"], errors="coerce", utc=True)
+    openrouter["release_year"] = openrouter["release_date_dt"].dt.year
+    openrouter["input_price_clean"] = numeric(openrouter["input_usd_per_1m"]).replace(0, np.nan)
+    openrouter["output_price_clean"] = numeric(openrouter["output_usd_per_1m"]).replace(0, np.nan)
+    openrouter["blended_price_usd_per_1m"] = (
+        openrouter["input_price_clean"].fillna(openrouter["output_price_clean"]) * 0.45
+        + openrouter["output_price_clean"].fillna(openrouter["input_price_clean"]) * 0.55
+    )
+    modal_cols = [col for col in ["modality", "input_modalities", "output_modalities"] if col in openrouter.columns]
+    if modal_cols:
+        modal_text = openrouter[modal_cols].astype(str).agg(" ".join, axis=1).str.lower()
+        text_like = modal_text.str.contains("text", na=False) | modal_text.str.strip().isin(["", "nan"])
+        openrouter = openrouter[text_like].copy()
+    openrouter = openrouter[
+        openrouter["input_price_clean"].gt(0)
+        & openrouter["output_price_clean"].gt(0)
+        & openrouter["blended_price_usd_per_1m"].gt(0)
+        & openrouter["model_family"].ne("Command")
+    ].copy()
+    openrouter["price_percentile_rank"] = openrouter["blended_price_usd_per_1m"].rank(pct=True)
+    return openrouter
+
+
+def task_cost_usd(input_tokens: float, output_tokens: float, input_price: float, output_price: float) -> float:
+    if not all(np.isfinite(value) for value in [input_tokens, output_tokens, input_price, output_price]):
+        return np.nan
+    return float(input_tokens) * float(input_price) / 1_000_000 + float(output_tokens) * float(output_price) / 1_000_000
+
+
+def build_domain_family_quality(domain_results: pd.DataFrame) -> pd.DataFrame:
+    work = domain_results.copy()
+    work["score_normalized_0_100"] = numeric(work["score_normalized_0_100"]).clip(0, 100)
+    work = work[work["score_normalized_0_100"].notna() & work["model_family"].ne("Command")].copy()
+    if work.empty:
+        return pd.DataFrame(columns=["domain", "model_family", "family_domain_score", "family_domain_best_score", "domain_source_count", "domain_benchmark_count", "domain_result_rows"])
+    # Collapse repeated snapshots/model rows inside each benchmark before
+    # combining benchmarks.  A 40k-row leaderboard must not outweigh an
+    # independent 100-row benchmark simply because it publishes more often.
+    keys = ["domain", "model_family", "source_id", "benchmark"]
+    grouped = work.groupby(keys, observed=True)
+    per_benchmark = grouped.agg(
+        benchmark_family_best=("score_normalized_0_100", "max"),
+        benchmark_weight=("benchmark_weight", "median"),
+        raw_result_rows=("score_normalized_0_100", "count"),
+    ).reset_index()
+    quantiles = grouped["score_normalized_0_100"].quantile(0.90).rename("benchmark_family_score").reset_index()
+    per_benchmark = per_benchmark.merge(quantiles, on=keys, how="left")
+    rows = []
+    for (domain, family), group in per_benchmark.groupby(["domain", "model_family"]):
+        weights = numeric(group["benchmark_weight"]).fillna(1.0).clip(0.25, 1.5)
+        rows.append(
+            {
+                "domain": domain,
+                "model_family": family,
+                "family_domain_score": round(float(np.average(group["benchmark_family_score"], weights=weights)), 3),
+                "family_domain_best_score": round(float(group["benchmark_family_best"].max()), 3),
+                "domain_source_count": int(group["source_id"].nunique()),
+                "domain_benchmark_count": int(group["benchmark"].nunique()),
+                "domain_result_rows": int(group["raw_result_rows"].sum()),
+                "effective_benchmark_observations": int(len(group)),
+                "aggregation_method": "benchmark-first weighted mean; repeated rows collapsed within benchmark",
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def build_cost_external_evidence() -> pd.DataFrame:
+    rows = [
+        {
+            "source_id": "openrouter_models_api",
+            "name": "OpenRouter Models API",
+            "url": "https://openrouter.ai/docs/guides/overview/models",
+            "used_for": "Current model price, context-window and modality catalog fields.",
+            "evidence_note": "The API exposes model identifiers, context length and lowest pricing fields; local dataset snapshots normalize those fields into per-million-token prices.",
+        },
+        {
+            "source_id": "epoch_llm_inference_price_trends",
+            "name": "Epoch AI LLM inference price trends",
+            "url": "https://epoch.ai/data-insights/llm-inference-price-trends/",
+            "used_for": "External prior that quality-adjusted inference prices can fall faster than raw frontier price lists.",
+            "evidence_note": "Used as scenario context, not as a hidden numeric override of the local catalog.",
+        },
+        {
+            "source_id": "price_of_progress_arxiv_2511_23455",
+            "name": "The Price of Progress: Algorithmic Efficiency and the Falling Cost of AI Inference",
+            "url": "https://arxiv.org/abs/2511.23455",
+            "used_for": "Quality-adjusted fixed-task cost-decline prior.",
+            "evidence_note": "Supports separating fixed benchmark/task cost from the average cost of frontier workloads.",
+        },
+        {
+            "source_id": "agentic_token_consumption_arxiv_2604_22750",
+            "name": "How Do AI Agents Spend Your Money?",
+            "url": "https://arxiv.org/abs/2604.22750",
+            "used_for": "Token-amplification caveat for agentic coding and multi-step workflows.",
+            "evidence_note": "Used to justify tracking message/task workload complexity separately from per-token prices.",
+        },
+        {
+            "source_id": "price_reversal_arxiv_2603_23971",
+            "name": "The Price Reversal Phenomenon",
+            "url": "https://arxiv.org/abs/2603.23971",
+            "used_for": "Caveat that listed price can be a weak proxy for realized cost when thinking tokens and retry variance differ by model.",
+            "evidence_note": "The analysis therefore reports token-budget assumptions, not only model list prices.",
+        },
+        {
+            "source_id": "anthropic_economic_index_arxiv_2511_15080",
+            "name": "Anthropic Economic Index report: Uneven geographic and enterprise AI adoption",
+            "url": "https://arxiv.org/abs/2511.15080",
+            "used_for": "External support for rising directive delegation and more autonomous AI task use.",
+            "evidence_note": "Used as narrative context for workload mix; the local labor/task tables remain the primary quantitative input.",
+        },
+    ]
+    return write_table(pd.DataFrame(rows), "cost_external_evidence")
+
+
+def select_task_candidate(candidates: pd.DataFrame, score_col: str, cost_col: str, threshold: float) -> tuple[pd.Series, str]:
+    scored = candidates[candidates[score_col].notna() & candidates[cost_col].notna()].copy()
+    adequate = scored[scored[score_col].ge(threshold)].copy()
+    if not adequate.empty:
+        return adequate.sort_values([cost_col, score_col], ascending=[True, False]).iloc[0], "adequate"
+    if not scored.empty:
+        return scored.sort_values([score_col, cost_col], ascending=[False, True]).iloc[0], "best_available_below_threshold"
+    return pd.Series(dtype=object), "no_candidate"
+
+
+def build_llm_cost_task_analysis(
+    forecasts: pd.DataFrame,
+    domain_results: pd.DataFrame,
+    domain_velocity: pd.DataFrame,
+    domain_forecasts: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    price_panel = build_model_price_panel()
+    domain_quality = build_domain_family_quality(domain_results)
+
+    message_rows = []
+    message_component_rows = []
+    for year, mix in MESSAGE_MIX_BY_YEAR.items():
+        available = price_panel[
+            price_panel["release_year"].notna()
+            & price_panel["release_year"].le(year)
+            & price_panel["release_year"].ge(2020)
+        ].copy()
+        if available.empty:
+            available = price_panel.copy()
+        weighted_cost = 0.0
+        weighted_tokens = 0.0
+        for profile in MESSAGE_WORKLOAD_PROFILES:
+            share = float(mix.get(profile["profile"], 0.0))
+            q = float(profile["price_quantile"])
+            input_price = float(available["input_price_clean"].quantile(q))
+            output_price = float(available["output_price_clean"].quantile(q))
+            cost = task_cost_usd(profile["input_tokens"], profile["output_tokens"], input_price, output_price)
+            tokens = profile["input_tokens"] + profile["output_tokens"]
+            weighted_cost += share * cost
+            weighted_tokens += share * tokens
+            message_component_rows.append(
+                {
+                    "year": year,
+                    "profile": profile["profile"],
+                    "display_name": profile["display_name"],
+                    "complexity_label": profile["complexity_label"],
+                    "mix_share": share,
+                    "input_tokens": profile["input_tokens"],
+                    "output_tokens": profile["output_tokens"],
+                    "price_quantile": q,
+                    "input_price_usd_per_1m": round(input_price, 6),
+                    "output_price_usd_per_1m": round(output_price, 6),
+                    "profile_cost_usd": round(cost, 6),
+                    "weighted_cost_contribution_usd": round(share * cost, 6),
+                    "method": "Modeled workload mix over current listed-price cohorts; not observed invoice data.",
+                }
+            )
+        message_rows.append(
+            {
+                "year": year,
+                "released_model_count": int(len(available)),
+                "low_cost_blended_price_usd_per_1m": round(float(available["blended_price_usd_per_1m"].quantile(0.20)), 6),
+                "median_blended_price_usd_per_1m": round(float(available["blended_price_usd_per_1m"].quantile(0.50)), 6),
+                "frontier_blended_price_usd_per_1m": round(float(available["blended_price_usd_per_1m"].quantile(0.90)), 6),
+                "simple_chat_share": mix.get("simple_chat", 0.0),
+                "knowledge_work_share": mix.get("knowledge_work_message", 0.0),
+                "long_context_share": mix.get("long_context_analysis", 0.0),
+                "agentic_workflow_share": mix.get("agentic_workflow", 0.0),
+                "average_effective_tokens": round(weighted_tokens, 0),
+                "modeled_average_message_cost_usd": round(weighted_cost, 6),
+                "message_cost_index_2023_100": np.nan,
+                "method": "Weighted scenario mix of simple chat, knowledge work, long-context analysis and agentic workflow runs.",
+            }
+        )
+    message_trends = pd.DataFrame(message_rows)
+    base_2023 = float(message_trends.loc[message_trends["year"].eq(2023), "modeled_average_message_cost_usd"].iloc[0]) if not message_trends.empty else np.nan
+    if np.isfinite(base_2023) and base_2023 > 0:
+        message_trends["message_cost_index_2023_100"] = (message_trends["modeled_average_message_cost_usd"] / base_2023 * 100).round(1)
+    message_components = pd.DataFrame(message_component_rows)
+
+    current_rows = []
+    candidate_rows = []
+    forecast_rows = []
+    domain_velocity_index = domain_velocity.set_index("domain") if not domain_velocity.empty else pd.DataFrame()
+    for profile in FIXED_TASK_PROFILES:
+        domain = profile["domain"]
+        quality = domain_quality[domain_quality["domain"].eq(domain)].copy()
+        candidates = price_panel.merge(quality, on="model_family", how="inner")
+        candidates = candidates[~candidates["model_family"].isin(["Other", "unknown", ""])].copy()
+        context_needed = profile["input_tokens"] + profile["output_tokens"]
+        candidates = candidates[numeric(candidates.get("context_window", pd.Series(index=candidates.index))).fillna(0).ge(context_needed)].copy()
+        candidates["current_task_cost_usd"] = [
+            task_cost_usd(profile["input_tokens"], profile["output_tokens"], inp, out)
+            for inp, out in zip(candidates["input_price_clean"], candidates["output_price_clean"])
+        ]
+        candidates["current_quality_gap"] = profile["required_domain_score"] - candidates["family_domain_score"]
+        candidates["current_adequacy_status"] = np.where(candidates["family_domain_score"].ge(profile["required_domain_score"]), "adequate", "below_threshold")
+        candidates = candidates.sort_values(["current_adequacy_status", "current_task_cost_usd", "family_domain_score"], ascending=[True, True, False])
+        top_candidates = candidates.sort_values(
+            ["current_adequacy_status", "current_task_cost_usd", "family_domain_score"],
+            ascending=[True, True, False],
+        ).head(20)
+        for _, row in top_candidates.iterrows():
+            candidate_rows.append(
+                {
+                    "task_profile": profile["task_profile"],
+                    "display_name": profile["display_name"],
+                    "domain": domain,
+                    "domain_label": domain_label(domain),
+                    "required_domain_score": profile["required_domain_score"],
+                    "openrouter_id": row["openrouter_id"],
+                    "canonical_model": row["canonical_model"],
+                    "vendor": row["vendor"],
+                    "model_family": row["model_family"],
+                    "context_window": row.get("context_window"),
+                    "input_usd_per_1m": row["input_price_clean"],
+                    "output_usd_per_1m": row["output_price_clean"],
+                    "family_domain_score": row["family_domain_score"],
+                    "current_quality_gap": round(float(row["current_quality_gap"]), 3),
+                    "current_task_cost_usd": round(float(row["current_task_cost_usd"]), 6),
+                    "current_adequacy_status": row["current_adequacy_status"],
+                    "evidence_level": "family_proxy",
+                    "method": "OpenRouter prices joined to domain benchmark family scores; candidate must fit task token budget.",
+                }
+            )
+        selected, status = select_task_candidate(candidates, "family_domain_score", "current_task_cost_usd", profile["required_domain_score"])
+        if selected.empty:
+            continue
+        current_cost = float(selected["current_task_cost_usd"])
+        current_rows.append(
+            {
+                "task_profile": profile["task_profile"],
+                "display_name": profile["display_name"],
+                "domain": domain,
+                "domain_label": domain_label(domain),
+                "scenario": "current",
+                "horizon_years": 0,
+                "target_year": 2026,
+                "selected_model": selected["canonical_model"],
+                "selected_family": selected["model_family"],
+                "selected_vendor": selected["vendor"],
+                "required_domain_score": profile["required_domain_score"],
+                "selected_domain_score": round(float(selected["family_domain_score"]), 3),
+                "forecast_task_cost_usd": round(current_cost, 6),
+                "current_task_cost_usd": round(current_cost, 6),
+                "cost_factor_vs_current": 1.0,
+                "adequacy_status": status,
+                "input_tokens": profile["input_tokens"],
+                "output_tokens": profile["output_tokens"],
+                "human_gate": profile["human_gate"],
+                "method": "Cheapest current model family meeting the task-domain score threshold; family-level quality proxy.",
+            }
+        )
+        current_frontier = (
+            float(domain_velocity_index.loc[domain, "current_frontier_score"])
+            if domain in domain_velocity_index.index and pd.notna(domain_velocity_index.loc[domain, "current_frontier_score"])
+            else float(candidates["family_domain_score"].max())
+        )
+        for scenario, prior in QUALITY_ADJUSTED_COST_PRIORS.items():
+            for horizon in [2, 5, 10]:
+                domain_match = domain_forecasts[
+                    domain_forecasts["domain"].eq(domain)
+                    & domain_forecasts["scenario"].eq(scenario)
+                    & domain_forecasts["horizon_years"].eq(horizon)
+                ]
+                forecast_score = (
+                    float(domain_match["forecast_frontier_score"].iloc[0])
+                    if not domain_match.empty
+                    else min(99.5, current_frontier + horizon * 3.0)
+                )
+                gain = max(0.0, forecast_score - current_frontier)
+                work = candidates.copy()
+                rank = work["current_task_cost_usd"].rank(pct=True).fillna(1.0)
+                catchup_multiplier = (0.70 + (1 - rank) * 0.45).clip(0.65, 1.15)
+                work["forecast_domain_score"] = (numeric(work["family_domain_score"]) + gain * catchup_multiplier).clip(0, 99.5)
+                quality_factor = max(0.025, float(prior["annual_factor"]) ** horizon)
+                work["forecast_task_cost_usd"] = work["current_task_cost_usd"] * quality_factor
+                future, future_status = select_task_candidate(work, "forecast_domain_score", "forecast_task_cost_usd", profile["required_domain_score"])
+                if future.empty:
+                    continue
+                forecast_rows.append(
+                    {
+                        "task_profile": profile["task_profile"],
+                        "display_name": profile["display_name"],
+                        "domain": domain,
+                        "domain_label": domain_label(domain),
+                        "scenario": scenario,
+                        "horizon_years": horizon,
+                        "target_year": 2026 + horizon,
+                        "selected_model": future["canonical_model"],
+                        "selected_family": future["model_family"],
+                        "selected_vendor": future["vendor"],
+                        "required_domain_score": profile["required_domain_score"],
+                        "selected_domain_score": round(float(future["forecast_domain_score"]), 3),
+                        "forecast_task_cost_usd": round(float(future["forecast_task_cost_usd"]), 6),
+                        "current_task_cost_usd": round(current_cost, 6),
+                        "cost_factor_vs_current": round(float(future["forecast_task_cost_usd"]) / current_cost, 6) if current_cost > 0 else np.nan,
+                        "adequacy_status": future_status,
+                        "input_tokens": profile["input_tokens"],
+                        "output_tokens": profile["output_tokens"],
+                        "human_gate": profile["human_gate"],
+                        "method": f"Cheapest adequate candidate after domain score gain and quality-adjusted cost factor; prior={prior['annual_factor']} per year.",
+                    }
+                )
+    fixed_curves = pd.concat([pd.DataFrame(current_rows), pd.DataFrame(forecast_rows)], ignore_index=True)
+    fixed_candidates = pd.DataFrame(candidate_rows)
+
+    divergence_rows = []
+    current_message = float(message_trends[message_trends["year"].eq(2026)]["modeled_average_message_cost_usd"].iloc[0]) if not message_trends.empty else np.nan
+    current_fixed = fixed_curves[fixed_curves["scenario"].eq("current")]["forecast_task_cost_usd"].median() if not fixed_curves.empty else np.nan
+    for scenario, prior in QUALITY_ADJUSTED_COST_PRIORS.items():
+        for horizon in [2, 5, 10]:
+            metric_rows = forecasts[forecasts["scenario"].eq(scenario) & forecasts["horizon_years"].eq(horizon)]
+            task_share = metric_rows.loc[metric_rows["metric"].eq("share_of_us_occupation_tasks_materially_touched"), "value"]
+            context_mult = metric_rows.loc[metric_rows["metric"].eq("frontier_context_window_multiplier"), "value"]
+            task_share_value = float(task_share.iloc[0]) if len(task_share) else 0.12 * horizon
+            context_value = float(context_mult.iloc[0]) if len(context_mult) else 1 + horizon
+            complexity_multiplier = 1 + task_share_value * 8.0 + math.log1p(max(context_value, 1.0)) * 0.45
+            frontier_price_factor = float(prior["frontier_price_factor"]) ** horizon
+            future_message = current_message * complexity_multiplier * frontier_price_factor
+            fixed_subset = fixed_curves[
+                fixed_curves["scenario"].eq(scenario)
+                & fixed_curves["horizon_years"].eq(horizon)
+                & fixed_curves["adequacy_status"].eq("adequate")
+            ]
+            if fixed_subset.empty:
+                fixed_subset = fixed_curves[fixed_curves["scenario"].eq(scenario) & fixed_curves["horizon_years"].eq(horizon)]
+            future_fixed = float(fixed_subset["forecast_task_cost_usd"].median()) if not fixed_subset.empty else np.nan
+            divergence_rows.append(
+                {
+                    "scenario": scenario,
+                    "horizon_years": horizon,
+                    "target_year": 2026 + horizon,
+                    "modeled_average_message_cost_usd": round(future_message, 6),
+                    "message_cost_factor_vs_2026": round(future_message / current_message, 4) if current_message > 0 else np.nan,
+                    "median_fixed_task_cost_usd": round(future_fixed, 6) if np.isfinite(future_fixed) else np.nan,
+                    "fixed_task_cost_factor_vs_2026": round(future_fixed / current_fixed, 6) if current_fixed > 0 and np.isfinite(future_fixed) else np.nan,
+                    "frontier_workload_complexity_multiplier": round(complexity_multiplier, 4),
+                    "frontier_price_factor": round(frontier_price_factor, 4),
+                    "task_share_touched_input": round(task_share_value, 4),
+                    "context_multiplier_input": round(context_value, 4),
+                    "interpretation": "Average task/message cost can rise if workload complexity and frontier routing grow faster than fixed-task unit costs fall.",
+                    "method": "Scenario transform combining capability forecast task contact, context multiplier and quality-adjusted fixed-task cost priors.",
+                }
+            )
+
+    return (
+        write_table(message_trends, "llm_message_cost_trends"),
+        write_table(message_components, "llm_message_cost_profile_components"),
+        write_table(fixed_candidates, "fixed_task_cost_candidates"),
+        write_table(fixed_curves, "fixed_task_cost_curves"),
+        write_table(pd.DataFrame(divergence_rows), "cost_divergence_scenarios"),
+    )
 
 
 def build_vendor_frontier_scores(company_scores: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -1427,12 +2812,15 @@ def build_coverage_diagnostics(company_scores: pd.DataFrame, match_audit: pd.Dat
 def build_rank_stability(company_scores: pd.DataFrame, draws: int = 700) -> tuple[pd.DataFrame, pd.DataFrame]:
     rng = np.random.default_rng(20260516)
     component_cols = list(COMPONENT_WEIGHTS)
-    base = company_scores[["model_family", "rank", "evidence_count", *component_cols]].copy().fillna(0)
+    evidence_col = "evidence_source_count" if "evidence_source_count" in company_scores.columns else "evidence_count"
+    base = company_scores[["model_family", "rank", evidence_col, *component_cols]].copy().fillna(0)
     rows = []
     for draw in range(draws):
         weights = rng.dirichlet(np.array(list(COMPONENT_WEIGHTS.values())) * 120)
-        evidence = numeric(base["evidence_count"]).clip(lower=1)
-        noise_scale = 2.2 + 36 / np.sqrt(evidence)
+        evidence = numeric(base[evidence_col]).clip(lower=1)
+        # Raw leaderboard rows are pseudo-replicates, so uncertainty shrinks by
+        # independent source families rather than by row count.
+        noise_scale = 2.2 + 12 / np.sqrt(evidence)
         simulated_components = base[component_cols].to_numpy(dtype=float) + rng.normal(0, noise_scale.to_numpy()[:, None], size=(len(base), len(component_cols)))
         simulated_components = np.clip(simulated_components, 0, 100)
         simulated_scores = simulated_components @ weights
@@ -1566,7 +2954,9 @@ def business_domain_for_job(row: pd.Series) -> str:
 def build_business_domain_implications(job_scores: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     jobs = job_scores.copy()
     jobs["business_domain"] = jobs.apply(business_domain_for_job, axis=1)
-    weights = numeric(jobs.get("bls_employment", pd.Series(index=jobs.index))).fillna(numeric(jobs.get("job_forecast", pd.Series(index=jobs.index)))).fillna(1).clip(lower=1)
+    # Growth forecasts are percentages, not population weights.  Never use them
+    # as a fallback denominator for labor-weighted domain averages.
+    weights = numeric(jobs.get("bls_employment", pd.Series(index=jobs.index))).fillna(1).clip(lower=1)
     jobs["domain_labor_weight"] = weights
     rows = []
     for domain in BUSINESS_DOMAIN_RULES:
@@ -2198,6 +3588,102 @@ def plot_forecasts(forecasts: pd.DataFrame) -> None:
     finish_figure(fig, "forecast_scenario_dashboard.png")
 
 
+def plot_llm_cost_task_analysis(
+    message_trends: pd.DataFrame,
+    fixed_curves: pd.DataFrame,
+    fixed_candidates: pd.DataFrame,
+    divergence: pd.DataFrame,
+) -> None:
+    if not message_trends.empty:
+        fig, ax1 = plt.subplots(figsize=(10.2, 6.2))
+        ax1.plot(
+            message_trends["year"],
+            message_trends["modeled_average_message_cost_usd"],
+            marker="o",
+            linewidth=2.8,
+            color=PALETTE["blue"],
+            label="modeled average message/task cost",
+        )
+        ax1.set_ylabel("USD per modeled message/task")
+        ax1.set_xlabel("Model release cohort year")
+        ax1.grid(alpha=0.25)
+        ax2 = ax1.twinx()
+        ax2.plot(
+            message_trends["year"],
+            message_trends["average_effective_tokens"],
+            marker="s",
+            linewidth=2.0,
+            color=PALETTE["orange"],
+            label="average effective tokens",
+        )
+        ax2.set_ylabel("Effective tokens in workload mix")
+        ax1.set_title("Modeled LLM Cost per Message/Task")
+        lines, labels = ax1.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax1.legend(lines + lines2, labels + labels2, loc="upper left", fontsize=8)
+        add_note(ax1, "This is a workload-mix model over listed-price cohorts, not observed billing data. The point is to separate per-token price from task complexity.")
+        soften_axes(ax1)
+        soften_axes(ax2)
+        finish_figure(fig, "llm_message_cost_trends.png")
+
+    if not fixed_curves.empty:
+        work = fixed_curves[fixed_curves["scenario"].isin(["current", "base"])].copy()
+        fig, ax = plt.subplots(figsize=(11, 6.8))
+        for task, group in work.groupby("display_name"):
+            group = group.sort_values("target_year")
+            ax.plot(group["target_year"], group["forecast_task_cost_usd"], marker="o", linewidth=2.1, label=task)
+        ax.set_yscale("log")
+        ax.set_xlabel("Target year")
+        ax.set_ylabel("Cheapest adequate task cost, USD (log)")
+        ax.set_title("Fixed Task Cost Curves")
+        ax.grid(alpha=0.24)
+        ax.legend(ncol=2, fontsize=8)
+        add_note(ax, "A fixed task can get cheaper when more families clear the required capability threshold and quality-adjusted unit cost falls.")
+        soften_axes(ax)
+        finish_figure(fig, "fixed_task_cost_curves.png")
+
+    if not divergence.empty:
+        fig, ax = plt.subplots(figsize=(10.8, 6.3))
+        for scenario, group in divergence.groupby("scenario"):
+            group = group.sort_values("target_year")
+            ax.plot(group["target_year"], group["message_cost_factor_vs_2026"], marker="o", linewidth=2.3, color=SCENARIO_COLORS.get(scenario, PALETTE["slate"]), label=f"{scenario} message/task")
+            ax.plot(group["target_year"], group["fixed_task_cost_factor_vs_2026"], marker="s", linestyle="--", linewidth=2.0, color=SCENARIO_COLORS.get(scenario, PALETTE["slate"]), alpha=0.75, label=f"{scenario} fixed task")
+        ax.axhline(1.0, color="#333333", linewidth=1)
+        ax.set_yscale("log")
+        ax.set_xlabel("Target year")
+        ax.set_ylabel("Factor vs 2026 (log)")
+        ax.set_title("Why Average Message Cost Can Rise While Fixed Task Cost Falls")
+        ax.grid(alpha=0.24)
+        ax.legend(ncol=2, fontsize=8)
+        add_note(ax, "Solid lines track the workload mix becoming harder; dashed lines track the cheapest adequate model for fixed task profiles.")
+        soften_axes(ax)
+        finish_figure(fig, "cost_task_message_divergence.png")
+
+    if not fixed_candidates.empty:
+        work = fixed_candidates.copy()
+        fig, ax = plt.subplots(figsize=(10.6, 6.4))
+        colors = work["current_adequacy_status"].map({"adequate": PALETTE["teal"], "below_threshold": PALETTE["orange"]}).fillna(PALETTE["slate"])
+        ax.scatter(
+            work["current_task_cost_usd"],
+            work["family_domain_score"],
+            s=48,
+            c=colors,
+            alpha=0.72,
+            edgecolor="white",
+            linewidth=0.4,
+        )
+        ax.set_xscale("log")
+        ax.set_xlabel("Current task cost, USD (log)")
+        ax.set_ylabel("Family-domain benchmark score")
+        ax.set_title("Task Quality-Cost Candidate Ladder")
+        for _, row in work.sort_values("current_task_cost_usd").head(10).iterrows():
+            ax.annotate(str(row["model_family"]), (row["current_task_cost_usd"], row["family_domain_score"]), xytext=(4, 4), textcoords="offset points", fontsize=8)
+        add_note(ax, "Each point is a task-model candidate. Adequacy uses family-domain benchmark scores, so this remains a deployability screen rather than direct model proof.")
+        ax.grid(alpha=0.24)
+        soften_axes(ax)
+        finish_figure(fig, "fixed_task_quality_cost_ladder.png")
+
+
 def plot_analogy(analogies: pd.DataFrame) -> None:
     top = analogies.sort_values("ai_similarity_score").copy()
     fig, ax = plt.subplots(figsize=(9.8, 5.8))
@@ -2581,6 +4067,124 @@ def plot_release_cadence(family_cadence: pd.DataFrame, vendor_cadence: pd.DataFr
         finish_figure(fig, "release_cadence_timeline.png")
 
 
+def plot_domain_benchmark_analysis(
+    domain_catalog: pd.DataFrame,
+    domain_frontier: pd.DataFrame,
+    domain_velocity: pd.DataFrame,
+    domain_forecasts: pd.DataFrame,
+    domain_thresholds: pd.DataFrame,
+) -> None:
+    if not domain_catalog.empty:
+        work = domain_catalog.sort_values("normalized_result_rows").copy()
+        fig, ax = plt.subplots(figsize=(11, 6.8))
+        colors = work["coverage_label"].map({"broad": PALETTE["teal"], "moderate": PALETTE["gold"], "thin": PALETTE["red"]}).fillna(PALETTE["slate"])
+        ax.barh(work["domain_label"], work["normalized_result_rows"], color=colors)
+        ax.set_xscale("log")
+        ax.set_title("Benchmark Coverage by Capability Domain")
+        ax.set_xlabel("Normalized benchmark result rows (log)")
+        ax.grid(axis="x", alpha=0.25)
+        for _, row in work.iterrows():
+            ax.text(row["normalized_result_rows"] * 1.05, row["domain_label"], f"{int(row['source_count'])} sources", va="center", fontsize=8, color=PALETTE["muted"])
+        add_note(ax, "Coverage is deliberately visible because domain forecasts are only as useful as the source breadth behind them.")
+        soften_axes(ax)
+        finish_figure(fig, "domain_benchmark_coverage.png")
+
+        matrix = domain_catalog.set_index("domain_label")[["source_count", "benchmark_count", "model_count", "family_count"]].fillna(0)
+        matrix = matrix.loc[matrix["source_count"].sort_values().index]
+        fig, ax = plt.subplots(figsize=(10.8, 6.4))
+        im = ax.imshow(np.log1p(matrix.to_numpy(dtype=float)), aspect="auto", cmap="YlGnBu")
+        ax.set_xticks(range(len(matrix.columns)))
+        ax.set_xticklabels([c.replace("_", " ") for c in matrix.columns], rotation=25, ha="right")
+        ax.set_yticks(range(len(matrix.index)))
+        ax.set_yticklabels(matrix.index)
+        ax.set_title("Domain Source Matrix")
+        for i, label in enumerate(matrix.index):
+            for j, col in enumerate(matrix.columns):
+                ax.text(j, i, f"{int(matrix.loc[label, col])}", ha="center", va="center", fontsize=8, color=PALETTE["ink"])
+        fig.colorbar(im, ax=ax, fraction=0.028, label="log(1 + count)")
+        soften_axes(ax)
+        finish_figure(fig, "domain_source_matrix.png")
+
+    if not domain_frontier.empty:
+        top_domains = domain_velocity.sort_values("current_frontier_score", ascending=False).head(10)["domain"].tolist()
+        work = domain_frontier[domain_frontier["domain"].isin(top_domains)].copy()
+        fig, ax = plt.subplots(figsize=(11.5, 6.7))
+        for domain, group in work.groupby("domain"):
+            group = group.sort_values("eval_year")
+            ax.plot(group["eval_year"], group["frontier_score"], marker="o", linewidth=2, label=domain_label(domain))
+        ax.set_ylim(0, 104)
+        ax.set_title("Observed Domain Frontier Trend")
+        ax.set_xlabel("Evaluation year")
+        ax.set_ylabel("Frontier score, normalized 0-100")
+        ax.grid(alpha=0.24)
+        ax.legend(ncol=2, fontsize=8)
+        add_note(ax, "Scores are normalized across heterogeneous benchmarks. The trend is useful for direction and relative velocity, not exact cross-domain psychometrics.")
+        soften_axes(ax)
+        finish_figure(fig, "domain_frontier_trends.png")
+
+    if not domain_velocity.empty:
+        work = domain_velocity.sort_values("current_frontier_score").copy()
+        fig, ax = plt.subplots(figsize=(11, 6.8))
+        ax.barh(work["domain_label"], work["current_frontier_score"], color=PALETTE["blue"], label="current frontier score")
+        ax.scatter(work["annual_frontier_point_gain_used"] * 4, work["domain_label"], color=PALETTE["orange"], s=68, label="annual point gain used x4")
+        ax.set_xlim(0, 105)
+        ax.set_title("Current Capability vs Improvement Velocity by Domain")
+        ax.set_xlabel("Normalized score / scaled annual gain")
+        ax.grid(axis="x", alpha=0.25)
+        ax.legend(frameon=False)
+        add_note(ax, "Orange dots are scaled so velocity can be read beside current level. Thin domains use the cross-domain fallback and are labeled in the table.")
+        soften_axes(ax)
+        finish_figure(fig, "domain_current_velocity.png")
+
+    if not domain_forecasts.empty:
+        base = domain_forecasts[domain_forecasts["scenario"].eq("base")].copy()
+        top_domains = domain_velocity.sort_values("current_frontier_score", ascending=False).head(10)["domain"].tolist()
+        base = base[base["domain"].isin(top_domains)]
+        fig, ax = plt.subplots(figsize=(11.5, 6.8))
+        for domain, group in base.groupby("domain"):
+            group = group.sort_values("target_year")
+            ax.plot(group["target_year"], group["forecast_frontier_score"], marker="o", linewidth=2.1, label=domain_label(domain))
+        ax.set_ylim(0, 104)
+        ax.set_title("Base Scenario Domain Capability Forecast")
+        ax.set_xlabel("Target year")
+        ax.set_ylabel("Forecast frontier score, normalized 0-100")
+        ax.grid(alpha=0.24)
+        ax.legend(ncol=2, fontsize=8)
+        add_note(ax, "Forecasts use bounded gap closure from observed domain trends. They become more speculative when source coverage is thin.")
+        soften_axes(ax)
+        finish_figure(fig, "domain_forecast_base.png")
+
+        selected = domain_forecasts[domain_forecasts["domain"].isin(domain_velocity.head(6)["domain"])].copy()
+        if not selected.empty:
+            domains = list(dict.fromkeys(selected["domain"].tolist()))[:6]
+            fig, axes = plt.subplots(2, 3, figsize=(15, 8.2), sharey=True)
+            for ax, domain in zip(axes.flatten(), domains):
+                subset = selected[selected["domain"].eq(domain)]
+                for scenario, group in subset.groupby("scenario"):
+                    group = group.sort_values("target_year")
+                    ax.plot(group["target_year"], group["forecast_frontier_score"], marker="o", linewidth=1.9, color=SCENARIO_COLORS.get(scenario, PALETTE["slate"]), label=scenario)
+                ax.set_title(domain_label(domain))
+                ax.set_ylim(0, 104)
+                ax.grid(alpha=0.20)
+                soften_axes(ax)
+            axes[0, 0].legend(fontsize=8)
+            fig.suptitle("Domain Forecast Scenario Small Multiples", fontsize=15, fontweight="bold", color=PALETTE["ink"])
+            finish_figure(fig, "domain_forecast_scenarios.png")
+
+    if not domain_thresholds.empty:
+        work = domain_thresholds[domain_thresholds["threshold_score"].eq(90)].copy()
+        work = work.sort_values("base_years_to_threshold", ascending=False)
+        fig, ax = plt.subplots(figsize=(11, 6.4))
+        values = numeric(work["base_years_to_threshold"]).clip(upper=12)
+        ax.barh(work["domain_label"], values, color=PALETTE["purple"])
+        ax.set_title("Estimated Years to 90/100 Domain Frontier Score")
+        ax.set_xlabel("Base scenario years from 2026 (capped at 12 for display)")
+        ax.grid(axis="x", alpha=0.25)
+        add_note(ax, "A zero means the normalized 90 threshold is already observed in this public benchmark panel. Thin-domain estimates should be read cautiously.")
+        soften_axes(ax)
+        finish_figure(fig, "domain_threshold_timeline.png")
+
+
 def build_plots(
     company_scores: pd.DataFrame,
     jobs: pd.DataFrame,
@@ -2602,6 +4206,15 @@ def build_plots(
     business_domain_pressure: pd.DataFrame,
     release_cadence_family: pd.DataFrame,
     release_cadence_vendor: pd.DataFrame,
+    domain_catalog: pd.DataFrame,
+    domain_frontier: pd.DataFrame,
+    domain_velocity: pd.DataFrame,
+    domain_forecasts: pd.DataFrame,
+    domain_thresholds: pd.DataFrame,
+    message_cost_trends: pd.DataFrame,
+    fixed_task_cost_curves: pd.DataFrame,
+    fixed_task_cost_candidates: pd.DataFrame,
+    cost_divergence_scenarios: pd.DataFrame,
 ) -> None:
     FIGURES.mkdir(parents=True, exist_ok=True)
     apply_chart_theme()
@@ -2623,6 +4236,8 @@ def build_plots(
     plot_forecast_uncertainty_bands(forecasts)
     plot_business_domain_pressure(business_domain_pressure)
     plot_release_cadence(release_cadence_family, release_cadence_vendor)
+    plot_domain_benchmark_analysis(domain_catalog, domain_frontier, domain_velocity, domain_forecasts, domain_thresholds)
+    plot_llm_cost_task_analysis(message_cost_trends, fixed_task_cost_curves, fixed_task_cost_candidates, cost_divergence_scenarios)
 
 
 def source_registry() -> pd.DataFrame:
@@ -2654,6 +4269,55 @@ def source_registry() -> pd.DataFrame:
             "url": str((DATASET / "README.md").relative_to(ROOT)),
             "used_for": "Company scoring, model benchmarks, prices, release cadence, research and ecosystem indicators.",
             "license_or_access": "Derived from public APIs and datasets listed in data/dataset/source_registry_rich.csv.",
+        },
+        {
+            "source_id": "livecodebench_leaderboard",
+            "name": "LiveCodeBench public leaderboard and data",
+            "url": "https://livecodebench.github.io/",
+            "used_for": "Coding-domain pass@1 rows by model, difficulty and release window.",
+            "license_or_access": "Public project data; benchmark paper and Hugging Face assets list license details.",
+        },
+        {
+            "source_id": "open_medical_llm_leaderboard",
+            "name": "Open Medical-LLM Leaderboard result files",
+            "url": "https://huggingface.co/spaces/openlifescienceai/open_medical_llm_leaderboard",
+            "used_for": "Medical-domain MedQA, MedMCQA, PubMedQA and MMLU medical subset accuracy rows.",
+            "license_or_access": "Public Hugging Face space and results dataset.",
+        },
+        {
+            "source_id": "terminal_bench_2_0",
+            "name": "Terminal-Bench 2.0 leaderboard",
+            "url": TERMINAL_BENCH_20_URL,
+            "used_for": "Agentic terminal-work benchmark scores across agents/models.",
+            "license_or_access": "Public leaderboard; agent/model scores are source-visible.",
+        },
+        {
+            "source_id": "financebench_results",
+            "name": "FinanceBench public results",
+            "url": "https://huggingface.co/datasets/financebench/results",
+            "used_for": "Finance RAG benchmark rows in the finance-domain panel.",
+            "license_or_access": "Public Hugging Face dataset.",
+        },
+        {
+            "source_id": "qfbench_v11",
+            "name": "QFBench V11 public leaderboard",
+            "url": QFBENCH_URL,
+            "used_for": "Quantitative-finance coding/agent benchmark scores.",
+            "license_or_access": "Public project website and GitHub repository.",
+        },
+        {
+            "source_id": "lexometrica_legal_ru_v1",
+            "name": "Lexometrica Ground Truth LegalBench RU",
+            "url": LEXOMETRICA_URL,
+            "used_for": "Legal reasoning composite and citation-validity rows.",
+            "license_or_access": "Public black-box leaderboard; prompts/cases are intentionally not published.",
+        },
+        {
+            "source_id": "cost_external_evidence",
+            "name": "Cost-per-message and fixed-task cost evidence notes",
+            "url": str((ANALYSIS / "cost_external_evidence.csv").relative_to(ROOT)),
+            "used_for": "Separating observed/listed API price signals from scenario priors about quality-adjusted fixed-task cost decline and agentic token amplification.",
+            "license_or_access": "Source URLs are listed in the generated evidence table.",
         },
     ]
     return write_table(pd.DataFrame(rows), "deep_analysis_source_registry")
@@ -2700,6 +4364,12 @@ def build_dashboard_key_findings(
     failure_modes: pd.DataFrame,
     business_domain_pressure: pd.DataFrame,
     release_cadence_family: pd.DataFrame,
+    domain_catalog: pd.DataFrame,
+    domain_velocity: pd.DataFrame,
+    domain_forecasts: pd.DataFrame,
+    message_cost_trends: pd.DataFrame,
+    fixed_task_cost_curves: pd.DataFrame,
+    cost_divergence_scenarios: pd.DataFrame,
 ) -> pd.DataFrame:
     rows: list[dict[str, Any]] = []
 
@@ -2739,6 +4409,32 @@ def build_dashboard_key_findings(
         1,
     )
 
+    if not domain_velocity.empty:
+        fast_domain = domain_velocity.sort_values("annual_frontier_point_gain_used", ascending=False).iloc[0]
+        add(
+            "Domains",
+            "Which capability field is improving fastest in the public panel?",
+            str(fast_domain["domain_label"]),
+            f"{format_number(fast_domain['annual_frontier_point_gain_used'])} points/year used",
+            "The domain panel normalizes coding, medicine, math, legal, finance, vision, search/document and agentic benchmark scores into one auditable long table before forecasting.",
+            "observed" if fast_domain["slope_source"] == "observed_domain_slope" else "scenario",
+            "domain_improvement_velocity.csv",
+            2,
+        )
+
+    if not domain_catalog.empty:
+        broad_count = int(domain_catalog["coverage_label"].eq("broad").sum())
+        add(
+            "Coverage",
+            "How many capability domains have broad benchmark coverage?",
+            f"{broad_count} broad domains",
+            f"{int(domain_catalog['normalized_result_rows'].sum()):,} normalized rows",
+            "Thin domains are not hidden: legal and finance are useful but carry stronger caveats than coding, language or arena-backed categories.",
+            "observed",
+            "domain_benchmark_catalog.csv",
+            3,
+        )
+
     direct_counts = family_coverage.sort_values("direct_benchmark_match_count", ascending=False).iloc[0]
     add(
         "Evidence",
@@ -2748,7 +4444,7 @@ def build_dashboard_key_findings(
         "Direct matches are the cleanest deployability evidence; family-only rows stay visible so the report does not borrow certainty from proxy data.",
         "direct_match",
         "family_coverage_matrix.csv",
-        2,
+        4,
     )
 
     fq_10y = probabilities[(probabilities["scenario"].eq("frontier_quality")) & (probabilities["horizon_years"].eq(10))].sort_values(
@@ -2765,7 +4461,7 @@ def build_dashboard_key_findings(
             "This is a sensitivity share from perturbed component weights, not a calibrated probability or prediction-market number.",
             "scenario",
             "company_next_frontier_probabilities.csv",
-            3,
+            5,
         )
 
     open_10y = probabilities[
@@ -2781,8 +4477,24 @@ def build_dashboard_key_findings(
             "The answer can differ from raw frontier-quality leadership because openness, cost and ecosystem pull are separate adoption axes.",
             "scenario",
             "company_next_frontier_probabilities.csv",
-            4,
+            6,
         )
+
+    if not domain_forecasts.empty:
+        base_2036 = domain_forecasts[(domain_forecasts["scenario"].eq("base")) & (domain_forecasts["horizon_years"].eq(10))].sort_values("forecast_frontier_score", ascending=False)
+        base_2036 = base_2036[~base_2036["confidence"].eq("low")] if (~base_2036["confidence"].eq("low")).any() else base_2036
+        if not base_2036.empty:
+            leader = base_2036.iloc[0]
+            add(
+                "Domain Forecast",
+                "Which field has the highest 2036 base-case frontier score?",
+                str(leader["domain_label"]),
+                f"{format_number(leader['forecast_frontier_score'])}/100 forecast score",
+                "The forecast is bounded by a 100-point frontier scale and uses gap closure, so it cannot grow without limit.",
+                "scenario",
+                "domain_capability_forecasts.csv",
+                7,
+            )
 
     gap_values = pd.to_numeric(gap["open_closed_best_gap"], errors="coerce")
     if gap_values.notna().any():
@@ -2795,7 +4507,7 @@ def build_dashboard_key_findings(
             "The report treats catch-up as category-specific. A single open-vs-closed headline hides large differences by task domain.",
             "observed",
             "open_closed_gap_by_category.csv",
-            5,
+            8,
         )
 
     if not direct_price.empty:
@@ -2808,7 +4520,38 @@ def build_dashboard_key_findings(
             "This view uses direct model-level benchmark evidence, avoiding the family-proxy shortcut used in the broader efficient-frontier screen.",
             "direct_match",
             "direct_model_price_performance.csv",
-            6,
+            9,
+        )
+
+    if not message_cost_trends.empty:
+        latest_message = message_cost_trends.sort_values("year").tail(1).iloc[0]
+        add(
+            "Economics",
+            "Is average message/task cost rising in the modeled workload mix?",
+            f"{latest_message['modeled_average_message_cost_usd']:.3f} USD",
+            f"{latest_message['message_cost_index_2023_100']:.1f} index vs 2023",
+            "The trend is workload-weighted: long-context and agentic runs gain share, so average work-unit cost can rise even when low-end token prices improve.",
+            "scenario",
+            "llm_message_cost_trends.csv",
+            10,
+        )
+
+    thesis = fixed_task_cost_curves[
+        fixed_task_cost_curves["task_profile"].eq("thesis_quality_longform")
+        & fixed_task_cost_curves["scenario"].eq("base")
+        & fixed_task_cost_curves["horizon_years"].eq(10)
+    ]
+    if not thesis.empty:
+        row = thesis.iloc[0]
+        add(
+            "Fixed Task Cost",
+            "What happens to a thesis-quality fixed writing task?",
+            str(row["selected_family"]),
+            f"{float(row['forecast_task_cost_usd']):.4f} USD in {int(row['target_year'])}",
+            "The fixed-task screen chooses the cheapest adequate family proxy for a stable token budget, so it can fall while frontier workload cost rises.",
+            "scenario",
+            "fixed_task_cost_curves.csv",
+            11,
         )
 
     labor = jobs.iloc[0]
@@ -2820,7 +4563,7 @@ def build_dashboard_key_findings(
         "The score combines observed exposure, task structure and bottlenecks; it is pressure for redesign, not a claim that the occupation disappears.",
         "observed",
         "job_exposure_scores.csv",
-        7,
+        12,
     )
 
     replacement = jobs.sort_values("full_job_automation_feasibility_index", ascending=False).iloc[0]
@@ -2832,7 +4575,7 @@ def build_dashboard_key_findings(
         "The replacement gate keeps physical, trust, regulatory and accountability bottlenecks in the calculation before labeling any role replaceable.",
         "observed",
         "job_replacement_feasibility.csv",
-        8,
+        13,
     )
 
     domain = business_domain_pressure.sort_values("disruption_index", ascending=False).iloc[0]
@@ -2844,7 +4587,7 @@ def build_dashboard_key_findings(
         "Domain pressure translates occupation evidence into business language while preserving example occupations and human gates.",
         "family_proxy",
         "business_domain_ai_pressure.csv",
-        9,
+        14,
     )
 
     cadence = release_cadence_family.sort_values("recent_releases_365d", ascending=False).iloc[0]
@@ -2856,7 +4599,7 @@ def build_dashboard_key_findings(
         "Cadence is a public execution signal and should be read beside quality, price and evidence depth rather than as a standalone rank.",
         "observed",
         "release_cadence_by_family.csv",
-        10,
+        15,
     )
 
     latest_dates = pd.to_datetime(source_coverage["latest_source_date"], errors="coerce").dropna()
@@ -2868,7 +4611,7 @@ def build_dashboard_key_findings(
         "Freshness and missingness are surfaced before the report leans on rankings, which makes stale-source risk easier to spot.",
         "observed",
         "source_coverage_diagnostics.csv",
-        11,
+        16,
     )
 
     stable_ranks = int(rank_intervals["rank_stability_label"].eq("stable").sum())
@@ -2880,7 +4623,7 @@ def build_dashboard_key_findings(
         "Rank bands are sensitivity diagnostics rather than calibrated confidence intervals.",
         "scenario",
         "rank_stability_intervals.csv",
-        12,
+        17,
     )
 
     high_failures = int(failure_modes["severity"].eq("high").sum())
@@ -2892,7 +4635,7 @@ def build_dashboard_key_findings(
         "The skeptical layer is part of the product: it names how the analysis can break and points to mitigation artifacts.",
         "speculative",
         "claim_failure_modes.csv",
-        13,
+        18,
     )
 
     return write_table(pd.DataFrame(rows).sort_values("priority_order"), "dashboard_key_findings")
@@ -2923,6 +4666,18 @@ def write_report(
     domain_workflows: pd.DataFrame,
     release_cadence_family: pd.DataFrame,
     release_cadence_vendor: pd.DataFrame,
+    domain_catalog: pd.DataFrame,
+    domain_results: pd.DataFrame,
+    domain_frontier: pd.DataFrame,
+    domain_velocity: pd.DataFrame,
+    domain_forecasts: pd.DataFrame,
+    domain_thresholds: pd.DataFrame,
+    message_cost_trends: pd.DataFrame,
+    message_cost_profile_components: pd.DataFrame,
+    fixed_task_cost_candidates: pd.DataFrame,
+    fixed_task_cost_curves: pd.DataFrame,
+    cost_divergence_scenarios: pd.DataFrame,
+    cost_external_evidence: pd.DataFrame,
     dashboard: pd.DataFrame,
 ) -> None:
     top_company = company_scores.iloc[0]
@@ -2980,6 +4735,21 @@ def write_report(
     cadence_vendor_table = release_cadence_vendor[
         ["vendor", "portfolio_families", "total_releases", "recent_releases_365d", "median_days_between_releases", "cadence_label"]
     ].head(12)
+    domain_catalog_table = domain_catalog[
+        ["domain_label", "normalized_result_rows", "source_count", "benchmark_count", "model_count", "coverage_label", "latest_eval_date", "interpretation"]
+    ].head(14)
+    domain_velocity_table = domain_velocity[
+        ["domain_label", "current_frontier_score", "annual_frontier_point_gain_used", "slope_source", "years_observed", "coverage_label", "forecast_confidence"]
+    ].head(14)
+    domain_forecast_table = domain_forecasts[(domain_forecasts["scenario"].eq("base")) & (domain_forecasts["horizon_years"].isin([2, 5, 10]))][
+        ["domain_label", "target_year", "forecast_frontier_score", "current_frontier_score", "confidence", "caveat"]
+    ].head(30)
+    domain_threshold_table = domain_thresholds[domain_thresholds["threshold_score"].isin([90, 95])][
+        ["domain_label", "threshold_score", "base_years_to_threshold", "estimated_threshold_year", "confidence"]
+    ].head(24)
+    domain_source_sample = domain_results[
+        ["source_name", "domain_label", "benchmark", "task", "model_name", "score_normalized_0_100", "eval_date", "limitations"]
+    ].sort_values(["domain_label", "score_normalized_0_100"], ascending=[True, False]).head(18)
     gap_table = gap[["category", "closed_or_api", "open_weight", "open_closed_best_gap", "open_closed_gap_pct_of_closed", "comparison_note"]].head(10)
     cluster_table = cluster_profiles[
         ["labor_cluster_id", "cluster_label", "occupation_count", "full_job_automation_feasibility_index", "augmentation_index", "human_bottleneck_index", "example_occupations"]
@@ -2995,12 +4765,48 @@ def write_report(
             "frontier_context_window_multiplier",
         ]
     ))]
+    message_cost_table = message_cost_trends[
+        [
+            "year",
+            "released_model_count",
+            "low_cost_blended_price_usd_per_1m",
+            "median_blended_price_usd_per_1m",
+            "frontier_blended_price_usd_per_1m",
+            "average_effective_tokens",
+            "modeled_average_message_cost_usd",
+            "message_cost_index_2023_100",
+        ]
+    ]
+    message_profile_table = message_cost_profile_components[message_cost_profile_components["year"].eq(2026)][
+        ["display_name", "mix_share", "input_tokens", "output_tokens", "price_quantile", "profile_cost_usd", "weighted_cost_contribution_usd"]
+    ]
+    fixed_current_table = fixed_task_cost_curves[fixed_task_cost_curves["scenario"].eq("current")][
+        ["display_name", "domain_label", "selected_model", "selected_family", "required_domain_score", "selected_domain_score", "forecast_task_cost_usd", "adequacy_status", "human_gate"]
+    ]
+    fixed_base_table = fixed_task_cost_curves[
+        fixed_task_cost_curves["scenario"].eq("base")
+        & fixed_task_cost_curves["horizon_years"].isin([2, 5, 10])
+    ][
+        ["display_name", "target_year", "selected_family", "selected_domain_score", "forecast_task_cost_usd", "cost_factor_vs_current", "adequacy_status"]
+    ].head(24)
+    divergence_table = cost_divergence_scenarios[
+        [
+            "scenario",
+            "target_year",
+            "modeled_average_message_cost_usd",
+            "message_cost_factor_vs_2026",
+            "median_fixed_task_cost_usd",
+            "fixed_task_cost_factor_vs_2026",
+            "frontier_workload_complexity_multiplier",
+        ]
+    ]
+    cost_evidence_table = cost_external_evidence[["source_id", "name", "used_for", "url"]]
 
     body = f"""# Deep Frontier AI Analysis
 
 Reference date: **{REFERENCE_DATE}**. Generated at: **{CAPTURED_AT}**.
 
-This report is deliberately data-heavy. It uses the local rich frontier-model dataset plus the public Anthropic Economic Index release files for occupation exposure, task penetration, O*NET task text and BLS wage/employment companion fields. The goal is not to claim precision about the future; it is to make the assumptions inspectable enough that the forecast can be argued with.
+This report is deliberately data-heavy. It uses the local rich frontier-model dataset, the public Anthropic Economic Index release files for occupation exposure, and a new domain benchmark layer covering coding, medicine, terminal agents, finance, legal reasoning, math, science/reasoning, language, vision and search/document work. The goal is not to claim precision about the future; it is to make the assumptions inspectable enough that the forecast can be argued with.
 
 ## Dashboard Snapshot
 
@@ -3014,9 +4820,11 @@ The report is organized around three questions:
 
 1. **Who has the strongest frontier-family signal right now?** The answer is a composite heuristic, so the report shows both rank and component composition instead of hiding the weighting.
 2. **Where are the counterintuitive gaps?** Open-weight systems, low prices, context windows and benchmark ratings move on different axes. The plots keep those axes separate.
-3. **What happens when model capability meets labor structure?** Occupation exposure is not the same thing as replacement. The labor section separates task pressure, augmentation, bottlenecks and whole-job feasibility.
+3. **Which domains are improving fastest?** The domain panel keeps fields separate: coding and agentic terminal work should not be averaged blindly with medicine, legal reasoning or finance.
+4. **What happens when model capability meets labor structure?** Occupation exposure is not the same thing as replacement. The labor section separates task pressure, augmentation, bottlenecks and whole-job feasibility.
+5. **Are costs rising or falling?** The economics section separates workload-mix cost per message/task from fixed-task cost curves, because those can move in opposite directions.
 
-Every chart should be read as an audit surface. If a conclusion depends on one metric, the report names that metric and shows the caveat near the visualization.
+Every chart should be read as an audit surface. If a conclusion depends on one metric, the report names that metric and shows the caveat near the visualization. Domain rows with `forecast_enabled=false` are deliberately held flat: no comparable history means no extrapolation. The full remediation log is in `docs/statistical_audit.md`.
 
 Evidence badges used throughout the HTML view: `observed`, `direct_match`, `family_proxy`, `scenario`, `speculative`. They are labels for evidence strength, not decoration.
 
@@ -3025,8 +4833,10 @@ Evidence badges used throughout the HTML view: `observed`, `direct_match`, `fami
 1. **Near-term frontier-family leadership is concentrated, but not one-dimensional.** The highest heuristic index in this run is **{top_company['model_family']}** with a frontier momentum heuristic index of **{top_company['frontier_momentum_heuristic_index']:.1f}**. The strongest openness/cost/ecosystem signal is **{top_open['model_family']}**, which is not automatically the same thing as best closed frontier performance.
 2. **The next-winner question is a simulation sensitivity exercise.** The table changes component weights thousands of times and injects evidence noise. Its shares are not calibrated probabilities.
 3. **Open vs closed is category-specific.** Some LMArena categories show narrow gaps; others preserve a clear closed/API advantage. "Open source caught up" is too crude.
-4. **The job story is not "all jobs disappear."** The highest-risk roles are task bundles where language, analysis, clerical transformation and directive delegation are already exposed. Jobs with physical work, trust, regulation or face-to-face accountability keep meaningful bottlenecks.
-5. **The 10-year question is institutional, not only technical.** In the base scenario, AI materially touches a large share of occupational tasks by 2036, but the binding constraint becomes verification, liability, workflow redesign and who owns the interface to work.
+4. **Field-level progress is uneven.** Coding, terminal-agent and language/document signals have denser coverage than legal and finance. The report extrapolates only domains with repeated observations of the same benchmark; other domains are marked `insufficient_history` and held flat.
+5. **The job story is not "all jobs disappear."** The highest-risk roles are task bundles where language, analysis, clerical transformation and directive delegation are already exposed. Jobs with physical work, trust, regulation or face-to-face accountability keep meaningful bottlenecks.
+6. **The 10-year labor path is a scenario, not an estimate.** The task-contact paths encode explicit adoption assumptions; they are useful for stress testing verification, liability and workflow redesign, not for predicting employment levels.
+7. **The cost view is synthetic.** Message/task paths combine assumed workload mixes with current catalog cohorts, while fixed-task paths use explicit quality and price scenarios. Neither is observed invoice history.
 
 ## Data Freshness And Coverage
 
@@ -3041,6 +4851,50 @@ Family coverage matrix:
 ![Source coverage dashboard](../figures/deep_analysis/source_coverage_dashboard.png)
 
 ![Family signal coverage heatmap](../figures/deep_analysis/family_signal_coverage_heatmap.png)
+
+## Capability Domains
+
+This is the new domain benchmark layer. It pulls together local benchmark sources and additional public sources downloaded during generation: LiveCodeBench, Open Medical-LLM Leaderboard result files, Terminal-Bench, FinanceBench, QFBench and Lexometrica LegalBench RU. Scores are normalized to a 0-100 frontier scale so fields can be compared without pretending that a medical QA percent, a legal composite, an arena rating and an agentic terminal score are the same measurement.
+
+Domain catalog:
+
+{report_table(domain_catalog_table)}
+
+Representative high-scoring source rows:
+
+{report_table(domain_source_sample)}
+
+![Domain benchmark coverage](../figures/deep_analysis/domain_benchmark_coverage.png)
+
+![Domain source matrix](../figures/deep_analysis/domain_source_matrix.png)
+
+## Domain Improvement Velocity
+
+The velocity table estimates how quickly each field is improving in the public benchmark panel. When a domain has enough dated observations, the report uses its observed frontier slope. When the time series is too thin, it falls back to the cross-domain median and labels the slope source explicitly.
+
+{report_table(domain_velocity_table)}
+
+![Domain frontier trends](../figures/deep_analysis/domain_frontier_trends.png)
+
+![Domain current velocity](../figures/deep_analysis/domain_current_velocity.png)
+
+## Domain Capability Forecasts
+
+The domain forecast uses a bounded gap-closure model: a domain starts at its current normalized frontier score, closes a fraction of the remaining gap each year, and is capped below 100. This makes the forecast interpretable: the question is how quickly each field closes the remaining gap, not whether scores can grow without limit.
+
+Base scenario by domain and horizon:
+
+{report_table(domain_forecast_table)}
+
+Threshold timing:
+
+{report_table(domain_threshold_table)}
+
+![Domain forecast base](../figures/deep_analysis/domain_forecast_base.png)
+
+![Domain forecast scenarios](../figures/deep_analysis/domain_forecast_scenarios.png)
+
+![Domain threshold timeline](../figures/deep_analysis/domain_threshold_timeline.png)
 
 ## Model Family Frontier Score
 
@@ -3125,6 +4979,42 @@ Direct evidence price-performance rows:
 {report_table(direct_models)}
 
 ![Direct vs proxy price performance](../figures/deep_analysis/direct_vs_proxy_price_performance.png)
+
+## LLM Cost Per Message vs Fixed Task Cost
+
+This section separates two claims that are often blended together. A **modeled average message/task** can become more expensive when users route more work to long-context, tool-heavy or agentic frontier runs. A **fixed task**, such as thesis-quality long-form writing under a stable token budget and quality threshold, can become cheaper when cheaper families become good enough. The tables below do not claim to observe private invoices or usage logs; they expose the assumptions behind the workload mix and the fixed-task thresholds.
+
+Modeled message/task cost by release cohort:
+
+{report_table(message_cost_table)}
+
+2026 workload profile components:
+
+{report_table(message_profile_table)}
+
+![LLM message cost trends](../figures/deep_analysis/llm_message_cost_trends.png)
+
+Current cheapest adequate fixed-task candidates:
+
+{report_table(fixed_current_table)}
+
+Base scenario fixed-task curves:
+
+{report_table(fixed_base_table)}
+
+![Fixed task cost curves](../figures/deep_analysis/fixed_task_cost_curves.png)
+
+The divergence table is the explicit version of the user's hypothesis: frontier work-unit cost can rise because average tasks get harder, while fixed task cost can fall because capability diffuses into cheaper models.
+
+{report_table(divergence_table)}
+
+![Cost task message divergence](../figures/deep_analysis/cost_task_message_divergence.png)
+
+![Fixed task quality cost ladder](../figures/deep_analysis/fixed_task_quality_cost_ladder.png)
+
+Cost evidence notes:
+
+{report_table(cost_evidence_table)}
 
 ## Job Exposure And Labor Pressure
 
@@ -3243,11 +5133,15 @@ Under-observed family audit:
 ## Method Notes
 
 - Model-family scoring uses `data/dataset/`: LMArena full leaderboard rows, SWE-bench submissions, Open LLM Leaderboard metrics, OpenRouter prices/context, Epoch model metadata, Hugging Face rollups, GitHub model mentions and OpenAlex paper mentions.
+- Domain scoring adds downloaded public benchmark sources under `data/raw/domain_benchmarks/`: LiveCodeBench, Open Medical-LLM, Terminal-Bench, FinanceBench, QFBench and Lexometrica. These are normalized into `domain_benchmark_results.csv`.
 - Direct model evidence uses conservative name matching across exact, normalized exact, alias, family-only and unmatched classes. Family-only rows are audit evidence, not direct model proof.
 - Vendor scoring maps model families to legal vendors and combines flagship-family signal with evidence-weighted portfolio breadth.
 - Rank stability and forecast bands are stress tests and scenario envelopes. They are not calibrated confidence intervals.
 - Labor scoring uses Anthropic Economic Index files from Hugging Face, including occupation exposure, task penetration, task automation/augmentation labels, O*NET task mappings/statements, and BLS wage/employment companion data.
 - Scenario forecasts are not forecasts from a proprietary model. They are transparent transforms of observed slopes and pressure scores. Every scenario row includes a method field and the input diagnostics include caps/fallback policy.
+- Domain forecasts use bounded gap closure from dated public benchmark frontier trends. When a domain lacks enough longitudinal evidence, the forecast uses a cross-domain fallback and marks confidence as low.
+- Cost-per-message analysis is a workload-mix model over listed API price cohorts, not observed billing data. It separates low-cost chat, knowledge work, long-context analysis and agentic workflow runs.
+- Fixed-task cost curves hold task token budgets and quality thresholds stable, then ask which current or future adequate family proxy is cheapest. They should be read as deployability screens, not direct model guarantees.
 - Leadership simulation shares are stochastic sensitivity analyses over explicit score components, not calibrated market probabilities.
 - Labor-weighted summaries use the best available public companion weights; where only major-group BLS employment is available, the analysis allocates it across detailed occupations inside that group to avoid treating each detailed occupation as the whole major group.
 - BLS web xlsx endpoints returned anti-bot 403 responses in this environment. The analysis therefore uses public BLS-derived companion files already included in Anthropic's release rather than scraping around that restriction.
@@ -3256,10 +5150,22 @@ Under-observed family audit:
 
 - `data/analysis/company_frontier_scores.csv`
 - `data/analysis/dashboard_key_findings.csv`
+- `data/analysis/domain_benchmark_catalog.csv`
+- `data/analysis/domain_benchmark_results.csv`
+- `data/analysis/domain_capability_frontier.csv`
+- `data/analysis/domain_improvement_velocity.csv`
+- `data/analysis/domain_capability_forecasts.csv`
+- `data/analysis/domain_forecast_thresholds.csv`
 - `data/analysis/company_score_methodology.csv`
 - `data/analysis/company_score_sensitivity.csv`
 - `data/analysis/model_benchmark_match_audit.csv`
 - `data/analysis/direct_model_price_performance.csv`
+- `data/analysis/llm_message_cost_trends.csv`
+- `data/analysis/llm_message_cost_profile_components.csv`
+- `data/analysis/fixed_task_cost_candidates.csv`
+- `data/analysis/fixed_task_cost_curves.csv`
+- `data/analysis/cost_divergence_scenarios.csv`
+- `data/analysis/cost_external_evidence.csv`
 - `data/analysis/vendor_frontier_scores.csv`
 - `data/analysis/vendor_score_components.csv`
 - `data/analysis/source_coverage_diagnostics.csv`
@@ -3287,12 +5193,23 @@ Under-observed family audit:
 - `data/analysis/forecast_claims.csv`
 - `figures/deep_analysis/company_score_component_stack.png`
 - `figures/deep_analysis/company_score_evidence_scatter.png`
+- `figures/deep_analysis/domain_benchmark_coverage.png`
+- `figures/deep_analysis/domain_source_matrix.png`
+- `figures/deep_analysis/domain_frontier_trends.png`
+- `figures/deep_analysis/domain_current_velocity.png`
+- `figures/deep_analysis/domain_forecast_base.png`
+- `figures/deep_analysis/domain_forecast_scenarios.png`
+- `figures/deep_analysis/domain_threshold_timeline.png`
 - `figures/deep_analysis/leadership_scenario_matrix.png`
 - `figures/deep_analysis/open_closed_category_levels.png`
 - `figures/deep_analysis/price_context_rating_map.png`
 - `figures/deep_analysis/labor_outcome_mix.png`
 - `figures/deep_analysis/forecast_scenario_dashboard.png`
 - `figures/deep_analysis/direct_vs_proxy_price_performance.png`
+- `figures/deep_analysis/llm_message_cost_trends.png`
+- `figures/deep_analysis/fixed_task_cost_curves.png`
+- `figures/deep_analysis/cost_task_message_divergence.png`
+- `figures/deep_analysis/fixed_task_quality_cost_ladder.png`
 - `figures/deep_analysis/vendor_frontier_scores.png`
 - `figures/deep_analysis/family_vs_vendor_rank_shift.png`
 - `figures/deep_analysis/source_coverage_dashboard.png`
@@ -3352,7 +5269,7 @@ def write_html_report(markdown: str, path: Path, dashboard: pd.DataFrame | None 
         "<div>",
         "<div class='eyebrow'>Hiring portfolio analysis</div>",
         f"<h1>{html.escape(title)}</h1>",
-        "<p class='hero-copy'>A dashboard-first, public-source view of frontier model signals, open/closed gaps, deployability economics and labor exposure. The interface puts the key comparisons up front, then keeps the full audit trail below.</p>",
+        "<p class='hero-copy'>A dashboard-first, public-source view of frontier model signals, domain benchmark velocity, open/closed gaps, deployability economics and labor exposure. The interface puts the key comparisons up front, then keeps the full audit trail below.</p>",
         "<div class='evidence-badges'>"
         + "".join(f"<span class='evidence-badge evidence-{html.escape(key)}'>{html.escape(key)}</span>" for key in EVIDENCE_BADGES)
         + "</div>",
@@ -3501,6 +5418,7 @@ def render_dashboard_html(dashboard: pd.DataFrame, section_id: str) -> str:
     top_tiles = rows[:6]
     lanes = [
         ("Models", "Leaderboards, vendors and direct evidence", "model-family-frontier-score"),
+        ("Domains", "Capability fields, velocity and forecasts", "capability-domains"),
         ("Economics", "Cost, context and deployable price-performance", "price-performance-frontier"),
         ("Labor", "Occupation pressure, domains and replacement gates", "job-exposure-and-labor-pressure"),
         ("Risk", "Coverage, stability and failure modes", "where-this-analysis-is-weak"),
@@ -3747,6 +5665,7 @@ a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; 
   border-bottom: 1px solid rgba(17, 17, 17, 0.08);
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(14px);
+  overflow: hidden;
 }
 .sidebar-title {
   display: inline-flex;
@@ -3767,7 +5686,10 @@ a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; 
 }
 .report-sidebar nav {
   flex: 1;
-  overflow-x: auto;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   scrollbar-width: none;
 }
 .report-sidebar nav::-webkit-scrollbar { display: none; }
@@ -3777,9 +5699,16 @@ a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; 
   margin: 0;
   display: flex;
   align-items: center;
+  flex-wrap: nowrap;
   gap: 8px;
-  min-width: max-content;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.report-sidebar ol::-webkit-scrollbar { display: none; }
+.report-sidebar li { flex: 0 0 auto; }
 .report-sidebar a:not(.sidebar-title) {
   display: inline-flex;
   align-items: center;
@@ -3965,6 +5894,8 @@ code {
   border-radius: 5px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.92em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 pre {
   max-width: 100%;
@@ -4175,11 +6106,23 @@ Generated by `python -m frontier_ai.deep_analysis`.
 
 - `company_frontier_scores`: model-family composite scores using benchmark, API, release, ecosystem, price and openness signals.
 - `dashboard_key_findings`: one-screen report entry points with headline metric, evidence label and primary artifact.
+- `domain_benchmark_catalog`: domain-level benchmark coverage, source count, model count, latest source date, interpretation and caveat.
+- `domain_benchmark_results`: normalized model-benchmark rows across local and downloaded domain sources.
+- `domain_capability_frontier`: annual domain frontier history used for improvement-rate estimates.
+- `domain_improvement_velocity`: current frontier score, observed or fallback annual point gain, coverage label and forecast confidence by field.
+- `domain_capability_forecasts`: 2, 5 and 10-year bounded gap-closure forecasts for each capability field.
+- `domain_forecast_thresholds`: estimated base-scenario years to normalized 80/90/95 thresholds by field.
 - `company_score_components`: reduced component table for plotting and review.
 - `company_score_methodology`: explicit component weights, transforms and rationale.
 - `company_score_sensitivity`: rank sensitivity under alternative component weights.
 - `model_benchmark_match_audit`: conservative OpenRouter-to-benchmark model matching audit with exact, normalized, alias, family-only and unmatched confidence labels.
 - `direct_model_price_performance`: deployability table restricted to rows with direct model-level benchmark evidence.
+- `llm_message_cost_trends`: modeled workload-weighted cost per message/task by model release cohort year, with low/median/frontier price cohort statistics.
+- `llm_message_cost_profile_components`: profile-level assumptions and cost contributions for simple chat, knowledge work, long-context and agentic workflow runs.
+- `fixed_task_cost_candidates`: current task-model candidates for stable fixed task profiles, using OpenRouter prices joined to family-domain benchmark scores.
+- `fixed_task_cost_curves`: current and future cheapest adequate model-family proxy for each fixed task profile under conservative/base/aggressive scenarios.
+- `cost_divergence_scenarios`: scenario table comparing average message/task cost factors against fixed-task cost factors.
+- `cost_external_evidence`: source and caveat registry for external cost, price-performance and agentic-token evidence.
 - `vendor_frontier_scores`: vendor portfolio score that combines flagship family and evidence-weighted portfolio components.
 - `vendor_score_components`: component-level vendor aggregation audit.
 - `source_coverage_diagnostics`: row counts, captured dates, latest source dates and core-field missingness by source table.
@@ -4221,11 +6164,19 @@ def build_deep_analysis(overwrite_sources: bool = False, write_reports_flag: boo
     company_scores, components = build_company_frontier_scores()
     job_scores, domain = build_job_exposure_scores(aei)
     forecasts, history, claims = build_capability_forecasts(company_scores, job_scores)
+    domain_catalog, domain_results, domain_frontier, domain_velocity, domain_forecasts, domain_thresholds = build_domain_benchmark_analysis(overwrite_sources=overwrite_sources)
     analogies = build_historical_analogy_index()
     gap, category_leaders = build_open_closed_gap_by_category()
     price_frontier = build_price_performance_frontier()
     match_audit = build_model_benchmark_match_audit()
     direct_price = build_direct_model_price_performance(match_audit, price_frontier)
+    message_cost_trends, message_cost_profile_components, fixed_task_cost_candidates, fixed_task_cost_curves, cost_divergence_scenarios = build_llm_cost_task_analysis(
+        forecasts,
+        domain_results,
+        domain_velocity,
+        domain_forecasts,
+    )
+    cost_external_evidence = build_cost_external_evidence()
     vendor_scores, vendor_components = build_vendor_frontier_scores(company_scores)
     source_coverage, family_coverage = build_coverage_diagnostics(company_scores, match_audit)
     bootstrap, rank_intervals = build_rank_stability(company_scores)
@@ -4249,6 +6200,12 @@ def build_deep_analysis(overwrite_sources: bool = False, write_reports_flag: boo
         failure_modes,
         business_domain_pressure,
         release_cadence_family,
+        domain_catalog,
+        domain_velocity,
+        domain_forecasts,
+        message_cost_trends,
+        fixed_task_cost_curves,
+        cost_divergence_scenarios,
     )
 
     manifest_rows = [
@@ -4281,6 +6238,15 @@ def build_deep_analysis(overwrite_sources: bool = False, write_reports_flag: boo
         business_domain_pressure,
         release_cadence_family,
         release_cadence_vendor,
+        domain_catalog,
+        domain_frontier,
+        domain_velocity,
+        domain_forecasts,
+        domain_thresholds,
+        message_cost_trends,
+        fixed_task_cost_curves,
+        fixed_task_cost_candidates,
+        cost_divergence_scenarios,
     )
     if write_reports_flag:
         write_report(
@@ -4308,6 +6274,18 @@ def build_deep_analysis(overwrite_sources: bool = False, write_reports_flag: boo
             domain_workflows,
             release_cadence_family,
             release_cadence_vendor,
+            domain_catalog,
+            domain_results,
+            domain_frontier,
+            domain_velocity,
+            domain_forecasts,
+            domain_thresholds,
+            message_cost_trends,
+            message_cost_profile_components,
+            fixed_task_cost_candidates,
+            fixed_task_cost_curves,
+            cost_divergence_scenarios,
+            cost_external_evidence,
             dashboard,
         )
         write_run_manifest(

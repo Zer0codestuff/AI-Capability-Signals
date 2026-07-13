@@ -5,6 +5,7 @@ __pycache__/
 .ruff_cache/
 .uv-cache/
 .matplotlib-cache/
+.mpl-cache/
 .DS_Store
 *.pyc
 *.egg-info/
