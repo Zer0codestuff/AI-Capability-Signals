@@ -1,35 +1,29 @@
 .venv/
 __pycache__/
+*.pyc
+*.egg-info/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
 .uv-cache/
-.matplotlib-cache/
-.mpl-cache/
-.DS_Store
-*.pyc
-*.egg-info/
 .ipynb_checkpoints/
+.DS_Store
 AGENTS.md
 CLAUDE.md
 GEMINI.md
 .agents/
 .codex/
-docs/project_issues_review.md
+
+# Raw source snapshots and intermediate frames are reproducible from the source registry and
+# are far too large to version. Their SHA-256 digests are recorded in report/run_manifest.json,
+# so a reviewer can verify that a rerun saw identical inputs without the bytes being in git.
 data/raw/
-data/processed/
+data/interim/
 data/sample/
-data/dataset/
-data/analysis/*
-!data/analysis/
-!data/analysis/*.csv
-figures/*
-!figures/
-!figures/deep_analysis/
-figures/deep_analysis/*
-!figures/deep_analysis/*.png
-report/*.html
-!report/deep_frontier_ai_forecast.html
-report/findings.json
-report/run_manifest.json
+
+# Published analysis tables are versioned so findings can be reviewed without a full rerun.
+# The exclusions below are tables that are large by nature.
+data/analysis/*.parquet
+
 *.tmp
+*.part

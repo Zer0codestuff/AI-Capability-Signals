@@ -1,28 +1,42 @@
 [project]
 name = "ai-capability-signals"
-version = "0.1.0"
-description = "A reproducible analysis of frontier AI model capability signals, open-weight competition, prices, benchmarks, and labor exposure."
+version = "2.0.0"
+description = "Reproducible, uncertainty-quantified analysis of public frontier AI capability, price and disclosure signals."
 readme = "README.md"
 requires-python = ">=3.11"
+license = { text = "MIT" }
 dependencies = [
   "matplotlib>=3.8",
   "numpy>=1.26",
   "pandas>=2.2",
   "pyarrow>=15.0",
-  "python-dateutil>=2.9",
-  "pyyaml>=6.0",
   "requests>=2.31",
-  "reportlab>=4.4",
-  "skyfield>=1.49",
-  "tabulate>=0.9"
+  "scipy>=1.11",
 ]
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.6",
+]
+
+[project.scripts]
+aicap = "aicap.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["B008"]
