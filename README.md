@@ -1,95 +1,72 @@
 # AI Capability Signals
 
-Hiring-portfolio data project for tracking frontier AI model capability signals with public sources, reproducible ingestion, explicit caveats, and defensible heuristic analysis.
+Reproducible, uncertainty-quantified analysis of public frontier AI capability, price and disclosure signals.
 
-Published report: https://zer0codestuff.github.io/AI-Capability-Signals/
+Published report: [report/frontier_signals.html](report/frontier_signals.html)
 
-## What This Project Shows
+## What changed in 2.0
 
-- Public-source ingestion from Epoch AI, OpenRouter, LMArena, LiveBench, SWE-bench Verified, Hugging Face, OpenAlex, GitHub, and Anthropic Economic Index files.
-- Normalized model metadata with separate `vendor`, `model_family`, and `product_line` fields so product families are not inferred from vendor names alone.
-- Benchmark and pricing tables that keep incompatible metrics separate instead of averaging them into a fake universal model score.
-- A deep-analysis layer with heuristic score methodology, sensitivity checks, direct model benchmark matching, vendor portfolio aggregation, source coverage diagnostics, rank-stability stress tests, skeptical failure-mode audits, business-domain implications, release cadence, labor clusters, whole-job replacement feasibility, bounded forecast scenarios, and forecast diagnostics.
-- A dashboard-first HTML report that opens with navigable findings, sortable/filterable evidence tables, and drill-down links into the detailed analysis.
-- A small sample mode for quick local verification without network access.
+Version 1 produced 49 analytical tables, multi-year forecasts, leadership "probabilities" and labour-replacement rankings. An audit of that version — kept at [`docs/audit_of_previous_version.md`](docs/audit_of_previous_version.md) — found that many of those outputs were not statistically defensible: composite indices of incomparable metrics, Monte Carlo procedures that resampled neither data nor models, a current price catalogue treated as a historical series, seven CSV tables that were hardcoded prose, and tests that validated schemas rather than estimators.
+
+Version 2 answers fewer questions, and only ones the public data can support. Every published number is either a direct measurement from a named source field, or the output of a named estimator with an uncertainty interval whose construction is stated. Claims the data cannot support are recorded as refusals rather than estimated.
+
+## Questions this project answers
+
+1. **Disclosure.** Do open-weight releases disclose more than closed-weight releases? (difference of proportions, BH-corrected)
+2. **Compute scaling.** How fast does disclosed training compute grow, and does a fitted trend forecast better than assuming no change? (HC3 OLS + Theil–Sen, rolling-origin backtest)
+3. **Price structure.** What does a given measured quality level cost in the current catalogue, and how wide is the price spread at fixed quality? (Pareto frontier, matched-quality bands; quality and price from the same record)
+4. **Benchmark agreement.** Do public benchmarks agree about model ordering strongly enough to justify a composite score? (Kendall τ with model-level bootstrap; answer: no)
+5. **Open-weight lag.** How far behind is the open-weight arena frontier, and how long does catch-up take? (within-regime gap trend; Kaplan–Meier lag with right censoring)
+6. **Usage composition.** What does observed Claude usage look like by occupation, and do the consumer and API surfaces agree? (paired contrast; not employment impact)
+7. **Calendar control.** Do release dates cluster on weekday/month/quarter after multiple-comparison correction? (year-preserving permutation null + BH)
+
+## Questions this project refuses
+
+The refusals ledger (`data/analysis/refusals.csv`) is a first-class output. Typical refusals:
+
+- a single composite capability score (benchmarks do not agree enough)
+- a historical price trend (the catalogue is a cross-section)
+- a date when open weights will match the closed frontier (trend ≠ crossing forecast)
+- current SWE-bench Verified SOTA (the public directory is stale)
+- job replacement / disruption rankings (usage composition is not employment impact)
+- release counts for recent years (Epoch curation is right-censored)
 
 ## Reproduce
 
-Fast sample run:
-
 ```bash
-uv run python -m frontier_ai.pipeline --sample
-uv run python -m unittest discover -s tests
+uv sync
+uv run aicap                     # full refresh from public sources
+uv run aicap --from-interim      # re-analyse cached frames
+uv run python -m unittest discover -s tests -v
 ```
 
-Sample mode writes only to `data/sample/processed/` and, when `--write-reports` is passed, `data/sample/report/`. It does not overwrite the full-run `data/processed/` tables or publishable reports.
-
-Full data refresh:
+Offline / CI:
 
 ```bash
-uv run python -m frontier_ai.pipeline --overwrite --write-reports
-uv run python -m frontier_ai.dataset_factory --overwrite
-uv run python -m frontier_ai.deep_analysis --overwrite-sources
-uv run python -m unittest discover -s tests
+uv run aicap --offline --from-interim --skip-report
 ```
 
-Regenerate the landscape PDF after the Markdown report:
+## Layout
 
-```bash
-make pdf
+```
+src/aicap/
+  sources/     validated ingestion with schema contracts
+  analysis/    one module per question; refusals when unsupported
+  report/      rendering only — no computation
+  stats.py     estimators covered by tests/test_stats.py
+  identity.py  strict model matcher; no family-best fallback
+data/
+  raw/         content-addressed source snapshots (gitignored)
+  interim/     parsed frames (gitignored)
+  analysis/    published tables (versioned)
+report/        Markdown + HTML report
+docs/          methodology, data dictionary, audit of v1
 ```
 
-Use `--skip-reports` on `frontier_ai.deep_analysis` only when you want the derived tables and figures without rewriting the Markdown/HTML deep-dive report. The core pipeline no longer rewrites the README, tests, or notebook stubs as a side effect.
+## Method in one paragraph
 
-## Main Outputs
+Reference date = minimum of each source's latest observation. Intervals are Wilson (proportions), HC3 (OLS), Theil–Sen (robust slopes), and percentile bootstraps that resample the unit of analysis. Multiple comparisons inside a pre-registered family are Benjamini–Hochberg corrected. Forecasts require beating a last-value baseline out of sample; published interval widths come from measured backtest errors. See [`docs/methodology.md`](docs/methodology.md).
 
-- `data/processed/`: normalized core model, pricing, benchmark, source, and release-calendar tables.
-- `data/dataset/`: optional rich dataset package built from broader ecosystem sources.
-- `data/analysis/`: analytical tables including heuristic model-family scores, direct benchmark match audits, vendor portfolio scores, source coverage diagnostics, rank stability intervals, skeptical failure modes, business-domain pressure, release cadence, next-frontier simulation shares, leadership audit, open/closed category gaps, price-performance frontiers, job exposure indexes, labor clusters, replacement feasibility, bounded forecasts, and diagnostics.
-- `data/analysis/dashboard_key_findings.csv`: dashboard entry points that connect each headline finding to its evidence label and primary artifact.
-- `report/`: generated reports when `--write-reports` is used.
+## Licence
 
-Large raw, processed, and rich dataset dumps are intentionally ignored by git. The smaller deep-analysis result tables and deep-analysis figures are kept publishable so reviewers can inspect the actual findings without regenerating the full million-row dataset.
-
-## Publication Policy
-
-This repository publishes code, tests, documentation, small derived analysis CSVs, curated figures, and generated Markdown reports. It intentionally does not version bulk raw/source snapshots under `data/raw/`, full normalized tables under `data/processed/`, or the optional rich dataset under `data/dataset/`.
-
-Third-party source data keeps its original license and terms. See `THIRD_PARTY_DATA.md` and `docs/data_policy.md` before redistributing any generated dataset package.
-
-## Method Notes
-
-The severe statistical review, evidence, fixes, and remaining limitations are documented in [`docs/statistical_audit.md`](docs/statistical_audit.md).
-
-- `frontier_momentum_heuristic_index` is a transparent composite index, not a calibrated truth score.
-- `company_score_methodology.csv` records components, source signals, transforms, weights, and rationale.
-- `company_score_sensitivity.csv` reruns rankings under baseline, no-ecosystem, no-price, and equal-weight variants.
-- `model_benchmark_match_audit.csv` separates exact, normalized, alias, family-only, and unmatched benchmark evidence so family proxies are not presented as direct model proof.
-- `direct_model_price_performance.csv` restricts deployability rows to direct model-level benchmark evidence and keeps the family-proxy frontier separate.
-- `vendor_frontier_scores.csv` adds a true company/vendor portfolio view beside the model-family view.
-- `source_coverage_diagnostics.csv` and `family_coverage_matrix.csv` expose freshness, row counts, and missingness before the report leans on rankings.
-- `rank_stability_intervals.csv` stress-tests family ranks with evidence-scaled bootstrap draws; these intervals are not calibrated confidence intervals.
-- `claim_failure_modes.csv` and `underobserved_family_audit.csv` document assumptions, failure modes, and sparse-evidence families.
-- `business_domain_ai_pressure.csv` maps occupation-level labor pressure into business domains while preserving example occupations.
-- `release_cadence_by_family.csv` and `release_cadence_by_vendor.csv` summarize visible public product/model cadence.
-- `company_next_frontier_probabilities.csv` stress-tests likely 2/5/10-year leaders with Monte Carlo component-weight uncertainty across separate frontier-quality, balanced-execution, and open-ecosystem-upside scenarios. The headline column is `simulation_win_share`, not a calibrated probability.
-- `leadership_model_audit.csv` records why the corrected forecast separates raw frontier model leadership from open/cost adoption upside.
-- `open_closed_gap_by_category.csv` breaks open-vs-closed model gaps by LMArena category instead of using one generic catchup claim.
-- `price_performance_frontier.csv` separates absolute model quality from deployable capability per dollar.
-- `job_replacement_feasibility.csv` gates task exposure through physical, trust, regulatory, and task-coverage bottlenecks before calling a job replaceable.
-- `labor_cluster_profiles.csv` groups occupations by exposure, bottlenecks, and task-domain structure.
-- `forecast_input_diagnostics.csv` records fit windows, raw slopes, and cap policies used for forecasts.
-- The release-calendar/oracle appendix is demoted exploratory material and is not part of the headline portfolio claims.
-
-## Known Limitations
-
-- The checked-in analytical snapshot has reference date 2026-05-15. It is reproducible, not current to the day; refresh the upstream layers before making current-market claims.
-- Public source catalogs drift; all current-model and price claims are snapshot-dependent.
-- Entity classification is explicit and tested, but still heuristic when source metadata is vague.
-- Benchmarks are not directly comparable across tasks, prompts, judge methods, and submission rules.
-- Direct model matching is conservative but still name-based; inspect `model_benchmark_match_audit.csv` before treating a row as model-level proof.
-- Forecast scenarios are capped transparent assumptions, not calibrated predictions.
-- Domain trends require repeated observations of the same benchmark. Domains without comparable longitudinal history are held flat rather than borrowing progress rates from unrelated domains.
-- LMArena history contains repeated leaderboard snapshots; the analysis collapses these benchmark-first so snapshot frequency and raw row count do not masquerade as independent evidence.
-- Message-cost “trends” are synthetic workload-mix scenarios over catalog cohorts, not observed invoices or a historical price panel.
-- Large generated datasets are excluded from git by design; reproducibility depends on public-source availability and cached local snapshots.
+Code is MIT. Third-party source data keeps its original terms — see [`THIRD_PARTY_DATA.md`](THIRD_PARTY_DATA.md).

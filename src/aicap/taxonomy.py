@@ -229,7 +229,9 @@ def lmarena_weights_class(licence: object) -> str:
         return WEIGHTS_UNKNOWN
     if "proprietary" in text:
         return WEIGHTS_CLOSED
-    restricted_tokens = ("non-commercial", "noncommercial", "research", "nc", "cc-by-nc")
+    # Short tokens like "nc" are matched as whole words only, so "licence" does not trigger them.
+    if re.search(r"(non[-\s]?commercial|\bresearch\b|\bnc\b|cc-by-nc)", text):
+        return WEIGHTS_RESTRICTED
     open_tokens = (
         "apache",
         "mit",
@@ -247,8 +249,6 @@ def lmarena_weights_class(licence: object) -> str:
         "modified mit",
         "open",
     )
-    if any(token in text for token in restricted_tokens):
-        return WEIGHTS_RESTRICTED
     if any(token in text for token in open_tokens):
         return WEIGHTS_OPEN
     return WEIGHTS_UNKNOWN

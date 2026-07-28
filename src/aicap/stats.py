@@ -297,6 +297,47 @@ def inverse_variance_combine(
 
 
 # --------------------------------------------------------------------------------------------
+# Time-to-event with right censoring
+# --------------------------------------------------------------------------------------------
+
+
+def kaplan_meier_median(durations: Sequence[float], observed: Sequence[bool]) -> tuple[float, float]:
+    """Kaplan-Meier median duration and the largest duration reached, given right censoring.
+
+    Returns ``(median, max_duration)``. The median is NaN when the survival curve never falls to
+    0.5, which happens when more than half the observations are still censored — in that case the
+    honest answer is "longer than the follow-up", not a number.
+
+    Why this rather than the mean of the completed cases: the observations that have *not* completed
+    are systematically the hard ones, so averaging only completed cases understates the duration.
+    That is the same survivorship error as reading a price history off a catalogue of surviving
+    models, and it is worth avoiding in both places.
+    """
+    times = np.asarray(durations, dtype=float)
+    events = np.asarray(observed, dtype=bool)
+    mask = np.isfinite(times)
+    times, events = times[mask], events[mask]
+    if times.size == 0:
+        return float("nan"), float("nan")
+
+    order = np.argsort(times, kind="stable")
+    times, events = times[order], events[order]
+    at_risk = times.size
+    survival = 1.0
+    median = float("nan")
+    for time in np.unique(times):
+        at_this_time = times == time
+        deaths = int(events[at_this_time].sum())
+        censored = int((~events[at_this_time]).sum())
+        if deaths and at_risk > 0:
+            survival *= 1.0 - deaths / at_risk
+            if survival <= 0.5 and not math.isfinite(median):
+                median = float(time)
+        at_risk -= deaths + censored
+    return median, float(times.max())
+
+
+# --------------------------------------------------------------------------------------------
 # Multiple comparisons and permutation
 # --------------------------------------------------------------------------------------------
 
