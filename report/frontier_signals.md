@@ -1,17 +1,18 @@
 # AI Capability Signals
 
 **Reference date:** 2026-07-27 (freshest source horizon; lagging sources are listed below).
-**Generated:** 2026-07-28T08:29:58+00:00.
+**Generated:** 2026-07-28T08:44:50+00:00.
 **Version:** 2.0.
 
-This report answers a small number of questions that public data can actually support, each with a
-stated estimator and an uncertainty interval. Claims the data cannot support are listed as
-refusals rather than estimated.
+This report answers questions that public data can actually support, each with a stated estimator
+and an uncertainty interval. Claims the data cannot support are listed as refusals rather than
+estimated. The HTML dashboard embeds every analysis chart for fast visual reading.
 
 ## Source freshness
 
-Each source's latest observation. Analyses that depend on a source more than 90 days behind the
-reference date refuse present-tense claims for that source.
+![Source freshness — days behind the reference date](../figures/source_freshness.png)
+
+*Source freshness — days behind the reference date*
 
 | source_id                | latest_observation   | date_semantics                                                           |    rows |   days_behind_reference | is_freshest   |
 |:-------------------------|:---------------------|:-------------------------------------------------------------------------|--------:|------------------------:|:--------------|
@@ -36,6 +37,13 @@ reference date refuse present-tense claims for that source.
 
 Before any estimate, the pipeline reports the properties of the data that constrain what can be
 claimed. Blocking findings are paired with an entry in the refusals ledger.
+
+![Where the pipeline refuses to invent a number](../figures/refusals_overview.png)
+
+*Where the pipeline refuses to invent a number*
+![Source freshness](../figures/source_freshness.png)
+
+*Source freshness*
 
 ### Blocking findings
 
@@ -63,8 +71,17 @@ claimed. Blocking findings are paired with an entry in the refusals ledger.
 
 Disclosure is a property of the record: either a field is populated or it is not. The comparison
 below is a difference of proportions with a two-sample bootstrap interval, corrected across fields
-by Benjamini–Hochberg. The accessibility field is excluded from the test because the weights class
-is derived from it, which would make the comparison circular.
+by Benjamini–Hochberg.
+
+![Open vs closed disclosure rates](../figures/disclosure_open_vs_closed.png)
+
+*Open vs closed disclosure rates*
+![Disclosure rates over time (Wilson intervals)](../figures/disclosure_by_year.png)
+
+*Disclosure rates over time (Wilson intervals)*
+![Top vendors by disclosure completeness](../figures/disclosure_by_vendor.png)
+
+*Top vendors by disclosure completeness*
 
 | field_label             |   open_disclosure_rate |   closed_disclosure_rate |   difference |   ci_low |   ci_high |   q_value_bh | significant_after_bh   |
 |:------------------------|-----------------------:|-------------------------:|-------------:|---------:|----------:|-------------:|:-----------------------|
@@ -73,18 +90,24 @@ is derived from it, which would make the comparison circular.
 | Training dataset size   |               0.49187  |                 0.151515 |     0.340355 | 0.287119 |  0.390411 |       0.0001 | True                   |
 | Training hardware       |               0.522358 |                 0.198653 |     0.323705 | 0.267993 |  0.37726  |       0.0001 | True                   |
 
-![Open vs closed disclosure rates](../figures/disclosure_open_vs_closed.png)
-
 **Confound, stated rather than adjusted:** open-weight releases skew academic and closed releases
-skew commercial. Part of the difference is publication culture. The data contain no instrument that
-separates the two.
+skew commercial. Part of the difference is publication culture.
 
 
 ## Disclosed training-compute growth
 
 Training compute is a physical, unbounded quantity. Its logarithm can be extrapolated without
-hitting a ceiling — unlike a benchmark percentage capped at 100, which is why the previous version's
-domain forecasts were withdrawn.
+hitting a ceiling — unlike a benchmark percentage capped at 100.
+
+![Disclosed training-compute frontier](../figures/compute_frontier.png)
+
+*Disclosed training-compute frontier*
+![Compute-growth slope under selection restrictions](../figures/compute_sensitivity.png)
+
+*Compute-growth slope under selection restrictions*
+![Backtest: trend MAE vs last-value baseline](../figures/compute_backtest_skill.png)
+
+*Backtest: trend MAE vs last-value baseline*
 
 ### Trend estimates
 
@@ -101,10 +124,6 @@ domain forecasts were withdrawn.
 
 ### Backtest against a last-value baseline
 
-A forecast is published only when it beats carrying the last observed frontier forward. The
-prediction interval is built from measured out-of-sample errors, not from the regression's
-in-sample standard error.
-
 |   horizon_years |   folds |   mae_log10 |   rmse_log10 |   baseline_mae_log10 |   skill_ratio_vs_last_value | beats_baseline   |   error_quantile_low |   error_quantile_high | baseline                                     | note                                                                                                                           |
 |----------------:|--------:|------------:|-------------:|---------------------:|----------------------------:|:-----------------|---------------------:|----------------------:|:---------------------------------------------|:-------------------------------------------------------------------------------------------------------------------------------|
 |               1 |       7 |    0.365346 |     0.603382 |             0.622291 |                    0.587098 | True             |            -0.255446 |              1.33189  | last observed frontier value carried forward | Errors are in log10 FLOP. A skill ratio below 1 means the fitted trend forecasts better out of sample than assuming no change. |
@@ -112,8 +131,6 @@ in-sample standard error.
 |               3 |       5 |    0.315061 |     0.49396  |             1.72041  |                    0.183131 | True             |            -0.128298 |              0.983956 | last observed frontier value carried forward | Errors are in log10 FLOP. A skill ratio below 1 means the fitted trend forecasts better out of sample than assuming no change. |
 
 ### Selection sensitivity
-
-Compute disclosure is incomplete and voluntary. The slope under several restrictions:
 
 | restriction                    |    n |   log10_flop_per_year |   doubling_time_months |   relative_change_vs_baseline | status    |
 |:-------------------------------|-----:|----------------------:|-----------------------:|------------------------------:|:----------|
@@ -132,14 +149,24 @@ Compute disclosure is incomplete and voluntary. The slope under several restrict
 |          2026 |               2 | backfill_of_provisional_year |                      25.4896 |  24.9279 |   25.6559 |     3.08742e+25 | empirical rolling-origin backtest error quantiles |                6 |                    0.173752 | Expectation for the 90th percentile of *disclosed* training compute. Because disclosure is incomplete and voluntary, read it as a lower bound on the true frontier. |
 |          2027 |               3 | future                       |                      26.0253 |  25.0413 |   26.1536 |     1.05989e+26 | empirical rolling-origin backtest error quantiles |                5 |                    0.183131 | Expectation for the 90th percentile of *disclosed* training compute. Because disclosure is incomplete and voluntary, read it as a lower bound on the true frontier. |
 
-![Disclosed compute frontier](../figures/compute_frontier.png)
-
 
 ## Price structure in the current catalogue
 
 Quality and price come from the **same catalogue record**, so there is no cross-source name join.
-The catalogue is a cross-section of currently listed models: it cannot support a price history, and
-that claim is refused.
+The catalogue is a cross-section of currently listed models: it cannot support a price history.
+
+![Price–quality Pareto frontier](../figures/price_quality_pareto.png)
+
+*Price–quality Pareto frontier*
+![Price spread at matched quality](../figures/price_spread_bands.png)
+
+*Price spread at matched quality*
+![Cheapest listed model at each quality threshold](../figures/price_cheapest_ladder.png)
+
+*Cheapest listed model at each quality threshold*
+![Catalogue price levels by weight availability](../figures/price_by_weights.png)
+
+*Catalogue price levels by weight availability*
 
 ### Cheapest listed model at each quality threshold
 
@@ -152,9 +179,6 @@ that claim is refused.
 |                  55 |                 6 | openai/gpt-5.6-terra | OpenAI                  | closed_weights           |                     55   |                        0.01125  |               3.55556 | anthropic/claude-opus-5    | estimated |
 
 ### Price spread among models of comparable quality
-
-If quality determined price, the max/min ratio inside a narrow quality band would be near 1. It is
-not.
 
 | quality_band   |   models |   cheapest_usd_per_call |   dearest_usd_per_call |   max_min_price_ratio |   ratio_ci_low |   ratio_ci_high |
 |:---------------|---------:|------------------------:|-----------------------:|----------------------:|---------------:|----------------:|
@@ -182,16 +206,18 @@ not.
 |----------------:|--------------------:|-------------------:|---------------------------:|------------------------------------------------:|---------------------------------------------:|---------:|----------:|-----------------------------:|:-------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |             321 |                  44 |           0.137072 |                      64000 |                                               5 |                                            2 |  1.66667 |   3.33333 |                      3.33333 | percentile_bootstrap_of_median | Among listings whose price tier actually applies at 64,000 prompt tokens, the input price relative to the base rate. Reading only the base rate understates long-context cost by this factor for those models. |
 
-![Price–quality Pareto frontier](../figures/price_quality_pareto.png)
-
-![Price spread at matched quality](../figures/price_spread_bands.png)
-
 
 ## Do public benchmarks agree?
 
-Every composite "AI capability score" rests on an untested premise: that the signals being combined
-measure one underlying thing. This section tests that premise. A composite is treated as defensible
-only if every measured pair of independent benchmarks has a Kendall τ lower bound above 0.8.
+A composite is treated as defensible only if every measured pair of independent benchmarks has a
+Kendall τ lower bound above 0.8.
+
+![Benchmark pair agreement (Kendall τ-b)](../figures/benchmark_agreement.png)
+
+*Benchmark pair agreement (Kendall τ-b)*
+![Models whose standing depends on the benchmark](../figures/benchmark_rank_instability.png)
+
+*Models whose standing depends on the benchmark*
 
 |   pairs_tested |   pairs_between_independent_benchmarks |   minimum_tau_ci_low |   median_tau | weakest_pair                                 |   weakest_pair_tau |   threshold_for_composite | composite_score_defensible   | verdict                                                                                                                                                   | threshold_rationale                                                                                                                                                                                       |
 |---------------:|---------------------------------------:|---------------------:|-------------:|:---------------------------------------------|-------------------:|--------------------------:|:-----------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -210,16 +236,25 @@ only if every measured pair of independent benchmarks has a Kendall τ lower bou
 | aa_intelligence_index | aa_agentic_index      |             107 |        0.888319 |     0.856275 |      0.916936 |              0.9 | True                     |
 | aa_intelligence_index | aa_coding_index       |             107 |        0.902519 |     0.867372 |      0.93229  |              1   | True                     |
 
-![Benchmark agreement](../figures/benchmark_agreement.png)
-
-Because the threshold is not met, **no composite capability score is published**. Benchmarks are
-reported separately.
+Because the threshold is not met, **no composite capability score is published**.
 
 
 ## Open-weight lag on the arena frontier
 
-Trends are estimated inside a single rating-methodology regime. A slope that spans a methodology
-break would partly measure the break.
+Trends are estimated inside a single rating-methodology regime.
+
+![Open-weight vs closed frontier](../figures/open_closed_gap.png)
+
+*Open-weight vs closed frontier*
+![Is the open–closed gap closing?](../figures/open_closed_gap_trend.png)
+
+*Is the open–closed gap closing?*
+![Open–closed gap by category](../figures/open_closed_gap_by_category.png)
+
+*Open–closed gap by category*
+![Open-weight catch-up lag (right-censored)](../figures/open_weights_lag_km.png)
+
+*Open-weight catch-up lag (right-censored)*
 
 ### Gap trend by regime
 
@@ -237,8 +272,6 @@ break would partly measure the break.
 
 ### Gap by category in the latest publication
 
-A single pooled gap number is refused; the gap is category-specific.
-
 | arena   | category                                      | open_best_model   | closed_best_model        |   gap_rating |   gap_ci_low | gap_distinguishable_from_zero   |
 |:--------|:----------------------------------------------|:------------------|:-------------------------|-------------:|-------------:|:--------------------------------|
 | text    | industry_mathematical                         | mimo-v2.5-pro     | claude-opus-5-high       |     102.931  |    63.8895   | True                            |
@@ -254,14 +287,21 @@ A single pooled gap number is refused; the gap is category-specific.
 | text    | exclude_ties                                  | mimo-v2.5-pro     | claude-opus-5-max        |      37.7747 |    -0.367644 | False                           |
 | text    | industry_life_and_physical_and_social_science | hy3               | claude-opus-5-max        |      36.9466 |    -0.723988 | False                           |
 
-![Open vs closed frontier](../figures/open_closed_gap.png)
-
 
 ## Observed usage composition (not employment impact)
 
 These tables describe the composition of one vendor's observed conversations. They are not a sample
-of the workforce and carry no information about employment outcomes. No replacement or disruption
-index is constructed.
+of the workforce and carry no information about employment outcomes.
+
+![Automation share by surface](../figures/usage_surface_contrast.png)
+
+*Automation share by surface*
+![Top occupations by usage share](../figures/usage_top_occupations.png)
+
+*Top occupations by usage share*
+![Usage composition by SOC major group](../figures/usage_major_groups.png)
+
+*Usage composition by SOC major group*
 
 ### Surface medians
 
@@ -280,12 +320,17 @@ index is constructed.
 |:------------|:----------------|------------------------:|--------------------------:|--------------------------:|----------------------------:|---------:|----------:|------------------------------------:|:-----------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | claude_ai   | first_party_api |                     659 |                   51.2186 |                   91.4137 |                    -40.1951 | -41.2635 |  -39.1171 |                            0.637133 | paired_bootstrap_of_mean_difference_over_occupations | Mean difference in automation share for the same occupations across the two surfaces. A difference whose interval excludes zero means the surfaces disagree about how automated usage is, even for the same jobs. Averaging them into one number would invent a consensus. |
 
-![Automation share by surface](../figures/usage_surface_contrast.png)
-
 
 ## SWE-bench Verified: historical record
 
 The public submission directory is stale relative to the reference date, so only the historical series is shown. Present-tense claims are refused.
+
+![SWE-bench Verified public frontier](../figures/swebench_frontier.png)
+
+*SWE-bench Verified public frontier*
+![Top SWE-bench Verified public submissions](../figures/swebench_top_systems.png)
+
+*Top SWE-bench Verified public submissions*
 
 ### Top public submissions
 
@@ -306,9 +351,6 @@ The public submission directory is stale relative to the reference date, so only
 
 ### Within-model scaffold spread
 
-A large spread across submissions that name the same model is direct evidence that the score is not
-a model property.
-
 | model_tag         |   submissions |   distinct_system_labels |   min_resolve_rate_pct |   max_resolve_rate_pct |   spread_pp |   median_resolve_rate_pct | interpretation                                                                                                                                           |
 |:------------------|--------------:|-------------------------:|-----------------------:|-----------------------:|------------:|--------------------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------|
 | claude-3-5-sonnet |             3 |                        1 |                   39.6 |                   62.8 |        23.2 |                      55.4 | Spread in resolve rate across submissions that name the same model. A large spread means the score is dominated by the agent scaffold, not by the model. |
@@ -322,31 +364,28 @@ year-preserving random-date null, then corrected by Benjamini–Hochberg.
 
 **Results surviving BH correction:** 3 of 3. Clusters survive correction. That is consistent with real vendor scheduling (weekdays, conference seasons), not astrology, and not a finding beyond calendars.
 
+![Calendar clustering of releases](../figures/calendar_control.png)
+
+*Calendar clustering of releases*
+![Notable model releases by weekday](../figures/calendar_weekday_counts.png)
+
+*Notable model releases by weekday*
+
 | feature   | top_bucket   |   top_count |    share |   permutation_p_value |   q_value_bh | significant_after_bh   |
 |:----------|:-------------|------------:|---------:|----------------------:|-------------:|:-----------------------|
 | weekday   | Monday       |         467 | 0.20234  |              0.0002   |     0.0003   | True                   |
 | month     | September    |         268 | 0.116118 |              0.0002   |     0.0003   | True                   |
 | quarter   | Q4           |         641 | 0.27773  |              0.008198 |     0.008198 | True                   |
 
-![Calendar control](../figures/calendar_control.png)
-
 
 ## Methods in brief
 
-- **Reference date** `2026-07-27` is the freshest source horizon. Sources that lag
-  behind are shown in the freshness table; when a source is too stale for present-tense claims the
-  analyses that depend on it refuse rather than quietly using old data.
-- **Intervals** are Wilson score intervals for proportions, HC3 robust intervals for OLS slopes,
-  Theil–Sen for robust slope checks, and percentile bootstraps that resample the unit of analysis
-  (a model, an occupation, a benchmark pair) — never a row of a table that may contain repeated
-  snapshots.
+- **Reference date** `2026-07-27` is the freshest source horizon.
+- **Intervals** are Wilson, HC3, Theil–Sen, and percentile bootstraps that resample the unit of analysis.
 - **Multiple comparisons** inside a pre-registered family are corrected by Benjamini–Hochberg.
-- **Forecasts** are published only when a rolling-origin backtest beats a last-value baseline; the
-  published interval is built from measured out-of-sample errors.
-- **Refusals** replace capped extrapolations. If a claim cannot be supported, the pipeline says so
-  and writes a row to `data/analysis/refusals.csv`.
-- The detailed audit of the previous version, and the specific defects this rebuild exists to
-  prevent, is in [`docs/audit_of_previous_version.md`](../docs/audit_of_previous_version.md).
+- **Forecasts** are published only when a rolling-origin backtest beats a last-value baseline.
+- **Refusals** replace capped extrapolations.
+- Audit of the previous version: [`docs/audit_of_previous_version.md`](../docs/audit_of_previous_version.md).
 
 ## Reproduce
 

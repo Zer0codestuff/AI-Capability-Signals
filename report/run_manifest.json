@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-07-28T08:31:10+00:00",
-  "started_at": "2026-07-28T08:29:58+00:00",
+  "generated_at": "2026-07-28T08:46:02+00:00",
+  "started_at": "2026-07-28T08:44:50+00:00",
   "command": "/workspace/.venv/bin/aicap --from-interim --skip-figures",
   "reference_date": "2026-07-27",
   "reference_date_is_derived": true,
   "freshest_source_date": "2026-07-27",
-  "git_sha": "3f836b41c8c243d60d46cd4c3355f7235887cd33",
+  "git_sha": "0a91c0f59605aaf17d9bfb6f8f290c3dc45b87e7",
   "python": "3.12.3",
   "platform": "Linux-6.12.94+-x86_64-with-glibc2.39",
   "refusal_count": 8,
@@ -218,18 +218,48 @@
     },
     {
       "path": "figures/benchmark_agreement.png",
-      "bytes": 74503,
-      "sha256": "f642e92c3d35a4015f1188cf01eb201edd25fc5b52b097193c18b70bea3c1385"
+      "bytes": 74799,
+      "sha256": "94fb3c82eb09f4008cf10c12ea57ba9855cabd96ee32e7df1549a0051c3fedb1"
+    },
+    {
+      "path": "figures/benchmark_rank_instability.png",
+      "bytes": 125175,
+      "sha256": "fdb75f3dea1f1e4a457a1d525488e684d3a1c6747c22d98ce7b08dcefa92133d"
     },
     {
       "path": "figures/calendar_control.png",
-      "bytes": 41675,
-      "sha256": "4f34e222ea084d8480f535371227e9d7556b7da6b60ce62a748e34443084e2ad"
+      "bytes": 41531,
+      "sha256": "7f1d91a772b4a3fa6c2efbf032224579665a2d4eda42179dd640e503ebdc0795"
+    },
+    {
+      "path": "figures/calendar_weekday_counts.png",
+      "bytes": 44809,
+      "sha256": "a09f81f791fc8229028640a4ec32e1e85c8dc1ac4507542ff087098f0781fb35"
+    },
+    {
+      "path": "figures/compute_backtest_skill.png",
+      "bytes": 37271,
+      "sha256": "e40d686a7b1014b7bdd42932ff960ee9c712370a16fe04381c5b612b9132afe1"
     },
     {
       "path": "figures/compute_frontier.png",
-      "bytes": 71247,
-      "sha256": "cc7b0490c0191909d3658a01dd1856b3bd6b8dcf8a4a179ca63ab17e3d934970"
+      "bytes": 88056,
+      "sha256": "ad2b91d55d67f669064c4343425a2db657cc96bc3b614dff34fc75a722143218"
+    },
+    {
+      "path": "figures/compute_sensitivity.png",
+      "bytes": 55273,
+      "sha256": "c4b9eca42cdf426efcba2932c80fc88b2c850923d2790a943f1ccdec98d1be0f"
+    },
+    {
+      "path": "figures/disclosure_by_vendor.png",
+      "bytes": 68367,
+      "sha256": "f4a0a6deef8ba5992cb519c3da5a36b2f14a9bdc23aa09d410f45fc674b60ec5"
+    },
+    {
+      "path": "figures/disclosure_by_year.png",
+      "bytes": 119152,
+      "sha256": "dfec9c2525e42c5b728e0998bafad247b3dbc3c13dfd10a3461c57d15aa0b13d"
     },
     {
       "path": "figures/disclosure_open_vs_closed.png",
@@ -238,38 +268,93 @@
     },
     {
       "path": "figures/open_closed_gap.png",
-      "bytes": 148130,
-      "sha256": "20576b0a33cdbfcd77d522f0c5e8306d8b85439b8b7479f4f0391eb80df9705c"
+      "bytes": 150565,
+      "sha256": "bc4726957353ce8be4cefbc9f937541444434adf1bd99e93b981e42c4700c21b"
+    },
+    {
+      "path": "figures/open_closed_gap_by_category.png",
+      "bytes": 74373,
+      "sha256": "481b6d148d19b452558ede90f943753cdb68a5c77b2910ace874cb3e39e302cc"
+    },
+    {
+      "path": "figures/open_closed_gap_trend.png",
+      "bytes": 50110,
+      "sha256": "dff97bbaea1e1c45c90834632f69f8d71efebdf4599cbb94f4700426ac38ba8d"
+    },
+    {
+      "path": "figures/open_weights_lag_km.png",
+      "bytes": 65889,
+      "sha256": "4b270b796d1b9413e74de035f6c0c76bc68722ccd241e562164d6f95cda137ab"
+    },
+    {
+      "path": "figures/price_by_weights.png",
+      "bytes": 47251,
+      "sha256": "c316a0d73e3e77d2e91d946a46ba9af59427e53fe4247c0f246910b6a4af4723"
+    },
+    {
+      "path": "figures/price_cheapest_ladder.png",
+      "bytes": 63517,
+      "sha256": "e4a8332a9086b973a0aec2b1d4316a96f5f2c8df9f038a427e816cdec3f42865"
     },
     {
       "path": "figures/price_quality_pareto.png",
-      "bytes": 75507,
-      "sha256": "59a9ee834f0c620d5f0e54bb2767c57c5bc4fc50a57c07826373c4f2972ca769"
+      "bytes": 76361,
+      "sha256": "9e1ee39b9ac47bd27ce2959668b101787ec86fcf6f0a0c18e06903a046f79fa2"
     },
     {
       "path": "figures/price_spread_bands.png",
-      "bytes": 47283,
-      "sha256": "cb8d5eb31dfbecde52acde62f86b1f579c23a66f035ab6fde2cd3e5e93c2999d"
+      "bytes": 47809,
+      "sha256": "a731f96c5ddeb0c1c8a2dee7c0d44d748c51367eb361ea0da4d7b2da01dbc89d"
+    },
+    {
+      "path": "figures/refusals_overview.png",
+      "bytes": 44193,
+      "sha256": "83af367d5c2d725f401f4e3d4a3b1c233cd608da9e998252a3ad0c80e8e77969"
+    },
+    {
+      "path": "figures/source_freshness.png",
+      "bytes": 47757,
+      "sha256": "4ed7e0523ead0a8791dc0fc73add304b952ef4626c9f72307d9ffb29fd82e169"
+    },
+    {
+      "path": "figures/swebench_frontier.png",
+      "bytes": 81260,
+      "sha256": "04d2e3ce334cb0134e7f5b36a33be83e4c98c89610ee9db88649d1c6180d4e5e"
+    },
+    {
+      "path": "figures/swebench_top_systems.png",
+      "bytes": 85141,
+      "sha256": "e5ced59c0db57f58f40bdce0cbf5ced5c7492f0f3fbc928c96ceb10f0923e826"
+    },
+    {
+      "path": "figures/usage_major_groups.png",
+      "bytes": 30738,
+      "sha256": "c50d546209cdfd0d09051db2f443fda2af1033991f651eb8f8a55c7f5f8202ce"
     },
     {
       "path": "figures/usage_surface_contrast.png",
-      "bytes": 40677,
-      "sha256": "5a92b42a10be65c136697b21c7012124fcddbc6f3d8ff18920f1389df6ac4a34"
+      "bytes": 41238,
+      "sha256": "547b54d5b0be751be29560f17bed34085a4544df1a78c9726b4b9b2cae20c418"
+    },
+    {
+      "path": "figures/usage_top_occupations.png",
+      "bytes": 99724,
+      "sha256": "781234be3c56ec39ad91cfb0d385111899fdb51e31161d947d29cdf9ecc396a1"
     },
     {
       "path": "report/frontier_signals.html",
-      "bytes": 41253,
-      "sha256": "3291ff7c8820fec7d51fb031b0edd7548c2409b19cdb7cba7fd83bf7be0a3cf8"
+      "bytes": 63509,
+      "sha256": "aa5d82c48254f4a39e72bde78162e5783dfb925d419420a381a837772a48af10"
     },
     {
       "path": "report/frontier_signals.md",
-      "bytes": 50437,
-      "sha256": "76c030de5e3b838e4dcb391af80ace6148827f322e3c16c804598e60c9c19250"
+      "bytes": 51041,
+      "sha256": "0c250c6047a5e15067c261a4eb5ce0023519a16f286f1f0af251832482c38580"
     },
     {
       "path": "report/run_manifest.json",
-      "bytes": 9458,
-      "sha256": "8fb1a25fd9d7297337a961ce5c6befba8cc0294ba4d6ecb9ec8732c46b8f6686"
+      "bytes": 12302,
+      "sha256": "a34761264cd3437e1c4c415fdd62e49b1540ae2a30652f88b3d14cb426cbc805"
     }
   ]
 }

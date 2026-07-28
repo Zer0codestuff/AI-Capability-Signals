@@ -162,5 +162,30 @@ class NoLegacyArtifactsTests(unittest.TestCase):
         self.assertEqual(present & forbidden, set())
 
 
+class ReportDensityTests(unittest.TestCase):
+    """The published report should stay chart-dense and navigable like the prior dashboard."""
+
+    def test_figure_catalog_is_dense(self) -> None:
+        figures = ROOT / "figures"
+        if not figures.exists() or not any(figures.glob("*.png")):
+            self.skipTest("figures not yet generated")
+        pngs = list(figures.glob("*.png"))
+        self.assertGreaterEqual(len(pngs), 20, "report should ship a dense chart set")
+
+    def test_html_dashboard_embeds_charts_and_assets(self) -> None:
+        html_path = ROOT / "report" / "frontier_signals.html"
+        if not html_path.exists():
+            self.skipTest("report not yet generated")
+        html = html_path.read_text(encoding="utf-8")
+        self.assertIn('class="shell"', html)
+        self.assertIn('class="side-nav"', html)
+        self.assertIn('class="metric-card', html)
+        self.assertGreaterEqual(html.count('class="chart"'), 20)
+        self.assertIn("assets/report.css", html)
+        self.assertIn("assets/report.js", html)
+        self.assertTrue((ROOT / "report" / "assets" / "report.css").exists())
+        self.assertTrue((ROOT / "report" / "assets" / "report.js").exists())
+
+
 if __name__ == "__main__":
     unittest.main()
