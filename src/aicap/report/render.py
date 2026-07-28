@@ -89,7 +89,7 @@ def _header(context: RunContext, freshness: pd.DataFrame) -> str:
         rows = freshness.to_markdown(index=False)
     return f"""# AI Capability Signals
 
-**Reference date:** {context.reference_date} (derived from the least fresh source).
+**Reference date:** {context.reference_date} (freshest source horizon; lagging sources are listed below).
 **Generated:** {context.started_at}.
 **Version:** 2.0.
 
@@ -99,8 +99,8 @@ refusals rather than estimated.
 
 ## Source freshness
 
-The reference date is the minimum of these horizons, so no claim can be newer than the least fresh
-input.
+Each source's latest observation. Analyses that depend on a source more than 90 days behind the
+reference date refuse present-tense claims for that source.
 
 {rows if rows else "_Freshness table unavailable._"}
 """
@@ -206,8 +206,6 @@ claimed. Blocking findings are paired with an entry in the refusals ledger.
 ### Refused claims
 
 {refusals_md}
-
-![Source coverage is summarised in the freshness table above.](../figures/calendar_control.png)
 """
 
 
@@ -418,13 +416,20 @@ def _section_calendar(calendar: pd.DataFrame) -> str:
     if calendar.empty:
         return ""
     surviving = int(calendar["surviving_after_correction"].iloc[0])
+    note = (
+        "No feature survives correction — apparent clusters were multiple-testing artifacts."
+        if surviving == 0
+        else (
+            "Clusters survive correction. That is consistent with real vendor scheduling "
+            "(weekdays, conference seasons), not astrology, and not a finding beyond calendars."
+        )
+    )
     return f"""## Calendar negative control
 
 A small, pre-registered family of calendar features (weekday, month, quarter) is tested against a
-year-preserving random-date null, then corrected by Benjamini–Hochberg. Features that look
-significant before correction and not after are the spurious-pattern lesson.
+year-preserving random-date null, then corrected by Benjamini–Hochberg.
 
-**Results surviving BH correction:** {surviving} of {len(calendar)}.
+**Results surviving BH correction:** {surviving} of {len(calendar)}. {note}
 
 {calendar[["feature", "top_bucket", "top_count", "share", "permutation_p_value", "q_value_bh", "significant_after_bh"]].to_markdown(index=False)}
 
@@ -435,8 +440,9 @@ significant before correction and not after are the spurious-pattern lesson.
 def _section_methods(context: RunContext) -> str:
     return f"""## Methods in brief
 
-- **Reference date** `{context.reference_date}` is the minimum of each source's latest observation,
-  so no claim is newer than the least fresh input.
+- **Reference date** `{context.reference_date}` is the freshest source horizon. Sources that lag
+  behind are shown in the freshness table; when a source is too stale for present-tense claims the
+  analyses that depend on it refuse rather than quietly using old data.
 - **Intervals** are Wilson score intervals for proportions, HC3 robust intervals for OLS slopes,
   Theil–Sen for robust slope checks, and percentile bootstraps that resample the unit of analysis
   (a model, an occupation, a benchmark pair) — never a row of a table that may contain repeated

@@ -10,7 +10,13 @@
 
 ## Reference date
 
-Derived at runtime as the minimum of each source's latest observation horizon. A run can pin a date with `--reference-date` for reproduction. This replaces the previous version's hardcoded `REFERENCE_DATE = "2026-05-15"`, which went stale silently.
+Derived at runtime as the *freshest* source observation horizon. Sources that lag behind are listed
+in the freshness table; when a source is more than 90 days behind, analyses that depend on it refuse
+present-tense claims rather than quietly using stale data. A run can pin a date with
+`--reference-date` for reproduction.
+
+This replaces the previous version's hardcoded `REFERENCE_DATE = "2026-05-15"`, which went stale
+silently.
 
 ## Estimators
 

@@ -142,9 +142,19 @@ def _feature_tests(dated: pd.DataFrame, year_counts: dict[int, int]) -> pd.DataF
     frame["significant_after_bh"] = rejected
     frame["family_size"] = int(len(frame))
     frame["surviving_after_correction"] = int(rejected.sum())
-    frame["interpretation"] = (
-        "A result that is significant before Benjamini-Hochberg correction and not after is a "
-        "calendar cluster that looks impressive only because several features were tested. That is "
-        "the spurious-pattern lesson this module exists to make visible."
-    )
+    surviving = int(rejected.sum())
+    if surviving == 0:
+        interpretation = (
+            "No calendar feature survives Benjamini-Hochberg correction. Apparent clusters that "
+            "look impressive before correction are the spurious-pattern lesson this module exists "
+            "to make visible."
+        )
+    else:
+        interpretation = (
+            f"{surviving} of {len(frame)} calendar features survive Benjamini-Hochberg correction "
+            "against a year-preserving random-date null. That is consistent with real release "
+            "scheduling (weekdays, conference seasons) rather than a multiple-testing artifact. "
+            "It is not evidence of anything beyond vendor calendars."
+        )
+    frame["interpretation"] = interpretation
     return frame.sort_values("permutation_p_value").reset_index(drop=True)

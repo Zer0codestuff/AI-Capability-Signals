@@ -65,7 +65,7 @@ docs/          methodology, data dictionary, audit of v1
 
 ## Method in one paragraph
 
-Reference date = minimum of each source's latest observation. Intervals are Wilson (proportions), HC3 (OLS), Theil–Sen (robust slopes), and percentile bootstraps that resample the unit of analysis. Multiple comparisons inside a pre-registered family are Benjamini–Hochberg corrected. Forecasts require beating a last-value baseline out of sample; published interval widths come from measured backtest errors. See [`docs/methodology.md`](docs/methodology.md).
+Reference date = freshest source horizon (lagging sources trigger per-analysis refusals). Intervals are Wilson (proportions), HC3 (OLS), Theil–Sen (robust slopes), and percentile bootstraps that resample the unit of analysis. Multiple comparisons inside a pre-registered family are Benjamini–Hochberg corrected. Forecasts require beating a last-value baseline out of sample; published interval widths come from measured backtest errors. See [`docs/methodology.md`](docs/methodology.md).
 
 ## Licence
 

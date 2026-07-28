@@ -1,0 +1,7 @@
+restriction,n,log10_flop_per_year,ci_low,ci_high,doubling_time_months,relative_change_vs_baseline,status,rationale
+all_disclosed,1124,0.554794,0.51554,0.594049,6.511171,0.0,estimated,No restriction.
+top_decile_within_year,117,0.540879,0.50021,0.581548,6.678681,-0.025081,estimated,Only the largest 10% of disclosed models each year: tests whether the trend is driven by the growing tail of small models rather than by the frontier.
+vendors_with_5plus_disclosures,873,0.520713,0.475288,0.566138,6.937338,-0.061431,estimated,Only organisations that disclose repeatedly: removes one-off disclosures whose propensity may correlate with model size.
+language_domain_only,707,0.753905,0.699015,0.808794,4.791533,0.358891,estimated,Language models only: removes composition change as domains enter the dataset.
+excluding_open_weights,65,0.45521,0.097136,0.813284,7.935588,-0.179497,estimated,Closed-weight models only: the subset whose disclosure is most likely selective.
+open_weights_only,564,0.56829,0.498413,0.638167,6.356541,0.024326,estimated,Open-weight models only: the subset with the most complete disclosure.

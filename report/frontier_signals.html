@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Capability Signals</title>
+  <style>
+    :root {
+      --ink: #1c1917; --muted: #78716c; --paper: #fafaf9; --card: #ffffff;
+      --line: #e7e5e4; --accent: #1d4ed8; --open: #0f766e; --closed: #9a3412;
+    }
+    body { margin: 0; font-family: "Source Serif 4", "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+      color: var(--ink); background: linear-gradient(180deg, #f5f5f4 0%, #e7e5e4 100%); }
+    main { max-width: 920px; margin: 0 auto; padding: 48px 22px 80px; background: var(--card);
+      box-shadow: 0 0 0 1px var(--line); }
+    h1 { font-family: "Segoe UI", "Helvetica Neue", sans-serif; font-size: 2.4rem; line-height: 1.1;
+      letter-spacing: -0.02em; margin: 0 0 0.6em; }
+    h2 { font-family: "Segoe UI", "Helvetica Neue", sans-serif; margin-top: 2.4em;
+      border-top: 1px solid var(--line); padding-top: 1em; }
+    p, li { line-height: 1.65; font-size: 1.02rem; }
+    strong { color: var(--ink); }
+    code, pre { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.92em; }
+    pre { background: #1c1917; color: #fafaf9; padding: 14px 16px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.86rem; margin: 1em 0 1.4em;
+      font-family: "Segoe UI", "Helvetica Neue", sans-serif; }
+    th, td { border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-weight: 600; }
+    img { max-width: 100%; border: 1px solid var(--line); background: white; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body><main><h1>AI Capability Signals</h1>
+<p><strong>Reference date:</strong> 2026-07-27 (freshest source horizon; lagging sources are listed below).</p>
+<p><strong>Generated:</strong> 2026-07-28T08:29:58+00:00.</p>
+<p><strong>Version:</strong> 2.0.</p>
+<p>This report answers a small number of questions that public data can actually support, each with a</p>
+<p>stated estimator and an uncertainty interval. Claims the data cannot support are listed as</p>
+<p>refusals rather than estimated.</p>
+<h2>Source freshness</h2>
+<p>Each source&#x27;s latest observation. Analyses that depend on a source more than 90 days behind the</p>
+<p>reference date refuse present-tense claims for that source.</p>
+<table><thead><tr><th>source_id</th><th>latest_observation</th><th>date_semantics</th><th>rows</th><th>days_behind_reference</th><th>is_freshest</th></tr></thead><tbody>
+<tr><td>swebench_verified</td><td>2025-12-15</td><td>submission directory date</td><td>134</td><td>224</td><td>False</td></tr>
+<tr><td>anthropic_economic_index</td><td>2026-06-01</td><td>usage period end date</td><td>2844</td><td>56</td><td>False</td></tr>
+<tr><td>epoch_models</td><td>2026-07-24</td><td>model publication date (curated; recent years right-censored)</td><td>3572</td><td>3</td><td>False</td></tr>
+<tr><td>openrouter_models</td><td>2026-07-27</td><td>catalogue listing created timestamp (cross-section, not a price history)</td><td>341</td><td>0</td><td>True</td></tr>
+<tr><td>lmarena_leaderboard</td><td>2026-07-27</td><td>leaderboard publication date</td><td>1894027</td><td>0</td><td>True</td></tr>
+</tbody></table>
+<h2>Findings that survive the audit</h2>
+<ul>
+<li>Open-weight releases disclose more than closed-weight releases. The largest corrected difference is for <strong>Parameter count</strong>: 52% points (95% CI 47% to 58%; BH q=0.000).</li>
+<li>The disclosed training-compute frontier grows at <strong>0.54 log10 FLOP per year</strong> (HC3 95% CI 0.47–0.60), a doubling time of about <strong>6.7 months</strong>. This is a lower bound: compute disclosure is incomplete and voluntary.</li>
+<li>A single composite capability score is not defensible on this evidence. Benchmarks are reported separately, and no weighted average of them is published.</li>
+<li>Inside the current arena rating regime (bradley_terry_frequency_reweighted), the open–closed gap changes by <strong>-6.6 rating points per year</strong> (HC3 CI -12.4 to -0.8). A crossing date is not published.</li>
+<li>Kaplan–Meier median lag for open weights to reach a historical closed-frontier level: <strong>152 days</strong> (89 of 229 levels still unmatched and right-censored).</li>
+<li>On the same occupations, the consumer product and the first-party API disagree about automation share by <strong>-40.2 percentage points</strong> (95% CI -41.3 to -39.1). No single &#x27;share of work automated&#x27; number is published.</li>
+<li>The pipeline records <strong>8 refused claims</strong> — quantities the available public data cannot support. They are listed below rather than estimated.</li>
+</ul>
+<h2>Data quality and refusals</h2>
+<p>Before any estimate, the pipeline reports the properties of the data that constrain what can be</p>
+<p>claimed. Blocking findings are paired with an entry in the refusals ledger.</p>
+<h3>Blocking findings</h3>
+<table><thead><tr><th>source_id</th><th>check</th><th>value</th><th>interpretation</th></tr></thead><tbody>
+<tr><td>anthropic_economic_index</td><td>panel_length</td><td>2</td><td>The release covers 2 monthly period(s) (2026-04-01 to 2026-05-01). Cross-sectional comparisons are supported; trends in usage composition are not.</td></tr>
+<tr><td>epoch_models</td><td>curation_right_censoring</td><td>2025</td><td>Model counts fall monotonically from 2025 to 2026, which is consistent with curation lag and also with a genuine slowdown. The two cannot be distinguished from this dataset, so release-count trends are not published for these years.</td></tr>
+<tr><td>swebench_verified</td><td>leaderboard_staleness</td><td>224</td><td>The most recent public submission is dated 2025-12-15, 224 days before the reference date. The leaderboard supports historical statements only; it cannot describe current agent capability.</td></tr>
+</tbody></table>
+<h3>Refused claims</h3>
+<table><thead><tr><th>analysis</th><th>claim</th><th>reason</th><th>unblocked_by</th></tr></thead><tbody>
+<tr><td>benchmark_agreement</td><td>A single composite score ranking models by overall capability.</td><td>Public benchmarks do not agree strongly enough on model ordering to be treated as noisy measurements of one construct. The weakest measured pair (lmarena_text_rating versus lmarena_webdev_rating) has Kendall tau 0.58 on 40 shared models, so a weighted average of them would mostly encode the choice of weights.</td><td>Evidence that the benchmarks load on a common factor, for example a factor analysis on a much wider model-by-benchmark matrix with published per-model scores.</td></tr>
+<tr><td>data_quality</td><td>A single number for how far behind open-weight models are, across all capabilities.</td><td>The gap is measured per arena and per category and varies widely between them. One pooled number would hide that variation and depend on which categories were included.</td><td>Nothing in this data. The quantity is category-specific by construction.</td></tr>
+<tr><td>data_quality</td><td>Current state-of-the-art coding-agent capability on SWE-bench Verified.</td><td>The public submission directory has received no entry for 224 days, so its top score is a lower bound from an earlier period, not a current measurement.</td><td>New submissions to the public SWE-bench Verified experiments directory.</td></tr>
+<tr><td>data_quality</td><td>How listed prices for a given capability level changed over time.</td><td>The catalogue is a cross-section of currently listed models. Withdrawn models are absent and no historical price field is published, so any &#x27;price over time&#x27; series built from it would be a survivorship-biased cohort comparison.</td><td>Repeated snapshots of this catalogue captured over time, or a source that publishes dated historical prices.</td></tr>
+<tr><td>data_quality</td><td>Number of notable AI models released per year, including the most recent years.</td><td>Epoch AI model counts decline monotonically from 2025 onward. Curation lag and a real slowdown produce identical shapes in this dataset.</td><td>A dataset revision that marks completeness per year, or waiting until the affected years stop growing between snapshots.</td></tr>
+<tr><td>open_weights_lag</td><td>The date on which open-weight models will match the closed frontier.</td><td>Extrapolating the measured gap trend to zero assumes the trend is linear, that the rating scale is stable, and that no methodology change intervenes. The trend is estimated on serially correlated weekly publications inside a single regime, which supports a direction but not a crossing date.</td><td>A model of the gap process validated out of sample against past regime changes.</td></tr>
+<tr><td>swebench_progress</td><td>Extrapolated future SWE-bench Verified resolve rates.</td><td>The public leaderboard has received no entry for 224 days. A trend fitted to a frozen series projects silence, not progress.</td><td>New public submissions.</td></tr>
+<tr><td>usage_composition</td><td>Trend in the automation share of observed AI usage.</td><td>The release covers 2 monthly period(s). A trend needs a longer panel; with this little history any slope is indistinguishable from noise.</td><td>A longer run of monthly releases from the same surface.</td></tr>
+</tbody></table>
+<h2>Disclosure completeness</h2>
+<p>Disclosure is a property of the record: either a field is populated or it is not. The comparison</p>
+<p>below is a difference of proportions with a two-sample bootstrap interval, corrected across fields</p>
+<p>by Benjamini–Hochberg. The accessibility field is excluded from the test because the weights class</p>
+<p>is derived from it, which would make the comparison circular.</p>
+<table><thead><tr><th>field_label</th><th>open_disclosure_rate</th><th>closed_disclosure_rate</th><th>difference</th><th>ci_low</th><th>ci_high</th><th>q_value_bh</th><th>significant_after_bh</th></tr></thead><tbody>
+<tr><td>Parameter count</td><td>0.860772</td><td>0.3367</td><td>0.524072</td><td>0.465437</td><td>0.581373</td><td>0.0001</td><td>True</td></tr>
+<tr><td>Training compute (FLOP)</td><td>0.564024</td><td>0.212121</td><td>0.351903</td><td>0.294599</td><td>0.407869</td><td>0.0001</td><td>True</td></tr>
+<tr><td>Training dataset size</td><td>0.49187</td><td>0.151515</td><td>0.340355</td><td>0.287119</td><td>0.390411</td><td>0.0001</td><td>True</td></tr>
+<tr><td>Training hardware</td><td>0.522358</td><td>0.198653</td><td>0.323705</td><td>0.267993</td><td>0.37726</td><td>0.0001</td><td>True</td></tr>
+</tbody></table>
+<p><img alt="Open vs closed disclosure rates" src="../figures/disclosure_open_vs_closed.png"></p>
+<p><strong>Confound, stated rather than adjusted:</strong> open-weight releases skew academic and closed releases</p>
+<p>skew commercial. Part of the difference is publication culture. The data contain no instrument that</p>
+<p>separates the two.</p>
+<h2>Disclosed training-compute growth</h2>
+<p>Training compute is a physical, unbounded quantity. Its logarithm can be extrapolated without</p>
+<p>hitting a ceiling — unlike a benchmark percentage capped at 100, which is why the previous version&#x27;s</p>
+<p>domain forecasts were withdrawn.</p>
+<h3>Trend estimates</h3>
+<table><thead><tr><th>specification</th><th>estimator</th><th>n</th><th>log10_flop_per_year</th><th>ci_low</th><th>ci_high</th><th>doubling_time_months</th></tr></thead><tbody>
+<tr><td>frontier_p90_by_year</td><td>ols_hc3</td><td>13</td><td>0.535666</td><td>0.474299</td><td>0.597033</td><td>6.74368</td></tr>
+<tr><td>frontier_p90_by_year</td><td>theil_sen</td><td>13</td><td>0.517738</td><td>0.464067</td><td>0.602392</td><td>6.9772</td></tr>
+<tr><td>frontier_max_by_year</td><td>ols_hc3</td><td>13</td><td>0.635875</td><td>0.528083</td><td>0.743667</td><td>5.68093</td></tr>
+<tr><td>frontier_max_by_year</td><td>theil_sen</td><td>13</td><td>0.63964</td><td>0.511744</td><td>0.728187</td><td>5.64748</td></tr>
+<tr><td>all_disclosed_models</td><td>ols_hc3</td><td>1124</td><td>0.554794</td><td>0.51554</td><td>0.594049</td><td>6.51117</td></tr>
+<tr><td>all_disclosed_models</td><td>theil_sen</td><td>1124</td><td>0.574119</td><td>0.530559</td><td>0.617581</td><td>6.29201</td></tr>
+<tr><td>epoch_frontier_flagged_models</td><td>ols_hc3</td><td>74</td><td>0.65278</td><td>0.621707</td><td>0.683853</td><td>5.53381</td></tr>
+<tr><td>epoch_frontier_flagged_models</td><td>theil_sen</td><td>74</td><td>0.661969</td><td>0.629017</td><td>0.693926</td><td>5.45699</td></tr>
+</tbody></table>
+<h3>Backtest against a last-value baseline</h3>
+<p>A forecast is published only when it beats carrying the last observed frontier forward. The</p>
+<p>prediction interval is built from measured out-of-sample errors, not from the regression&#x27;s</p>
+<p>in-sample standard error.</p>
+<table><thead><tr><th>horizon_years</th><th>folds</th><th>mae_log10</th><th>rmse_log10</th><th>baseline_mae_log10</th><th>skill_ratio_vs_last_value</th><th>beats_baseline</th><th>error_quantile_low</th><th>error_quantile_high</th><th>baseline</th><th>note</th></tr></thead><tbody>
+<tr><td>1</td><td>7</td><td>0.365346</td><td>0.603382</td><td>0.622291</td><td>0.587098</td><td>True</td><td>-0.255446</td><td>1.33189</td><td>last observed frontier value carried forward</td><td>Errors are in log10 FLOP. A skill ratio below 1 means the fitted trend forecasts better out of sample than assuming no change.</td></tr>
+<tr><td>2</td><td>6</td><td>0.202818</td><td>0.283188</td><td>1.16729</td><td>0.173752</td><td>True</td><td>-0.166287</td><td>0.561697</td><td>last observed frontier value carried forward</td><td>Errors are in log10 FLOP. A skill ratio below 1 means the fitted trend forecasts better out of sample than assuming no change.</td></tr>
+<tr><td>3</td><td>5</td><td>0.315061</td><td>0.49396</td><td>1.72041</td><td>0.183131</td><td>True</td><td>-0.128298</td><td>0.983956</td><td>last observed frontier value carried forward</td><td>Errors are in log10 FLOP. A skill ratio below 1 means the fitted trend forecasts better out of sample than assuming no change.</td></tr>
+</tbody></table>
+<h3>Selection sensitivity</h3>
+<p>Compute disclosure is incomplete and voluntary. The slope under several restrictions:</p>
+<table><thead><tr><th>restriction</th><th>n</th><th>log10_flop_per_year</th><th>doubling_time_months</th><th>relative_change_vs_baseline</th><th>status</th></tr></thead><tbody>
+<tr><td>all_disclosed</td><td>1124</td><td>0.554794</td><td>6.51117</td><td>0</td><td>estimated</td></tr>
+<tr><td>top_decile_within_year</td><td>117</td><td>0.540879</td><td>6.67868</td><td>-0.025081</td><td>estimated</td></tr>
+<tr><td>vendors_with_5plus_disclosures</td><td>873</td><td>0.520713</td><td>6.93734</td><td>-0.061431</td><td>estimated</td></tr>
+<tr><td>language_domain_only</td><td>707</td><td>0.753905</td><td>4.79153</td><td>0.358891</td><td>estimated</td></tr>
+<tr><td>excluding_open_weights</td><td>65</td><td>0.45521</td><td>7.93559</td><td>-0.179497</td><td>estimated</td></tr>
+<tr><td>open_weights_only</td><td>564</td><td>0.56829</td><td>6.35654</td><td>0.024326</td><td>estimated</td></tr>
+</tbody></table>
+<h3>Expectations for provisional and future years</h3>
+<table><thead><tr><th>target_year</th><th>horizon_years</th><th>target_kind</th><th>log10_compute_p90_forecast</th><th>pi_low</th><th>pi_high</th><th>flop_forecast</th><th>interval_source</th><th>backtest_folds</th><th>skill_ratio_vs_last_value</th><th>interpretation</th></tr></thead><tbody>
+<tr><td>2025</td><td>1</td><td>backfill_of_provisional_year</td><td>24.9539</td><td>23.622</td><td>25.2094</td><td>8.99352e+24</td><td>empirical rolling-origin backtest error quantiles</td><td>7</td><td>0.587098</td><td>Expectation for the 90th percentile of *disclosed* training compute. Because disclosure is incomplete and voluntary, read it as a lower bound on the true frontier.</td></tr>
+<tr><td>2026</td><td>2</td><td>backfill_of_provisional_year</td><td>25.4896</td><td>24.9279</td><td>25.6559</td><td>3.08742e+25</td><td>empirical rolling-origin backtest error quantiles</td><td>6</td><td>0.173752</td><td>Expectation for the 90th percentile of *disclosed* training compute. Because disclosure is incomplete and voluntary, read it as a lower bound on the true frontier.</td></tr>
+<tr><td>2027</td><td>3</td><td>future</td><td>26.0253</td><td>25.0413</td><td>26.1536</td><td>1.05989e+26</td><td>empirical rolling-origin backtest error quantiles</td><td>5</td><td>0.183131</td><td>Expectation for the 90th percentile of *disclosed* training compute. Because disclosure is incomplete and voluntary, read it as a lower bound on the true frontier.</td></tr>
+</tbody></table>
+<p><img alt="Disclosed compute frontier" src="../figures/compute_frontier.png"></p>
+<h2>Price structure in the current catalogue</h2>
+<p>Quality and price come from the <strong>same catalogue record</strong>, so there is no cross-source name join.</p>
+<p>The catalogue is a cross-section of currently listed models: it cannot support a price history, and</p>
+<p>that claim is refused.</p>
+<h3>Cheapest listed model at each quality threshold</h3>
+<table><thead><tr><th>quality_threshold</th><th>eligible_models</th><th>cheapest_model_id</th><th>cheapest_model_vendor</th><th>cheapest_model_weights</th><th>cheapest_model_quality</th><th>cheapest_blended_usd_per_call</th><th>premium_vs_cheapest</th><th>highest_quality_model_id</th><th>status</th></tr></thead><tbody>
+<tr><td>20</td><td>69</td><td>openai/gpt-oss-120b</td><td>OpenAI</td><td>open_weights</td><td>23.8</td><td>0.000281</td><td>142.349</td><td>anthropic/claude-opus-5</td><td>estimated</td></tr>
+<tr><td>30</td><td>53</td><td>tencent/hy3-preview</td><td>Tencent</td><td>open_weights</td><td>41.2</td><td>0.000399</td><td>100.251</td><td>anthropic/claude-opus-5</td><td>estimated</td></tr>
+<tr><td>40</td><td>30</td><td>tencent/hy3-preview</td><td>Tencent</td><td>open_weights</td><td>41.2</td><td>0.000399</td><td>100.251</td><td>anthropic/claude-opus-5</td><td>estimated</td></tr>
+<tr><td>50</td><td>16</td><td>openai/gpt-5.6-luna</td><td>OpenAI</td><td>closed_weights</td><td>51.2</td><td>0.0045</td><td>8.88889</td><td>anthropic/claude-opus-5</td><td>estimated</td></tr>
+<tr><td>55</td><td>6</td><td>openai/gpt-5.6-terra</td><td>OpenAI</td><td>closed_weights</td><td>55</td><td>0.01125</td><td>3.55556</td><td>anthropic/claude-opus-5</td><td>estimated</td></tr>
+</tbody></table>
+<h3>Price spread among models of comparable quality</h3>
+<p>If quality determined price, the max/min ratio inside a narrow quality band would be near 1. It is</p>
+<p>not.</p>
+<table><thead><tr><th>quality_band</th><th>models</th><th>cheapest_usd_per_call</th><th>dearest_usd_per_call</th><th>max_min_price_ratio</th><th>ratio_ci_low</th><th>ratio_ci_high</th></tr></thead><tbody>
+<tr><td>5-10</td><td>8</td><td>0.00023</td><td>0.000806</td><td>3.50435</td><td>1.975</td><td>3.50435</td></tr>
+<tr><td>10-15</td><td>12</td><td>6e-05</td><td>0.0032</td><td>53.3333</td><td>6.15385</td><td>53.3333</td></tr>
+<tr><td>15-20</td><td>11</td><td>0.00105</td><td>0.0077</td><td>7.33333</td><td>3.04636</td><td>7.33333</td></tr>
+<tr><td>20-25</td><td>6</td><td>0.000281</td><td>0.0175</td><td>62.2776</td><td>3.15556</td><td>62.2776</td></tr>
+<tr><td>25-30</td><td>10</td><td>0.00055</td><td>0.024</td><td>43.6364</td><td>10.6667</td><td>43.6364</td></tr>
+<tr><td>30-35</td><td>10</td><td>0.00085</td><td>0.01375</td><td>16.1765</td><td>2.44408</td><td>16.1765</td></tr>
+<tr><td>35-40</td><td>13</td><td>0.0007</td><td>0.024</td><td>34.2857</td><td>3.57143</td><td>34.2857</td></tr>
+<tr><td>40-45</td><td>11</td><td>0.000399</td><td>0.00705</td><td>17.6692</td><td>3.35714</td><td>17.6692</td></tr>
+<tr><td>50-55</td><td>10</td><td>0.0045</td><td>0.045</td><td>10</td><td>3.55556</td><td>10</td></tr>
+<tr><td>55-60</td><td>5</td><td>0.01125</td><td>0.08</td><td>7.11111</td><td>1.77778</td><td>7.11111</td></tr>
+</tbody></table>
+<h3>Weight availability and price, at equal measured quality</h3>
+<table><thead><tr><th>term</th><th>price_factor</th><th>ci_low</th><th>ci_high</th><th>n</th><th>causal_status</th></tr></thead><tbody>
+<tr><td>quality_index</td><td>1.0572</td><td>0.018097</td><td>0.030218</td><td>100</td><td>association in a catalogue. Published-weight models are served by competing hosts while closed models are served by their developer, so this mixes openness with host competition.</td></tr>
+<tr><td>weights_published</td><td>0.41515</td><td>-0.569258</td><td>-0.187613</td><td>100</td><td>association in a catalogue. Published-weight models are served by competing hosts while closed models are served by their developer, so this mixes openness with host competition.</td></tr>
+</tbody></table>
+<h3>Prompt-length price tiers</h3>
+<table><thead><tr><th>models_listed</th><th>models_with_tiers</th><th>share_with_tiers</th><th>evaluation_prompt_tokens</th><th>models_with_tier_binding_at_evaluation_length</th><th>median_input_price_multiplier_when_binding</th><th>ci_low</th><th>ci_high</th><th>max_input_price_multiplier</th><th>estimator</th><th>interpretation</th></tr></thead><tbody>
+<tr><td>321</td><td>44</td><td>0.137072</td><td>64000</td><td>5</td><td>2</td><td>1.66667</td><td>3.33333</td><td>3.33333</td><td>percentile_bootstrap_of_median</td><td>Among listings whose price tier actually applies at 64,000 prompt tokens, the input price relative to the base rate. Reading only the base rate understates long-context cost by this factor for those models.</td></tr>
+</tbody></table>
+<p><img alt="Price–quality Pareto frontier" src="../figures/price_quality_pareto.png"></p>
+<p><img alt="Price spread at matched quality" src="../figures/price_spread_bands.png"></p>
+<h2>Do public benchmarks agree?</h2>
+<p>Every composite &quot;AI capability score&quot; rests on an untested premise: that the signals being combined</p>
+<p>measure one underlying thing. This section tests that premise. A composite is treated as defensible</p>
+<p>only if every measured pair of independent benchmarks has a Kendall τ lower bound above 0.8.</p>
+<table><thead><tr><th>pairs_tested</th><th>pairs_between_independent_benchmarks</th><th>minimum_tau_ci_low</th><th>median_tau</th><th>weakest_pair</th><th>weakest_pair_tau</th><th>threshold_for_composite</th><th>composite_score_defensible</th><th>verdict</th><th>threshold_rationale</th></tr></thead><tbody>
+<tr><td>10</td><td>7</td><td>0.409745</td><td>0.747126</td><td>lmarena_text_rating vs lmarena_webdev_rating</td><td>0.582051</td><td>0.8</td><td>False</td><td>A single composite capability score is not defensible on this evidence. Benchmarks are reported separately, and no weighted average of them is published.</td><td>Declared before estimation. tau &gt; 0.8 corresponds to at least 90% of model pairs ordered identically, which is the minimum for a single number to be usable without knowing which benchmark generated it.</td></tr>
+</tbody></table>
+<table><thead><tr><th>benchmark_a</th><th>benchmark_b</th><th>common_models</th><th>kendall_tau_b</th><th>tau_ci_low</th><th>tau_ci_high</th><th>top_10_overlap</th><th>both_vendor_composites</th></tr></thead><tbody>
+<tr><td>lmarena_text_rating</td><td>lmarena_webdev_rating</td><td>40</td><td>0.582051</td><td>0.409745</td><td>0.724047</td><td>0.7</td><td>False</td></tr>
+<tr><td>aa_agentic_index</td><td>lmarena_text_rating</td><td>47</td><td>0.684895</td><td>0.548204</td><td>0.79132</td><td>0.8</td><td>False</td></tr>
+<tr><td>aa_agentic_index</td><td>lmarena_webdev_rating</td><td>30</td><td>0.728736</td><td>0.563549</td><td>0.856802</td><td>0.8</td><td>False</td></tr>
+<tr><td>aa_intelligence_index</td><td>lmarena_webdev_rating</td><td>30</td><td>0.747126</td><td>0.572115</td><td>0.881517</td><td>0.8</td><td>False</td></tr>
+<tr><td>aa_intelligence_index</td><td>lmarena_text_rating</td><td>47</td><td>0.753355</td><td>0.639958</td><td>0.841709</td><td>0.9</td><td>False</td></tr>
+<tr><td>aa_coding_index</td><td>lmarena_text_rating</td><td>51</td><td>0.77098</td><td>0.673594</td><td>0.849238</td><td>1</td><td>False</td></tr>
+<tr><td>aa_coding_index</td><td>lmarena_webdev_rating</td><td>31</td><td>0.780645</td><td>0.617778</td><td>0.903089</td><td>0.8</td><td>False</td></tr>
+<tr><td>aa_coding_index</td><td>aa_agentic_index</td><td>108</td><td>0.839226</td><td>0.790501</td><td>0.880571</td><td>0.9</td><td>True</td></tr>
+<tr><td>aa_intelligence_index</td><td>aa_agentic_index</td><td>107</td><td>0.888319</td><td>0.856275</td><td>0.916936</td><td>0.9</td><td>True</td></tr>
+<tr><td>aa_intelligence_index</td><td>aa_coding_index</td><td>107</td><td>0.902519</td><td>0.867372</td><td>0.93229</td><td>1</td><td>True</td></tr>
+</tbody></table>
+<p><img alt="Benchmark agreement" src="../figures/benchmark_agreement.png"></p>
+<p>Because the threshold is not met, <strong>no composite capability score is published</strong>. Benchmarks are</p>
+<p>reported separately.</p>
+<h2>Open-weight lag on the arena frontier</h2>
+<p>Trends are estimated inside a single rating-methodology regime. A slope that spans a methodology</p>
+<p>break would partly measure the break.</p>
+<h3>Gap trend by regime</h3>
+<table><thead><tr><th>methodology_regime</th><th>leaderboards</th><th>window_start</th><th>window_end</th><th>mean_gap_rating</th><th>gap_change_per_year_ols</th><th>ci_low</th><th>ci_high</th><th>gap_change_per_year_theil_sen</th><th>theil_sen_ci_low</th><th>theil_sen_ci_high</th><th>r_squared</th><th>estimator</th><th>serial_correlation_note</th></tr></thead><tbody>
+<tr><td>bradley_terry</td><td>102</td><td>2024-01-09</td><td>2025-05-11</td><td>55.187</td><td>-57.654</td><td>-72.4254</td><td>-42.8826</td><td>-50.4896</td><td>-66.0529</td><td>-41.3194</td><td>0.433054</td><td>ols_hc3_and_theil_sen_on_within_regime_dates</td><td>Consecutive leaderboards share most of their vote history, so observations are strongly serially correlated and these intervals are too narrow. Read the sign and rough magnitude, not the endpoints.</td></tr>
+<tr><td>bradley_terry_frequency_reweighted</td><td>102</td><td>2025-07-25</td><td>2026-07-27</td><td>40.1906</td><td>-6.57898</td><td>-12.3748</td><td>-0.783139</td><td>-11.9994</td><td>-20.1212</td><td>-6.54908</td><td>0.033431</td><td>ols_hc3_and_theil_sen_on_within_regime_dates</td><td>Consecutive leaderboards share most of their vote history, so observations are strongly serially correlated and these intervals are too narrow. Read the sign and rough magnitude, not the endpoints.</td></tr>
+<tr><td>bradley_terry_style_control_default</td><td>14</td><td>2025-05-19</td><td>2025-07-17</td><td>40.3924</td><td>53.5378</td><td>-25.4885</td><td>132.564</td><td>59.2254</td><td>-29.1643</td><td>92.6544</td><td>0.037159</td><td>ols_hc3_and_theil_sen_on_within_regime_dates</td><td>Consecutive leaderboards share most of their vote history, so observations are strongly serially correlated and these intervals are too narrow. Read the sign and rough magnitude, not the endpoints.</td></tr>
+</tbody></table>
+<h3>Catch-up lag (Kaplan–Meier, right-censored)</h3>
+<table><thead><tr><th>levels_tracked</th><th>levels_reached</th><th>levels_still_unmatched</th><th>share_right_censored</th><th>kaplan_meier_median_lag_days</th><th>follow_up_days</th><th>naive_median_of_completed_lags_days</th><th>naive_understates_by_days</th><th>estimator</th><th>interpretation</th></tr></thead><tbody>
+<tr><td>229</td><td>140</td><td>89</td><td>0.388646</td><td>152</td><td>398</td><td>98.5</td><td>53.5</td><td>kaplan_meier_median_with_right_censoring</td><td>Kaplan-Meier median days for the open-weight frontier to reach a historical closed-frontier level. Censored levels contribute as &#x27;not yet reached&#x27;. A NaN median means more than half the levels tracked are still unmatched within the follow-up window, so the honest answer is &#x27;longer than the follow-up&#x27;.</td></tr>
+</tbody></table>
+<h3>Gap by category in the latest publication</h3>
+<p>A single pooled gap number is refused; the gap is category-specific.</p>
+<table><thead><tr><th>arena</th><th>category</th><th>open_best_model</th><th>closed_best_model</th><th>gap_rating</th><th>gap_ci_low</th><th>gap_distinguishable_from_zero</th></tr></thead><tbody>
+<tr><td>text</td><td>industry_mathematical</td><td>mimo-v2.5-pro</td><td>claude-opus-5-high</td><td>102.931</td><td>63.8895</td><td>True</td></tr>
+<tr><td>text</td><td>polish</td><td>mimo-v2.5-pro</td><td>gemini-3.5-flash-high</td><td>77.8629</td><td>35.6569</td><td>True</td></tr>
+<tr><td>text</td><td>math</td><td>inkling</td><td>claude-opus-5-high</td><td>65.9092</td><td>16.1994</td><td>True</td></tr>
+<tr><td>text</td><td>creative_writing</td><td>glm-5.1</td><td>claude-opus-5-max</td><td>62.3683</td><td>29.8349</td><td>True</td></tr>
+<tr><td>text</td><td>korean</td><td>mimo-v2.5-pro</td><td>claude-fable-5</td><td>60.7786</td><td>17.3192</td><td>True</td></tr>
+<tr><td>text</td><td>japanese</td><td>glm-5.2-max</td><td>claude-fable-5</td><td>49.7919</td><td>-8.23794</td><td>False</td></tr>
+<tr><td>text</td><td>industry_legal_and_government</td><td>mimo-v2.5-pro</td><td>claude-opus-5-high</td><td>48.6344</td><td>19.4439</td><td>True</td></tr>
+<tr><td>text</td><td>non_english</td><td>glm-5.1</td><td>claude-opus-5-max</td><td>43.5031</td><td>5.60445</td><td>True</td></tr>
+<tr><td>text</td><td>industry_entertainment_and_sports_and_media</td><td>glm-5.1</td><td>claude-opus-4-6-thinking</td><td>41.6977</td><td>14.4703</td><td>True</td></tr>
+<tr><td>text</td><td>russian</td><td>glm-5.1</td><td>claude-opus-5-high</td><td>39.8644</td><td>13.4427</td><td>True</td></tr>
+<tr><td>text</td><td>exclude_ties</td><td>mimo-v2.5-pro</td><td>claude-opus-5-max</td><td>37.7747</td><td>-0.367644</td><td>False</td></tr>
+<tr><td>text</td><td>industry_life_and_physical_and_social_science</td><td>hy3</td><td>claude-opus-5-max</td><td>36.9466</td><td>-0.723988</td><td>False</td></tr>
+</tbody></table>
+<p><img alt="Open vs closed frontier" src="../figures/open_closed_gap.png"></p>
+<h2>Observed usage composition (not employment impact)</h2>
+<p>These tables describe the composition of one vendor&#x27;s observed conversations. They are not a sample</p>
+<p>of the workforce and carry no information about employment outcomes. No replacement or disruption</p>
+<p>index is constructed.</p>
+<h3>Surface medians</h3>
+<table><thead><tr><th>surface</th><th>period_start</th><th>occupations</th><th>metric</th><th>median</th><th>ci_low</th><th>ci_high</th><th>estimator</th><th>scope</th></tr></thead><tbody>
+<tr><td>claude_ai</td><td>2026-05-01</td><td>718</td><td>automation_share_pct</td><td>48.4</td><td>47.3</td><td>50.12</td><td>percentile_bootstrap_of_median</td><td>Median across occupations with published values. Occupations are not employment-weighted: this describes the composition of the published occupation set, not of the workforce.</td></tr>
+<tr><td>claude_ai</td><td>2026-05-01</td><td>718</td><td>augmentation_share_pct</td><td>51.6</td><td>49.88</td><td>52.7</td><td>percentile_bootstrap_of_median</td><td>Median across occupations with published values. Occupations are not employment-weighted: this describes the composition of the published occupation set, not of the workforce.</td></tr>
+<tr><td>claude_ai</td><td>2026-05-01</td><td>718</td><td>ai_autonomy_mean</td><td>2.74</td><td>2.72</td><td>2.75</td><td>percentile_bootstrap_of_median</td><td>Median across occupations with published values. Occupations are not employment-weighted: this describes the composition of the published occupation set, not of the workforce.</td></tr>
+<tr><td>first_party_api</td><td>2026-05-01</td><td>690</td><td>automation_share_pct</td><td>94.63</td><td>94.12</td><td>95.21</td><td>percentile_bootstrap_of_median</td><td>Median across occupations with published values. Occupations are not employment-weighted: this describes the composition of the published occupation set, not of the workforce.</td></tr>
+<tr><td>first_party_api</td><td>2026-05-01</td><td>690</td><td>augmentation_share_pct</td><td>5.37</td><td>4.79</td><td>5.88</td><td>percentile_bootstrap_of_median</td><td>Median across occupations with published values. Occupations are not employment-weighted: this describes the composition of the published occupation set, not of the workforce.</td></tr>
+<tr><td>first_party_api</td><td>2026-05-01</td><td>690</td><td>ai_autonomy_mean</td><td>2.19</td><td>2.18</td><td>2.22</td><td>percentile_bootstrap_of_median</td><td>Median across occupations with published values. Occupations are not employment-weighted: this describes the composition of the published occupation set, not of the workforce.</td></tr>
+</tbody></table>
+<h3>Surface contrast on the same occupations</h3>
+<table><thead><tr><th>surface_a</th><th>surface_b</th><th>occupations_in_common</th><th>mean_automation_share_a</th><th>mean_automation_share_b</th><th>mean_difference_a_minus_b</th><th>ci_low</th><th>ci_high</th><th>spearman_rho_of_automation_shares</th><th>estimator</th><th>interpretation</th></tr></thead><tbody>
+<tr><td>claude_ai</td><td>first_party_api</td><td>659</td><td>51.2186</td><td>91.4137</td><td>-40.1951</td><td>-41.2635</td><td>-39.1171</td><td>0.637133</td><td>paired_bootstrap_of_mean_difference_over_occupations</td><td>Mean difference in automation share for the same occupations across the two surfaces. A difference whose interval excludes zero means the surfaces disagree about how automated usage is, even for the same jobs. Averaging them into one number would invent a consensus.</td></tr>
+</tbody></table>
+<p><img alt="Automation share by surface" src="../figures/usage_surface_contrast.png"></p>
+<h2>SWE-bench Verified: historical record</h2>
+<p>The public submission directory is stale relative to the reference date, so only the historical series is shown. Present-tense claims are refused.</p>
+<h3>Top public submissions</h3>
+<table><thead><tr><th>submission</th><th>submission_date</th><th>system_label</th><th>model_tag</th><th>vendor</th><th>family</th><th>resolve_rate_pct</th><th>uses_open_weights_model</th><th>source_url</th></tr></thead><tbody>
+<tr><td>20251215_livesweagent_claude-opus-4-5</td><td>2025-12-15</td><td>livesweagent_claude-opus-4-5</td><td>claude-opus-4-5</td><td>Anthropic</td><td>Claude</td><td>79.2</td><td>0</td><td>https://github.com/SWE-bench/experiments/tree/main/evaluation/verified/20251215_livesweagent_claude-opus-4-5</td></tr>
+<tr><td>20251205_sonar-foundation-agent_claude-opus-4-5</td><td>2025-12-05</td><td>sonar-foundation-agent_claude-opus-4-5</td><td>claude-opus-4-5</td><td>Anthropic</td><td>Claude</td><td>79.2</td><td>0</td><td>https://github.com/SWE-bench/experiments/tree/main/evaluation/verified/20251205_sonar-foundation-agent_claude-opus-4-5</td></tr>
+<tr><td>20250928_trae_doubao_seed_code</td><td>2025-09-28</td><td>trae_doubao_seed_code</td><td>trae_doubao_seed_code</td><td>ByteDance</td><td>Doubao</td><td>78.8</td><td>nan</td><td>https://github.com/SWE-bench/experiments/tree/main/evaluation/verified/20250928_trae_doubao_seed_code</td></tr>
+<tr><td>20251127_openhands_claude-opus-4-5</td><td>2025-11-27</td><td>openhands_claude-opus-4-5</td><td>claude-opus-4-5</td><td>Anthropic</td><td>Claude</td><td>77.6</td><td>0</td><td>https://github.com/SWE-bench/experiments/tree/main/evaluation/verified/20251127_openhands_claude-opus-4-5</td></tr>
+<tr><td>20251120_livesweagent_gemini-3-pro-preview</td><td>2025-11-20</td><td>livesweagent_gemini-3-pro-preview</td><td>gemini-3-pro-preview</td><td>Google</td><td>Gemini</td><td>77.4</td><td>0</td><td>https://github.com/SWE-bench/experiments/tree/main/evaluation/verified/20251120_livesweagent_gemini-3-pro-preview</td></tr>
+<tr><td>20250804_epam-ai-run-claude-4-sonnet</td><td>2025-08-04</td><td>epam-ai-run-claude-4-sonnet</td><td>claude-4-sonnet</td><td>Anthropic</td><td>Claude</td><td>76.8</td><td>0</td><td>https://github.com/SWE-bench/experiments/tree/main/evaluation/verified/20250804_epam-ai-run-claude-4-sonnet</td></tr>
+<tr><td>20250902_atlassian-rovo-dev</td><td>2025-09-02</td><td>atlassian-rovo-dev</td><td>atlassian-rovo-dev</td><td>Unknown</td><td>Other</td><td>76.8</td><td>nan</td><td>https://github.com/SWE-bench/experiments/tree/main/evaluation/verified/20250902_atlassian-rovo-dev</td></tr>
+<tr><td>20250819_ACoder</td><td>2025-08-19</td><td>ACoder</td><td>ACoder</td><td>Unknown</td><td>Other</td><td>76.4</td><td>nan</td><td>https://github.com/SWE-bench/experiments/tree/main/evaluation/verified/20250819_ACoder</td></tr>
+<tr><td>20250901_warp</td><td>2025-09-01</td><td>warp</td><td>warp</td><td>Unknown</td><td>Other</td><td>75.6</td><td>nan</td><td>https://github.com/SWE-bench/experiments/tree/main/evaluation/verified/20250901_warp</td></tr>
+<tr><td>20250612_trae</td><td>2025-06-12</td><td>trae</td><td>trae</td><td>Unknown</td><td>Other</td><td>75.2</td><td>nan</td><td>https://github.com/SWE-bench/experiments/tree/main/evaluation/verified/20250612_trae</td></tr>
+<tr><td>20251103_sonar-foundation-agent_claude-sonnet-4-5</td><td>2025-11-03</td><td>sonar-foundation-agent_claude-sonnet-4-5</td><td>claude-sonnet-4-5</td><td>Anthropic</td><td>Claude</td><td>74.8</td><td>0</td><td>https://github.com/SWE-bench/experiments/tree/main/evaluation/verified/20251103_sonar-foundation-agent_claude-sonnet-4-5</td></tr>
+<tr><td>20250731_harness_ai</td><td>2025-07-31</td><td>harness_ai</td><td>harness_ai</td><td>Unknown</td><td>Other</td><td>74.8</td><td>nan</td><td>https://github.com/SWE-bench/experiments/tree/main/evaluation/verified/20250731_harness_ai</td></tr>
+</tbody></table>
+<h3>Within-model scaffold spread</h3>
+<p>A large spread across submissions that name the same model is direct evidence that the score is not</p>
+<p>a model property.</p>
+<table><thead><tr><th>model_tag</th><th>submissions</th><th>distinct_system_labels</th><th>min_resolve_rate_pct</th><th>max_resolve_rate_pct</th><th>spread_pp</th><th>median_resolve_rate_pct</th><th>interpretation</th></tr></thead><tbody>
+<tr><td>claude-3-5-sonnet</td><td>3</td><td>1</td><td>39.6</td><td>62.8</td><td>23.2</td><td>55.4</td><td>Spread in resolve rate across submissions that name the same model. A large spread means the score is dominated by the agent scaffold, not by the model.</td></tr>
+<tr><td>claude-opus-4-5</td><td>3</td><td>3</td><td>77.6</td><td>79.2</td><td>1.6</td><td>79.2</td><td>Spread in resolve rate across submissions that name the same model. A large spread means the score is dominated by the agent scaffold, not by the model.</td></tr>
+</tbody></table>
+<h2>Calendar negative control</h2>
+<p>A small, pre-registered family of calendar features (weekday, month, quarter) is tested against a</p>
+<p>year-preserving random-date null, then corrected by Benjamini–Hochberg.</p>
+<p><strong>Results surviving BH correction:</strong> 3 of 3. Clusters survive correction. That is consistent with real vendor scheduling (weekdays, conference seasons), not astrology, and not a finding beyond calendars.</p>
+<table><thead><tr><th>feature</th><th>top_bucket</th><th>top_count</th><th>share</th><th>permutation_p_value</th><th>q_value_bh</th><th>significant_after_bh</th></tr></thead><tbody>
+<tr><td>weekday</td><td>Monday</td><td>467</td><td>0.20234</td><td>0.0002</td><td>0.0003</td><td>True</td></tr>
+<tr><td>month</td><td>September</td><td>268</td><td>0.116118</td><td>0.0002</td><td>0.0003</td><td>True</td></tr>
+<tr><td>quarter</td><td>Q4</td><td>641</td><td>0.27773</td><td>0.008198</td><td>0.008198</td><td>True</td></tr>
+</tbody></table>
+<p><img alt="Calendar control" src="../figures/calendar_control.png"></p>
+<h2>Methods in brief</h2>
+<ul>
+<li><strong>Reference date</strong> <code>2026-07-27</code> is the freshest source horizon. Sources that lag</li>
+</ul>
+<p>  behind are shown in the freshness table; when a source is too stale for present-tense claims the</p>
+<p>  analyses that depend on it refuse rather than quietly using old data.</p>
+<ul>
+<li><strong>Intervals</strong> are Wilson score intervals for proportions, HC3 robust intervals for OLS slopes,</li>
+</ul>
+<p>  Theil–Sen for robust slope checks, and percentile bootstraps that resample the unit of analysis</p>
+<p>  (a model, an occupation, a benchmark pair) — never a row of a table that may contain repeated</p>
+<p>  snapshots.</p>
+<ul>
+<li><strong>Multiple comparisons</strong> inside a pre-registered family are corrected by Benjamini–Hochberg.</li>
+<li><strong>Forecasts</strong> are published only when a rolling-origin backtest beats a last-value baseline; the</li>
+</ul>
+<p>  published interval is built from measured out-of-sample errors.</p>
+<ul>
+<li><strong>Refusals</strong> replace capped extrapolations. If a claim cannot be supported, the pipeline says so</li>
+</ul>
+<p>  and writes a row to <code>data/analysis/refusals.csv</code>.</p>
+<ul>
+<li>The detailed audit of the previous version, and the specific defects this rebuild exists to</li>
+</ul>
+<p>  prevent, is in <a href="../docs/audit_of_previous_version.md"><code>docs/audit_of_previous_version.md</code></a>.</p>
+<h2>Reproduce</h2>
+<pre><code>
+uv sync
+uv run aicap                # full refresh
+uv run aicap --from-interim # re-analyse cached frames
+uv run python -m unittest discover -s tests
+</code></pre></main></body>
+</html>

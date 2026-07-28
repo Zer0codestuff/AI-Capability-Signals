@@ -86,17 +86,19 @@ class RunContext:
 
     @property
     def reference_date(self) -> str:
-        """The run's analytical cutoff.
+        """The run's as-of date for present-tense claims.
 
-        Defaults to the least fresh source horizon so that cross-source comparisons are made on a
-        window every source actually covers.
+        Defaults to the *freshest* source horizon. Sources that lag behind are reported in the
+        freshness table and, when too stale to support present-tense claims, trigger a refusal for
+        the analyses that depend on them. Binding the whole report to the least fresh source made
+        every other analysis look months out of date.
         """
         if self.reference_date_override:
             return self.reference_date_override
         dates = [f.latest_observation for f in self.freshness if f.latest_observation]
         if not dates:
             return datetime.now(UTC).date().isoformat()
-        return min(dates)
+        return max(dates)
 
     @property
     def max_source_date(self) -> str:
@@ -108,10 +110,10 @@ class RunContext:
         if frame.empty:
             return pd.DataFrame(columns=["source_id", "latest_observation", "date_semantics", "rows"])
         reference = pd.Timestamp(self.reference_date)
-        frame["days_behind_freshest"] = (
-            pd.Timestamp(self.max_source_date) - pd.to_datetime(frame["latest_observation"])
+        frame["days_behind_reference"] = (
+            reference - pd.to_datetime(frame["latest_observation"])
         ).dt.days
-        frame["is_binding_constraint"] = frame["latest_observation"] == reference.date().isoformat()
+        frame["is_freshest"] = frame["latest_observation"] == self.max_source_date
         return frame.sort_values("latest_observation").reset_index(drop=True)
 
     def refusals_frame(self) -> pd.DataFrame:

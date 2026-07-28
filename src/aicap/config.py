@@ -6,10 +6,10 @@ The previous version of this project hardcoded ``REFERENCE_DATE = "2026-05-15"``
 later the published report still described superseded models as current, because nothing in the
 code could notice that the constant had gone stale.
 
-Here the reference date is *derived from the data*: it is the earliest "latest observation" over
-the ingested sources (see :func:`aicap.provenance.derive_reference_date`). That makes it
-impossible for the reference date to claim more freshness than the least fresh source provides,
-and it moves automatically when the data moves. A run can still pin a date explicitly with
+Here the reference date is *derived from the data*: it is the freshest observation horizon over
+the ingested sources (see :func:`aicap.provenance.RunContext.reference_date`). Sources that lag
+behind are reported in the freshness table and trigger refusals in the analyses that depend on
+them when they are too stale for present-tense claims. A run can still pin a date explicitly with
 ``--reference-date`` for reproducing an older snapshot.
 """
 

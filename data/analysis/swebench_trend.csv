@@ -1,0 +1,2 @@
+record_setting_submissions,window_start,window_end,points_per_year,ci_low,ci_high,r_squared,estimator,caveat
+33,2023-10-10,2025-12-05,40.818783,34.325336,47.31223,0.928108,ols_hc3_on_record_setting_submissions,"A running maximum is monotone by construction, so a positive slope is almost guaranteed. The magnitude is informative; the sign is not a finding."
