@@ -33,6 +33,9 @@ package-dir = { "" = "src" }
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+aicap = ["report/report.css", "report/report.js"]
+
 [tool.ruff]
 line-length = 110
 target-version = "py311"
