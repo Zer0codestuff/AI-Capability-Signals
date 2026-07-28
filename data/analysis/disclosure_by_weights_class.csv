@@ -1,0 +1,26 @@
+weights_class,field,field_label,models,models_disclosing,disclosure_rate,ci_low,ci_high,estimator
+closed_weights,accessibility_raw,Accessibility statement,297,297,1.0,0.987231,1.0,wilson_score_interval
+open_weights,accessibility_raw,Accessibility statement,589,589,1.0,0.99352,1.0,wilson_score_interval
+open_weights_restricted,accessibility_raw,Accessibility statement,395,395,1.0,0.990368,1.0,wilson_score_interval
+unknown,accessibility_raw,Accessibility statement,409,0,0.0,0.0,0.009305,wilson_score_interval
+unreleased,accessibility_raw,Accessibility statement,618,618,1.0,0.993822,1.0,wilson_score_interval
+closed_weights,parameters,Parameter count,297,100,0.3367,0.285343,0.392228,wilson_score_interval
+open_weights,parameters,Parameter count,589,497,0.843803,0.812267,0.870884,wilson_score_interval
+open_weights_restricted,parameters,Parameter count,395,350,0.886076,0.850955,0.913759,wilson_score_interval
+unknown,parameters,Parameter count,409,188,0.459658,0.411958,0.508108,wilson_score_interval
+unreleased,parameters,Parameter count,618,466,0.754045,0.718591,0.78636,wilson_score_interval
+closed_weights,training_compute_flop,Training compute (FLOP),297,63,0.212121,0.169455,0.262139,wilson_score_interval
+open_weights,training_compute_flop,Training compute (FLOP),589,350,0.594228,0.554085,0.633149,wilson_score_interval
+open_weights_restricted,training_compute_flop,Training compute (FLOP),395,205,0.518987,0.469769,0.56784,wilson_score_interval
+unknown,training_compute_flop,Training compute (FLOP),409,101,0.246944,0.207634,0.290963,wilson_score_interval
+unreleased,training_compute_flop,Training compute (FLOP),618,297,0.480583,0.441433,0.519972,wilson_score_interval
+closed_weights,training_hardware,Training hardware,297,59,0.198653,0.157252,0.247751,wilson_score_interval
+open_weights,training_hardware,Training hardware,589,314,0.533107,0.492732,0.573053,wilson_score_interval
+open_weights_restricted,training_hardware,Training hardware,395,200,0.506329,0.457202,0.555334,wilson_score_interval
+unknown,training_hardware,Training hardware,409,126,0.308068,0.265283,0.354426,wilson_score_interval
+unreleased,training_hardware,Training hardware,618,263,0.425566,0.387163,0.46489,wilson_score_interval
+closed_weights,training_tokens,Training dataset size,297,45,0.151515,0.115205,0.196725,wilson_score_interval
+open_weights,training_tokens,Training dataset size,589,297,0.504244,0.46397,0.544464,wilson_score_interval
+open_weights_restricted,training_tokens,Training dataset size,395,187,0.473418,0.424672,0.522675,wilson_score_interval
+unknown,training_tokens,Training dataset size,409,112,0.273839,0.232877,0.31901,wilson_score_interval
+unreleased,training_tokens,Training dataset size,618,277,0.44822,0.409451,0.487629,wilson_score_interval

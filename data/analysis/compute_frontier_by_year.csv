@@ -1,0 +1,14 @@
+publication_year,models_with_disclosed_compute,log10_compute_p90,log10_compute_max,log10_compute_median,top_model,top_model_vendor,distinct_vendors,frontier_definition
+2012,10,17.6893,17.778151,16.828292,Unsupervised High-level Feature Learner,Google,5,p90 of log10 FLOP within year
+2013,13,18.047107,18.417096,16.589726,DistBelief NNLM,Google,8,p90 of log10 FLOP within year
+2014,15,19.484748,20.473633,17.714665,SNM-skip,Google,10,p90 of log10 FLOP within year
+2015,14,19.824492,20.579784,18.26374,AlphaGo Fan,Google,7,p90 of log10 FLOP within year
+2016,27,20.895193,21.820858,17.116582,GNMT,Google,10,p90 of log10 FLOP within year
+2017,29,20.749216,20.925828,17.757904,JFT,Google,13,p90 of log10 FLOP within year
+2018,51,20.334454,21.941708,17.499603,ResNeXt-101 32x48d,Meta,13,p90 of log10 FLOP within year
+2019,82,21.951794,23.032353,19.368316,AlphaStar,Google,20,p90 of log10 FLOP within year
+2020,77,22.175454,23.49693,20.415841,GPT-3 175B (davinci),OpenAI,11,p90 of log10 FLOP within year
+2021,139,22.86624,24.311118,21.041393,FLAN 137B,Google,35,p90 of log10 FLOP within year
+2022,130,23.550119,24.437988,21.663646,Minerva (540B),Google,29,p90 of log10 FLOP within year
+2023,229,23.811662,25.69897,22.538574,Gemini 1.0 Ultra,Google,83,p90 of log10 FLOP within year
+2024,308,24.275728,25.579784,22.69823,Llama 3.1-405B,Meta,70,p90 of log10 FLOP within year

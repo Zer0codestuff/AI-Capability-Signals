@@ -1,0 +1,6 @@
+arena,rows,rows_from_duplicate_keys,max_replicates,share_from_duplicate_keys
+search,688,60,6,0.0872
+text,991366,17703,6,0.0179
+text_style_control,849802,0,1,0.0
+vision,39062,0,1,0.0
+webdev,13109,92,2,0.007

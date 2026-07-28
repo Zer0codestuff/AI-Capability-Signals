@@ -1,50 +1,40 @@
-table,rows,path,analysis_captured_at
-analysis_manifest,49,data/analysis/analysis_manifest.csv,2026-07-12T19:42:51+00:00
-business_domain_ai_pressure,8,data/analysis/business_domain_ai_pressure.csv,2026-07-12T19:42:51+00:00
-capability_forecasts,54,data/analysis/capability_forecasts.csv,2026-07-12T19:42:51+00:00
-capability_frontier_history,17,data/analysis/capability_frontier_history.csv,2026-07-12T19:42:51+00:00
-claim_failure_modes,5,data/analysis/claim_failure_modes.csv,2026-07-12T19:42:51+00:00
-company_frontier_scores,11,data/analysis/company_frontier_scores.csv,2026-07-12T19:42:51+00:00
-company_next_frontier_probabilities,99,data/analysis/company_next_frontier_probabilities.csv,2026-07-12T19:42:51+00:00
-company_score_components,11,data/analysis/company_score_components.csv,2026-07-12T19:42:51+00:00
-company_score_methodology,6,data/analysis/company_score_methodology.csv,2026-07-12T19:42:51+00:00
-company_score_sensitivity,44,data/analysis/company_score_sensitivity.csv,2026-07-12T19:42:51+00:00
-cost_divergence_scenarios,9,data/analysis/cost_divergence_scenarios.csv,2026-07-12T19:42:51+00:00
-cost_external_evidence,6,data/analysis/cost_external_evidence.csv,2026-07-12T19:42:51+00:00
-counterintuitive_findings,5,data/analysis/counterintuitive_findings.csv,2026-07-12T19:42:51+00:00
-dashboard_key_findings,18,data/analysis/dashboard_key_findings.csv,2026-07-12T19:42:51+00:00
-deep_analysis_source_registry,11,data/analysis/deep_analysis_source_registry.csv,2026-07-12T19:42:51+00:00
-direct_model_price_performance,257,data/analysis/direct_model_price_performance.csv,2026-07-12T19:42:51+00:00
-domain_benchmark_catalog,11,data/analysis/domain_benchmark_catalog.csv,2026-07-12T19:42:51+00:00
-domain_benchmark_results,115938,data/analysis/domain_benchmark_results.csv,2026-07-12T19:42:51+00:00
-domain_capability_forecasts,99,data/analysis/domain_capability_forecasts.csv,2026-07-12T19:42:51+00:00
-domain_capability_frontier,21,data/analysis/domain_capability_frontier.csv,2026-07-12T19:42:51+00:00
-domain_forecast_thresholds,33,data/analysis/domain_forecast_thresholds.csv,2026-07-12T19:42:51+00:00
-domain_improvement_velocity,11,data/analysis/domain_improvement_velocity.csv,2026-07-12T19:42:51+00:00
-domain_workflow_examples,8,data/analysis/domain_workflow_examples.csv,2026-07-12T19:42:51+00:00
-family_coverage_matrix,11,data/analysis/family_coverage_matrix.csv,2026-07-12T19:42:51+00:00
-fixed_task_cost_candidates,120,data/analysis/fixed_task_cost_candidates.csv,2026-07-12T19:42:51+00:00
-fixed_task_cost_curves,60,data/analysis/fixed_task_cost_curves.csv,2026-07-12T19:42:51+00:00
-forecast_claims,4,data/analysis/forecast_claims.csv,2026-07-12T19:42:51+00:00
-forecast_input_diagnostics,3,data/analysis/forecast_input_diagnostics.csv,2026-07-12T19:42:51+00:00
-frontier_score_bootstrap,7700,data/analysis/frontier_score_bootstrap.csv,2026-07-12T19:42:51+00:00
-historical_analogy_index,8,data/analysis/historical_analogy_index.csv,2026-07-12T19:42:51+00:00
-job_exposure_scores,756,data/analysis/job_exposure_scores.csv,2026-07-12T19:42:51+00:00
-job_replacement_feasibility,756,data/analysis/job_replacement_feasibility.csv,2026-07-12T19:42:51+00:00
-labor_cluster_profiles,7,data/analysis/labor_cluster_profiles.csv,2026-07-12T19:42:51+00:00
-labor_market_exposure_summary,30,data/analysis/labor_market_exposure_summary.csv,2026-07-12T19:42:51+00:00
-leadership_model_audit,8,data/analysis/leadership_model_audit.csv,2026-07-12T19:42:51+00:00
-llm_message_cost_profile_components,16,data/analysis/llm_message_cost_profile_components.csv,2026-07-12T19:42:51+00:00
-llm_message_cost_trends,4,data/analysis/llm_message_cost_trends.csv,2026-07-12T19:42:51+00:00
-lmarena_category_leaders,54,data/analysis/lmarena_category_leaders.csv,2026-07-12T19:42:51+00:00
-model_benchmark_match_audit,1408,data/analysis/model_benchmark_match_audit.csv,2026-07-12T19:42:51+00:00
-open_closed_gap_by_category,7,data/analysis/open_closed_gap_by_category.csv,2026-07-12T19:42:51+00:00
-price_performance_frontier,352,data/analysis/price_performance_frontier.csv,2026-07-12T19:42:51+00:00
-rank_stability_intervals,11,data/analysis/rank_stability_intervals.csv,2026-07-12T19:42:51+00:00
-release_cadence_by_family,10,data/analysis/release_cadence_by_family.csv,2026-07-12T19:42:51+00:00
-release_cadence_by_vendor,9,data/analysis/release_cadence_by_vendor.csv,2026-07-12T19:42:51+00:00
-source_coverage_diagnostics,21,data/analysis/source_coverage_diagnostics.csv,2026-07-12T19:42:51+00:00
-task_domain_exposure_heatmap,22,data/analysis/task_domain_exposure_heatmap.csv,2026-07-12T19:42:51+00:00
-underobserved_family_audit,11,data/analysis/underobserved_family_audit.csv,2026-07-12T19:42:51+00:00
-vendor_frontier_scores,10,data/analysis/vendor_frontier_scores.csv,2026-07-12T19:42:51+00:00
-vendor_score_components,60,data/analysis/vendor_score_components.csv,2026-07-12T19:42:51+00:00
+table,rows,bytes,description
+arena_frontier_by_date,230,72112,Open-versus-closed arena frontier and catch-up lag.
+benchmark_crosswalk,617,41141,Cross-benchmark rank agreement.
+benchmark_pair_agreement,10,2765,Cross-benchmark rank agreement.
+benchmark_panel,341,31575,Cross-benchmark rank agreement.
+benchmark_rank_instability,109,31521,Cross-benchmark rank agreement.
+calendar_release_counts,23,640,Calendar clustering tests with multiple-comparison correction.
+calendar_release_tests,3,1350,Calendar clustering tests with multiple-comparison correction.
+cheapest_at_quality_threshold,5,726,Catalogue price structure and price-quality relationship.
+composite_score_verdict,1,636,Cross-benchmark rank agreement.
+compute_forecast_backtest,3,861,Disclosed training-compute frontier and backtested forecast.
+compute_frontier_by_year,13,1365,Disclosed training-compute frontier and backtested forecast.
+compute_frontier_forecast,3,1088,Disclosed training-compute frontier and backtested forecast.
+compute_selection_sensitivity,6,1112,Disclosed training-compute frontier and backtested forecast.
+compute_trend_estimates,8,1368,Disclosed training-compute frontier and backtested forecast.
+data_quality_findings,18,5514,Data-quality finding or diagnostic.
+disclosure_by_vendor,33,9416,Disclosure completeness from Epoch AI fields.
+disclosure_by_weights_class,25,2759,Disclosure completeness from Epoch AI fields.
+disclosure_by_year,35,3566,Disclosure completeness from Epoch AI fields.
+disclosure_open_vs_closed,4,1889,Disclosure completeness from Epoch AI fields.
+lmarena_duplicate_report,5,206,Data-quality finding or diagnostic.
+open_closed_gap_by_category,74,10987,Open-versus-closed arena frontier and catch-up lag.
+open_closed_gap_trend,3,1365,Open-versus-closed arena frontier and catch-up lag.
+open_weights_lag,229,69609,Open-versus-closed arena frontier and catch-up lag.
+open_weights_lag_summary,1,593,Open-versus-closed arena frontier and catch-up lag.
+price_distribution_by_weights,9,1514,Catalogue price structure and price-quality relationship.
+price_quality_frontier,100,23681,Catalogue price structure and price-quality relationship.
+price_quality_regression,2,1112,Catalogue price structure and price-quality relationship.
+price_spread_at_matched_quality,10,3254,Catalogue price structure and price-quality relationship.
+price_tier_impact,1,525,Catalogue price structure and price-quality relationship.
+refusals,8,2968,"Claims the pipeline declines to make, with the reason and what would unblock them."
+source_freshness,5,513,Observation horizon of each ingested source; the reference date is the minimum.
+sources,5,2178,"Source registry: what each source is used for, and its known limitations."
+swebench_frontier_history,134,13393,SWE-bench Verified historical frontier.
+swebench_scaffold_spread,2,527,SWE-bench Verified historical frontier.
+swebench_top_systems,20,4393,SWE-bench Verified historical frontier.
+usage_major_group_composition,44,3253,Observed Claude usage composition by occupation.
+usage_surface_contrast,1,604,Observed Claude usage composition by occupation.
+usage_surface_summary,6,1717,Observed Claude usage composition by occupation.
+usage_top_occupations,30,6296,Observed Claude usage composition by occupation.

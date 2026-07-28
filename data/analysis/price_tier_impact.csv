@@ -1,0 +1,2 @@
+models_listed,models_with_tiers,share_with_tiers,evaluation_prompt_tokens,models_with_tier_binding_at_evaluation_length,median_input_price_multiplier_when_binding,ci_low,ci_high,max_input_price_multiplier,estimator,interpretation
+321,44,0.137072,64000,5,2.0,1.666667,3.333333,3.333333,percentile_bootstrap_of_median,"Among listings whose price tier actually applies at 64,000 prompt tokens, the input price relative to the base rate. Reading only the base rate understates long-context cost by this factor for those models."
