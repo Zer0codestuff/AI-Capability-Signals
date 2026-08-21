@@ -305,8 +305,33 @@ def safe_float(value: Any) -> float | None:
     try:
         return float(text)
     except ValueError:
-        match = re.search(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?", text)
-        return float(match.group()) if match else None
+        # No regex rescue: extracting the first number from strings like
+        # "1.5B" or "~70%" silently corrupts orders of magnitude.  Unparsable
+        # values stay missing so downstream diagnostics can see the gap.
+        return None
+
+
+def model_key(value: Any) -> str:
+    """Source-independent model identifier used for cross-table dedup.
+
+    Strips provider prefixes ("openai/gpt-5", "OpenAI: GPT-5"), lowercases and
+    removes punctuation so the same model from Epoch and OpenRouter collapses
+    onto one key instead of duplicating release events.
+    """
+    text = clean_text(value).lower()
+    if ":" in text:
+        text = text.split(":", 1)[1]
+    if "/" in text:
+        prefix, rest = text.split("/", 1)
+        known_prefix = prefix in {
+            "ai21", "alibaba", "amazon", "anthropic", "cohere", "deepseek",
+            "deepseek-ai", "google", "meta", "meta-llama", "microsoft",
+            "minimax", "mistral", "mistralai", "moonshot", "moonshotai",
+            "nvidia", "openai", "perplexity", "qwen", "x-ai",
+        }
+        if known_prefix:
+            text = rest
+    return re.sub(r"[^a-z0-9]+", "", text)
 
 
 def token_price_per_million(value: Any) -> float | None:
@@ -960,7 +985,10 @@ def build_oracle_events(master: pd.DataFrame, openrouter: pd.DataFrame) -> pd.Da
         & (master_recent["date_dt"].dt.date <= pd.to_datetime(REFERENCE_DATE).date())
     ].copy()
     # Keep the appendix readable: use one row per family/model/date/source and favor timestamped OpenRouter rows for recent APIs.
-    events["event_key"] = events[family_col].fillna("") + "::" + events["canonical_model"].fillna("").map(slug) + "::" + events["release_date"].fillna("")
+    # model_key normalizes away provider prefixes so the same release arriving
+    # from Epoch ("GPT-5") and OpenRouter ("OpenAI: GPT-5") deduplicates instead
+    # of being counted twice in calendar statistics.
+    events["event_key"] = events[family_col].fillna("") + "::" + events["canonical_model"].fillna("").map(model_key) + "::" + events["release_date"].fillna("")
     events = events.sort_values(["release_precision", "source_dataset"], ascending=[False, False]).drop_duplicates("event_key")
     events = events.sort_values("date_dt")
     events["weekday"] = events["date_dt"].dt.day_name()
