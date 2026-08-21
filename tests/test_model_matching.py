@@ -77,6 +77,46 @@ class ModelMatchingTests(unittest.TestCase):
                 self.assertTrue(aliases)
                 self.assertIn(normalize_model_name(family), aliases)
 
+    def test_tier_tokens_do_not_collapse_distinct_models(self):
+        candidates = [
+            {"model_name": "o3", "family": "GPT", "sort_score": 90},
+            {"model_name": "o3-mini", "family": "GPT", "sort_score": 70},
+        ]
+        matcher = PreparedModelMatcher(candidates)
+        for query, expected in [("o3-mini", "o3-mini"), ("o3", "o3")]:
+            with self.subTest(query=query):
+                match = matcher.match(query, query, "GPT")
+                self.assertEqual(match.benchmark_model_name, expected)
+
+    def test_mini_variant_does_not_inherit_full_model_match(self):
+        candidates = [{"model_name": "GPT-4o", "family": "GPT", "sort_score": 95}]
+        match = find_best_model_match("GPT-4o-mini", "openai/gpt-4o-mini", "GPT", candidates)
+        # Coarse generation aliases may rank a fallback, but they must never
+        # pass as direct model-level evidence.
+        self.assertIn(match.confidence, {"alias_match", "family_only"})
+        self.assertFalse(match.direct_model_match)
+
+    def test_claude_generations_do_not_cross_match(self):
+        candidates = [
+            {"model_name": "Claude Sonnet 3.5", "family": "Claude", "sort_score": 60},
+            {"model_name": "Claude Opus 4", "family": "Claude", "sort_score": 85},
+        ]
+        match = find_best_model_match("Claude Sonnet 4", "anthropic/claude-sonnet-4", "Claude", candidates)
+        self.assertNotIn(match.confidence, {"exact", "normalized_exact", "alias_match"})
+
+    def test_overlap_prefers_strongest_candidate_not_first_listed(self):
+        candidates = [
+            {"model_name": "gpt-5.5-preview-old", "model_id": "", "family": "GPT", "sort_score": 10},
+            {"model_name": "gpt-5.5", "model_id": "", "family": "GPT", "sort_score": 99},
+        ]
+        match = find_best_model_match("OpenAI: GPT 5.5 Preview", "openai/gpt-5.5-preview", "GPT", candidates)
+        self.assertEqual(match.confidence, "normalized_exact")
+        self.assertEqual(match.benchmark_model_name, "gpt-5.5")
+
+    def test_newer_provider_prefixes_are_stripped(self):
+        self.assertEqual(normalize_model_name("mistralai/mistral-large"), normalize_model_name("mistral-large"))
+        self.assertEqual(normalize_model_name("deepseek-ai/deepseek-r1"), normalize_model_name("deepseek-r1"))
+
 
 if __name__ == "__main__":
     unittest.main()
