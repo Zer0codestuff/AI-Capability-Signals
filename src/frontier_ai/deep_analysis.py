@@ -105,6 +105,28 @@ SENSITIVITY_WEIGHTS = {
     },
 }
 
+# Leadership-scenario weights are DERIVED, not hand-typed vectors: each
+# scenario multiplies the documented baseline COMPONENT_WEIGHTS and the
+# multipliers interpolate log-linearly from the 2-year to the 10-year horizon.
+# This keeps every simulation weight traceable to the published baseline.
+LEADERSHIP_SCENARIO_MULTIPLIERS = {
+    "frontier_quality": {
+        "description": "Who is most likely to create the raw frontier-best model; baseline weights tilted toward raw capability and product surface.",
+        "early": {"performance_component": 1.45, "release_velocity_component": 1.05, "ecosystem_component": 0.65, "capability_surface_component": 1.15, "cost_efficiency_component": 0.35, "openness_component": 0.45},
+        "late": {"performance_component": 1.75, "release_velocity_component": 1.00, "ecosystem_component": 0.50, "capability_surface_component": 1.30, "cost_efficiency_component": 0.20, "openness_component": 0.35},
+    },
+    "balanced_lab_execution": {
+        "description": "Who can lead considering current quality, execution velocity, ecosystem, product surface and economics; near-baseline weights with mild late-horizon economics tilt.",
+        "early": {key: 1.0 for key in COMPONENT_WEIGHTS},
+        "late": {"performance_component": 0.95, "release_velocity_component": 0.95, "ecosystem_component": 1.10, "capability_surface_component": 1.00, "cost_efficiency_component": 1.15, "openness_component": 1.10},
+    },
+    "open_ecosystem_upside": {
+        "description": "Which family could win if open distribution and low cost compound; baseline weights tilted toward openness, cost efficiency and ecosystem pull.",
+        "early": {"performance_component": 0.70, "release_velocity_component": 0.90, "ecosystem_component": 1.35, "capability_surface_component": 0.85, "cost_efficiency_component": 1.70, "openness_component": 1.80},
+        "late": {"performance_component": 0.55, "release_velocity_component": 0.80, "ecosystem_component": 1.60, "capability_surface_component": 0.70, "cost_efficiency_component": 2.10, "openness_component": 2.30},
+    },
+}
+
 DIGITAL_TASK_WORDS = {
     "language": ["write", "draft", "document", "report", "summar", "translate", "edit", "email", "communicat"],
     "code": ["code", "software", "program", "debug", "database", "script", "algorithm", "application"],
@@ -337,6 +359,24 @@ QUALITY_ADJUSTED_COST_PRIORS = {
     },
 }
 
+# Explicit authored assumptions for the share of US occupation tasks materially
+# touched by AI at each horizon.  A lookup table replaces the previous
+# pseudo-formula: these are scenario inputs to argue with, not estimates
+# derived from a transition model.  Values are capped by observed p90
+# substitution pressure before publication.
+TASK_CONTACT_ASSUMPTIONS = {
+    "conservative": {2: 0.05, 5: 0.14, 10: 0.26},
+    "base": {2: 0.09, 5: 0.22, 10: 0.40},
+    "aggressive": {2: 0.14, 5: 0.34, 10: 0.62},
+}
+
+# Documented bounds for domain velocity transforms.  The observed (signed)
+# slope stays visible in annual_frontier_point_gain_observed; the used gain is
+# a bounded, non-negative planning input.
+ANNUAL_GAIN_CAP = 12.0
+GAP_CLOSURE_RATE_MIN = 0.035
+GAP_CLOSURE_RATE_MAX = 0.72
+
 BENCHMARK_DOMAIN_KEYWORDS = [
     ("medicine", ["medqa", "medmcqa", "pubmedqa", "mmlu_anatomy", "mmlu_clinical", "medical", "medicine", "biology", "genetics"]),
     ("software_engineering", ["swebench", "swe-bench", "livecodebench", "lcb", "humaneval", "mbpp", "code", "coding", "webdev"]),
@@ -440,22 +480,51 @@ def numeric(series: pd.Series) -> pd.Series:
     return pd.to_numeric(series, errors="coerce")
 
 
-def minmax(series: pd.Series, invert: bool = False, log: bool = False, missing_value: float = 50.0) -> pd.Series:
+def minmax(series: pd.Series, invert: bool = False, log: bool = False, missing_value: float = 50.0, fill_missing: bool = True) -> pd.Series:
     values = numeric(series).replace([np.inf, -np.inf], np.nan)
     if log:
         values = np.log1p(values.clip(lower=0))
     lo = values.min(skipna=True)
     hi = values.max(skipna=True)
     if not np.isfinite(lo) or not np.isfinite(hi) or math.isclose(float(lo), float(hi)):
-        out = pd.Series(50.0, index=series.index)
+        out = pd.Series(np.nan if not fill_missing else missing_value, index=series.index)
     else:
         out = (values - lo) / (hi - lo) * 100
     if invert:
         out = 100 - out
-    # Missing public evidence is not evidence of zero capability.  Use a neutral
-    # value so sparse families are not mechanically pushed to the bottom; the
-    # separate coverage diagnostics expose the uncertainty instead.
-    return out.fillna(missing_value).clip(0, 100)
+    # Missing public evidence is not evidence of zero capability.  By default a
+    # neutral value keeps sparse families from being mechanically pushed to the
+    # bottom; composite components instead pass fill_missing=False and
+    # renormalize weights over available inputs (see weighted_component).
+    if fill_missing:
+        out = out.fillna(missing_value)
+    return out.clip(0, 100)
+
+
+def weighted_component(scores: pd.DataFrame, specs: list[tuple[str, float, dict[str, Any]]]) -> pd.Series:
+    """Weighted mean over the inputs each row actually has.
+
+    Instead of injecting a fake neutral 50 for missing sub-inputs (which lets
+    data-less families beat families with real low values), each row's weights
+    are renormalized across its available inputs.  Rows with no input at all
+    fall back to the neutral 50 and stay visible in coverage diagnostics.
+    """
+    total = pd.Series(0.0, index=scores.index)
+    weight_sum = pd.Series(0.0, index=scores.index)
+    for col, weight, kwargs in specs:
+        if col not in scores.columns:
+            continue
+        raw = scores[col]
+        available = numeric(raw).notna() & np.isfinite(numeric(raw).fillna(np.nan))
+        scaled = minmax(raw, fill_missing=False, **kwargs)
+        # An input that exists but cannot be normalized (degenerate scale with
+        # one distinct value) contributes the neutral midpoint, never zero.
+        scaled = scaled.fillna(50.0)
+        contribution = weight * available.astype(float)
+        total = total + scaled * contribution
+        weight_sum = weight_sum + contribution
+    out = total / weight_sum.replace(0, np.nan)
+    return out.fillna(50.0).clip(0, 100)
 
 
 def soc_base(value: Any) -> str:
@@ -659,28 +728,48 @@ def frontier_family_from_model(name: Any = "", model_id: Any = "", vendor: Any =
 
 def apply_family_score_components(scores: pd.DataFrame) -> pd.DataFrame:
     scores = scores.copy()
-    scores["performance_component"] = (
-        minmax(scores.get("lmarena_best", pd.Series(index=scores.index))) * 0.45
-        + minmax(scores.get("swebench_best", pd.Series(index=scores.index))) * 0.30
-        + minmax(scores.get("openllm_top_mean", pd.Series(index=scores.index))) * 0.25
+    # Each component renormalizes its sub-weights over the inputs a family
+    # actually has.  This removes two biases of the previous fill-with-50
+    # approach: data-less families no longer score 50 by default on inputs they
+    # never had, and closed vendors are no longer handed a fake 50 on the
+    # open-only Open LLM Leaderboard sub-signal.
+    scores["performance_component"] = weighted_component(
+        scores,
+        [
+            ("lmarena_best", 0.45, {}),
+            ("swebench_best", 0.30, {}),
+            ("openllm_top_mean", 0.25, {}),
+        ],
     )
-    scores["release_velocity_component"] = (
-        minmax(scores.get("recent_api_releases", pd.Series(index=scores.index))) * 0.55
-        + minmax(scores.get("epoch_recent_releases", pd.Series(index=scores.index))) * 0.45
+    scores["release_velocity_component"] = weighted_component(
+        scores,
+        [
+            ("recent_api_releases", 0.55, {}),
+            ("epoch_recent_releases", 0.45, {}),
+        ],
     )
-    scores["ecosystem_component"] = (
-        minmax(scores.get("hf_downloads", pd.Series(index=scores.index)), log=True) * 0.40
-        + minmax(scores.get("github_model_mentions", pd.Series(index=scores.index)), log=True) * 0.25
-        + minmax(scores.get("openalex_paper_mentions", pd.Series(index=scores.index)), log=True) * 0.25
-        + minmax(scores.get("hf_likes", pd.Series(index=scores.index)), log=True) * 0.10
+    scores["ecosystem_component"] = weighted_component(
+        scores,
+        [
+            ("hf_downloads", 0.40, {"log": True}),
+            ("github_model_mentions", 0.25, {"log": True}),
+            ("openalex_paper_mentions", 0.25, {"log": True}),
+            ("hf_likes", 0.10, {"log": True}),
+        ],
     )
-    scores["capability_surface_component"] = (
-        minmax(scores.get("context_window_max", pd.Series(index=scores.index)), log=True) * 0.35
-        + minmax(scores.get("max_output_tokens", pd.Series(index=scores.index)), log=True) * 0.20
-        + minmax(scores.get("multimodal_models", pd.Series(index=scores.index))) * 0.20
-        + minmax(scores.get("training_compute_max", pd.Series(index=scores.index)), log=True) * 0.25
+    scores["capability_surface_component"] = weighted_component(
+        scores,
+        [
+            ("context_window_max", 0.35, {"log": True}),
+            ("max_output_tokens", 0.20, {"log": True}),
+            ("multimodal_models", 0.20, {}),
+            ("training_compute_max", 0.25, {"log": True}),
+        ],
     )
-    price = scores.get("output_price_min", pd.Series(index=scores.index)).replace(0, np.nan)
+    if "output_price_min" in scores.columns:
+        price = scores["output_price_min"].replace(0, np.nan)
+    else:
+        price = pd.Series(np.nan, index=scores.index)
     scores["cost_efficiency_component"] = minmax(price, invert=True, log=True)
     scores["openness_component"] = (
         scores.get("hf_open_weight_share", pd.Series(index=scores.index)).fillna(0) * 55
@@ -746,16 +835,28 @@ def build_company_frontier_scores() -> tuple[pd.DataFrame, pd.DataFrame]:
     arena["family"] = [family_from_text(n, o) for n, o in zip(arena.get("model_name", ""), arena.get("organization", ""))]
     arena["access_class"] = [access_from_text(n, o, lic) for n, o, lic in zip(arena.get("model_name", ""), arena.get("organization", ""), arena.get("license", ""))]
     arena["rating"] = numeric(arena["rating"])
-    arena_group = arena.groupby("family", dropna=False).agg(
-        lmarena_best=("rating", "max"),
-        lmarena_median_top=("rating", lambda s: s.dropna().sort_values(ascending=False).head(20).median()),
-        lmarena_votes=("vote_count", "sum"),
-        lmarena_models=("model_name", "nunique"),
-        lmarena_open_best=("rating", lambda s: s[arena.loc[s.index, "access_class"].isin(["open_weight", "likely_open_weight"])].max()),
-        lmarena_closed_best=("rating", lambda s: s[arena.loc[s.index, "access_class"].eq("closed_or_api")].max()),
+    # The full table stacks repeated leaderboard snapshots whose Elo scales
+    # drift over time.  Normalize within each (category, snapshot) so a model's
+    # best is its strongest percentile inside a single comparable board, and
+    # deduplicate vote counts per (category, model) before summing so snapshot
+    # frequency cannot masquerade as extra votes.
+    arena["rating_norm"] = (
+        arena.groupby(["category", "leaderboard_publish_date"], dropna=False)["rating"].rank(method="average", pct=True) * 100
     )
+    arena["vote_best"] = arena.groupby(["category", "model_name"], dropna=False)["vote_count"].transform("max")
+    arena_votes = arena.drop_duplicates(["family", "category", "model_name"], keep="first")
+    arena_group = arena.groupby("family", dropna=False).agg(
+        lmarena_best=("rating_norm", "max"),
+        lmarena_median_top=("rating_norm", lambda s: s.dropna().sort_values(ascending=False).head(20).median()),
+        lmarena_models=("model_name", "nunique"),
+        lmarena_open_best=("rating_norm", lambda s: s[arena.loc[s.index, "access_class"].isin(["open_weight", "likely_open_weight"])].max()),
+        lmarena_closed_best=("rating_norm", lambda s: s[arena.loc[s.index, "access_class"].eq("closed_or_api")].max()),
+    )
+    vote_sums = arena_votes.groupby("family", dropna=False)["vote_best"].sum().rename("lmarena_votes")
     for family, row in arena_group.iterrows():
         rows.setdefault(family, {"model_family": family, "family": family}).update(row.to_dict())
+        if family in vote_sums.index:
+            rows[family]["lmarena_votes"] = float(vote_sums.loc[family])
 
     openrouter["release_date_dt"] = pd.to_datetime(openrouter["release_date"], errors="coerce")
     recent_cutoff = pd.Timestamp(REFERENCE_DATE) - pd.Timedelta(days=240)
@@ -1110,15 +1211,15 @@ def build_capability_forecasts(company_scores: pd.DataFrame, job_scores: pd.Data
     price_work = openrouter.dropna(subset=["release_year", "output_usd_per_1m"]).copy()
     price_work = price_work[price_work["release_year"].le(pd.Timestamp(REFERENCE_DATE).year)]
     price_work = price_work[price_work["output_usd_per_1m"] > 0]
+    price_yearly = pd.DataFrame()
+    price_slope = np.nan
     if len(price_work) >= 8:
         price_yearly = price_work.groupby("release_year")["output_usd_per_1m"].quantile(0.20).reset_index()
         if len(price_yearly) >= 2:
             price_slope = float(np.polyfit(price_yearly["release_year"], np.log10(price_yearly["output_usd_per_1m"]), 1)[0])
-        else:
-            price_slope = -0.20
-    else:
-        price_yearly = pd.DataFrame({"release_year": [2024, 2025, 2026], "output_usd_per_1m": [12, 4, 1.5]})
-        price_slope = -0.35
+    # No fabricated fallback series: when the catalog cannot support a cohort
+    # fit, the diagnostic records insufficient data and forward paths rely
+    # solely on the explicit scenario slopes below.
     # OpenRouter is a current catalog. Grouping today's prices by model release
     # year is cross-sectional survivor/cohort evidence, not a historical price
     # series. Keep the slope as a diagnostic only and use explicit scenario
@@ -1127,18 +1228,26 @@ def build_capability_forecasts(company_scores: pd.DataFrame, job_scores: pd.Data
 
     lmarena = lmarena.copy()
     lmarena["access_class"] = [access_from_text(n, o, lic) for n, o, lic in zip(lmarena.get("model_name", ""), lmarena.get("organization", ""), lmarena.get("license", ""))]
+    # Measure the open-vs-closed gap on the most recent snapshot only; mixing
+    # historical boards would compare ratings on drifted Elo scales.
+    dated_arena = lmarena.dropna(subset=["leaderboard_publish_date"])
+    if not dated_arena.empty:
+        latest_date = dated_arena["leaderboard_publish_date"].max()
+        lmarena = lmarena[lmarena["leaderboard_publish_date"].eq(latest_date)]
     best_open = numeric(lmarena.loc[lmarena["access_class"].isin(["open_weight", "likely_open_weight"]), "rating"]).max()
     best_closed = numeric(lmarena.loc[lmarena["access_class"].eq("closed_or_api"), "rating"]).max()
     open_gap = float(best_closed - best_open) if np.isfinite(best_open) and np.isfinite(best_closed) else 45.0
 
-    top_score = company_scores.sort_values("frontier_momentum_heuristic_index", ascending=False).head(1)["frontier_momentum_heuristic_index"].iloc[0]
-    median_exposure = float(job_scores["capability_exposure_index"].median() / 100)
+    # Concentration is measured, not simulated: a Herfindahl index over the
+    # composite-index shares of the current snapshot.  No horizon growth term.
+    composite = numeric(company_scores["frontier_momentum_heuristic_index"]).clip(lower=0)
+    signal_concentration = float((composite / composite.sum()).pow(2).sum()) if float(composite.sum()) > 0 else np.nan
     p90_substitution = float(job_scores["substitution_pressure_index"].quantile(0.90) / 100)
 
     scenarios = {
-        "conservative": {"compute": 0.55, "context": 0.45, "price_slope": -0.08, "adoption": 0.55, "gap": 0.45, "compute_cap": 80, "context_cap": 16},
-        "base": {"compute": 1.00, "context": 1.00, "price_slope": -0.18, "adoption": 1.00, "gap": 1.00, "compute_cap": 400, "context_cap": 64},
-        "aggressive": {"compute": 1.45, "context": 1.50, "price_slope": -0.30, "adoption": 1.55, "gap": 1.35, "compute_cap": 1200, "context_cap": 128},
+        "conservative": {"compute": 0.55, "context": 0.45, "price_slope": -0.08, "gap": 0.45, "compute_cap": 80, "context_cap": 16},
+        "base": {"compute": 1.00, "context": 1.00, "price_slope": -0.18, "gap": 1.00, "compute_cap": 400, "context_cap": 64},
+        "aggressive": {"compute": 1.45, "context": 1.50, "price_slope": -0.30, "gap": 1.35, "compute_cap": 1200, "context_cap": 128},
     }
     rows = []
     diagnostics = [
@@ -1169,7 +1278,7 @@ def build_capability_forecasts(company_scores: pd.DataFrame, job_scores: pd.Data
             "raw_log10_slope_per_year": price_slope,
             "observed_log10_slope_per_year": np.nan,
             "scenario_assumed_log10_slope_per_year": price_assumed_slope,
-            "fallback_or_cap_policy": "Current catalog grouped by release cohort is not a historical price series; forward paths use explicit -0.08/-0.18/-0.30 log10 scenario assumptions. Price factor floors at 0.05.",
+            "fallback_or_cap_policy": "Current catalog grouped by release cohort is not a historical price series; no fabricated fallback series is used when the fit window is too short. Forward paths use explicit -0.08/-0.18/-0.30 log10 scenario assumptions regardless of the diagnostic slope. Price factor floors at 0.05.",
         },
     ]
     for scenario, mult in scenarios.items():
@@ -1181,7 +1290,8 @@ def build_capability_forecasts(company_scores: pd.DataFrame, job_scores: pd.Data
             scenario_price_slope = float(mult["price_slope"])
             price_factor = max(0.05, 10 ** (scenario_price_slope * horizon))
             open_gap_remaining = max(0, open_gap * (1 - min(0.92, 0.12 * horizon * mult["gap"])))
-            labor_tasks = min(0.88, (median_exposure * 0.24 + p90_substitution * 0.18) * horizon ** 0.62 * mult["adoption"])
+            contact_assumption = TASK_CONTACT_ASSUMPTIONS[scenario][horizon]
+            labor_tasks = min(contact_assumption, p90_substitution) if np.isfinite(p90_substitution) else contact_assumption
             rows.extend(
                 [
                     {
@@ -1227,16 +1337,16 @@ def build_capability_forecasts(company_scores: pd.DataFrame, job_scores: pd.Data
                         "metric": "share_of_us_occupation_tasks_materially_touched",
                         "value": round(labor_tasks, 3),
                         "unit": "share of task-weighted occupation activity",
-                        "method": "Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon",
+                        "method": f"Explicit scenario task-contact assumption ({contact_assumption:.2f} at {horizon}y), capped by observed p90 substitution pressure; not a transition-model estimate.",
                     },
                     {
                         "scenario": scenario,
                         "horizon_years": horizon,
                         "target_year": 2026 + horizon,
-                        "metric": "leading_lab_concentration",
-                        "value": round(min(0.95, top_score / 100 + 0.03 * horizon * (mult["compute"] - 0.7)), 3),
-                        "unit": "index, 1 means winner-take-most frontier",
-                        "method": "company momentum concentration from benchmark, API, ecosystem and release signals",
+                        "metric": "frontier_signal_concentration_hhi",
+                        "value": round(signal_concentration, 3) if np.isfinite(signal_concentration) else np.nan,
+                        "unit": "Herfindahl index of composite-signal shares (0-1)",
+                        "method": "Sum of squared frontier-momentum composite shares across families in this snapshot; scale-free concentration diagnostic with no horizon dynamics.",
                     },
                 ]
             )
@@ -1825,11 +1935,11 @@ def build_domain_benchmark_analysis(overwrite_sources: bool = False) -> tuple[pd
         )
     velocity = pd.DataFrame(velocity_rows)
     if not velocity.empty:
-        velocity["annual_frontier_point_gain_used"] = numeric(velocity["annual_frontier_point_gain_observed"]).clip(lower=0.0, upper=12.0).fillna(0.0).round(3)
+        velocity["annual_frontier_point_gain_used"] = numeric(velocity["annual_frontier_point_gain_observed"]).clip(lower=0.0, upper=ANNUAL_GAIN_CAP).fillna(0.0).round(3)
         velocity["forecast_enabled"] = velocity["longitudinal_benchmark_count"].ge(1) & numeric(velocity["annual_frontier_point_gain_observed"]).gt(0)
         velocity["annual_gap_closure_rate_base"] = (
             velocity["annual_frontier_point_gain_used"] / (100 - numeric(velocity["current_frontier_score"]).clip(upper=98.5)).clip(lower=8)
-        ).clip(0.035, 0.72).round(4)
+        ).clip(GAP_CLOSURE_RATE_MIN, GAP_CLOSURE_RATE_MAX).round(4)
         velocity["forecast_confidence"] = np.select(
             [
                 velocity["coverage_label"].eq("broad") & velocity["longitudinal_benchmark_count"].ge(2),
@@ -1918,6 +2028,9 @@ def build_domain_benchmark_analysis(overwrite_sources: bool = False) -> tuple[pd
 
 
 def build_historical_analogy_index() -> pd.DataFrame:
+    # Every dimension score below is an author-assigned subjective prior, not a
+    # measured quantity.  The table is published with that provenance attached
+    # so the similarity output can never be mistaken for observed data.
     waves = pd.DataFrame(
         [
             {"wave": "spreadsheets", "period": "1979-1995", "speed": 78, "cost_decline": 62, "generality": 68, "labor_scope": 74, "capital_intensity": 28, "network_effects": 46, "regulatory_friction": 18},
@@ -1935,6 +2048,9 @@ def build_historical_analogy_index() -> pd.DataFrame:
     matrix = waves[dims].to_numpy(dtype=float)
     similarity = (matrix @ ai) / (np.linalg.norm(matrix, axis=1) * np.linalg.norm(ai))
     waves["ai_similarity_score"] = (similarity * 100).round(2)
+    waves["evidence_level"] = "speculative"
+    waves["input_basis"] = "author_assigned_subjective_prior"
+    waves["ai_profile_basis"] = "author_assigned_subjective_prior (frontier-AI vector)"
     waves["interpretation"] = [
         "Best analogy for occupational task rebundling and sudden knowledge-worker productivity jumps.",
         "Best analogy for general-purpose diffusion, platform creation and strange second-order labor demand.",
@@ -1955,6 +2071,15 @@ def build_open_closed_gap_by_category() -> tuple[pd.DataFrame, pd.DataFrame]:
     lmarena["access_class"] = [access_from_text(n, o, lic) for n, o, lic in zip(lmarena.get("model_name", ""), lmarena.get("organization", ""), lmarena.get("license", ""))]
     lmarena["access_bucket"] = np.where(lmarena["access_class"].isin(["open_weight", "likely_open_weight"]), "open_weight", "closed_or_api")
     lmarena["rating"] = numeric(lmarena["rating"])
+    # Compare open vs closed inside each category's most recent snapshot only.
+    # Mixing every historical snapshot would let stale boards and repeated
+    # listings decide the gap.
+    dated = lmarena.dropna(subset=["leaderboard_publish_date"])
+    latest_snapshots = dated.sort_values("leaderboard_publish_date").groupby("category", dropna=False).tail(1)[
+        ["category", "leaderboard_publish_date"]
+    ]
+    if not latest_snapshots.empty:
+        lmarena = lmarena.merge(latest_snapshots, on=["category", "leaderboard_publish_date"], how="inner")
     grouped = lmarena.groupby(["category", "access_bucket"], as_index=False).agg(
         best_rating=("rating", "max"),
         top10_median_rating=("rating", lambda s: s.dropna().sort_values(ascending=False).head(10).median()),
@@ -1969,8 +2094,8 @@ def build_open_closed_gap_by_category() -> tuple[pd.DataFrame, pd.DataFrame]:
     wide["open_closed_gap_pct_of_closed"] = safe_divide(wide["open_closed_best_gap"], wide["closed_or_api"]).round(4)
     wide["comparison_note"] = np.where(
         wide[["closed_or_api", "open_weight"]].notna().all(axis=1),
-        "Comparable open-weight and closed/API rows observed in selected snapshot.",
-        "No comparable open-weight or closed/API row in selected snapshot.",
+        "Open and closed best ratings compared within the category's most recent leaderboard snapshot.",
+        "No comparable open-weight or closed/API row in the category's most recent snapshot.",
     )
     family_category = lmarena.sort_values("rating", ascending=False).groupby(["category", "model_family", "access_bucket"], as_index=False).head(1)
     family_category = family_category[
@@ -2480,6 +2605,7 @@ def build_llm_cost_task_analysis(
                 "average_effective_tokens": round(weighted_tokens, 0),
                 "modeled_average_message_cost_usd": round(weighted_cost, 6),
                 "message_cost_index_2023_100": np.nan,
+                "assumption_basis": "authored workload-mix shares over listed-price cohorts (survivor-biased catalog)",
                 "method": "Weighted scenario mix of simple chat, knowledge work, long-context analysis and agentic workflow runs.",
             }
         )
@@ -3081,36 +3207,29 @@ def build_release_cadence() -> tuple[pd.DataFrame, pd.DataFrame]:
     return write_table(family_cadence, "release_cadence_by_family"), write_table(vendor_cadence, "release_cadence_by_vendor")
 
 
+def scenario_weight_vector(spec: dict[str, Any], horizon: int) -> np.ndarray:
+    """Interpolate a scenario's baseline multipliers at the given horizon."""
+    t = (horizon - 2) / 8.0
+    vector = []
+    for component, base_weight in COMPONENT_WEIGHTS.items():
+        early_m = float(spec["early"].get(component, 1.0))
+        late_m = float(spec["late"].get(component, 1.0))
+        multiplier = math.exp(math.log(early_m) * (1 - t) + math.log(late_m) * t)
+        vector.append(base_weight * multiplier)
+    array = np.array(vector, dtype=float)
+    return array / array.sum()
+
+
 def build_company_leadership_simulation(company_scores: pd.DataFrame, draws: int = 6000) -> pd.DataFrame:
     rng = np.random.default_rng(20260516)
     components = list(COMPONENT_WEIGHTS)
     base = company_scores[["model_family", *components]].copy().fillna(0)
-    scenarios = {
-        "frontier_quality": {
-            2: np.array([0.46, 0.22, 0.07, 0.20, 0.02, 0.03]),
-            5: np.array([0.42, 0.20, 0.09, 0.21, 0.03, 0.05]),
-            10: np.array([0.38, 0.18, 0.11, 0.22, 0.04, 0.07]),
-            "description": "Who is most likely to create the raw frontier-best model; performance, release cadence and capability surface dominate.",
-        },
-        "balanced_lab_execution": {
-            2: np.array([0.38, 0.22, 0.13, 0.18, 0.04, 0.05]),
-            5: np.array([0.34, 0.20, 0.15, 0.18, 0.06, 0.07]),
-            10: np.array([0.30, 0.18, 0.17, 0.18, 0.07, 0.10]),
-            "description": "Who can lead considering current quality, execution velocity, ecosystem, product surface and economics.",
-        },
-        "open_ecosystem_upside": {
-            2: np.array([0.32, 0.18, 0.18, 0.15, 0.08, 0.09]),
-            5: np.array([0.28, 0.16, 0.21, 0.15, 0.09, 0.11]),
-            10: np.array([0.25, 0.14, 0.23, 0.14, 0.10, 0.14]),
-            "description": "Which family could win if open distribution and low cost compound; this is not the same as raw frontier-best.",
-        },
-    }
     rows = []
     raw_scores = base[components].to_numpy(dtype=float)
-    for scenario, spec in scenarios.items():
+    for scenario, spec in LEADERSHIP_SCENARIO_MULTIPLIERS.items():
         description = str(spec["description"])
         for horizon in [2, 5, 10]:
-            weights = spec[horizon]
+            weights = scenario_weight_vector(spec, horizon)
             alpha = np.maximum(weights * 140, 2.0)
             wins = defaultdict(int)
             score_store = defaultdict(list)
@@ -3137,7 +3256,7 @@ def build_company_leadership_simulation(company_scores: pd.DataFrame, draws: int
                         "simulated_score_p10": round(float(np.quantile(values, 0.10)), 2),
                         "simulated_score_p90": round(float(np.quantile(values, 0.90)), 2),
                         "draws": draws,
-                        "method": "Dirichlet component-weight sensitivity with scenario-specific weights and evidence noise; no arbitrary horizon bonus.",
+                        "method": "Dirichlet around scenario weights derived from documented multipliers over the published baseline COMPONENT_WEIGHTS; evidence-scaled noise; not a calibrated probability model.",
                     }
                 )
     out = pd.DataFrame(rows).sort_values(["scenario", "horizon_years", "simulation_win_share"], ascending=[True, True, False])
@@ -3145,10 +3264,22 @@ def build_company_leadership_simulation(company_scores: pd.DataFrame, draws: int
 
 
 def build_leadership_model_audit(company_scores: pd.DataFrame, probabilities: pd.DataFrame) -> pd.DataFrame:
-    component_cols = list(COMPONENT_WEIGHTS)
+    scored = company_scores.copy()
+    # Component ranks feed the audit notes so commentary is derived from data.
+    for col, rank_col in [
+        ("performance_component", "performance_rank"),
+        ("release_velocity_component", "release_velocity_rank"),
+        ("ecosystem_component", "ecosystem_rank"),
+        ("cost_efficiency_component", "cost_efficiency_rank"),
+        ("openness_component", "openness_rank"),
+    ]:
+        scored[rank_col] = numeric(scored[col]).rank(ascending=False, method="min")
+    scored["family_total"] = len(scored)
+    # Audit the currently strongest families instead of a hardcoded lab list.
+    audited_families = scored.sort_values("rank")["model_family"].head(8).tolist()
     rows = []
-    for family in ["GPT", "Qwen", "Claude", "Gemini", "Mistral", "DeepSeek", "Llama", "Grok"]:
-        match = company_scores[company_scores["model_family"].eq(family)]
+    for family in audited_families:
+        match = scored[scored["model_family"].eq(family)]
         if match.empty:
             continue
         row = match.iloc[0]
@@ -3176,18 +3307,40 @@ def build_leadership_model_audit(company_scores: pd.DataFrame, probabilities: pd
 
 
 def leadership_audit_note(row: pd.Series) -> str:
-    family = row.get("model_family")
-    if family == "Mistral":
-        return "Strong openness/cost, but current performance and release-velocity signals are below GPT/Qwen/Claude/Gemini; should not be called raw frontier leader from this dataset."
-    if family == "Qwen":
-        return "Strong open ecosystem and good performance; credible upside, especially under open-distribution scenarios."
-    if family == "GPT":
-        return "Strongest current composite and release velocity; remains top frontier-quality prior in this dataset."
-    if family == "Claude":
-        return "Strong benchmark/coding signal but lower release breadth and ecosystem pull in this snapshot."
-    if family == "Gemini":
-        return "Strong benchmark breadth and ecosystem signal; weaker openness/cost signal."
-    return "Interpret with caution; public signals are incomplete and component-dependent."
+    # Notes are derived from this snapshot's component ranks, never hand-written
+    # per family, so the narrative cannot silently outlive the data.
+    parts = []
+
+    def rank_of(col: str) -> float:
+        value = row.get(col)
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return np.nan
+
+    perf = rank_of("performance_rank")
+    openness = rank_of("openness_rank")
+    cost = rank_of("cost_efficiency_rank")
+    velocity = rank_of("release_velocity_rank")
+    families = rank_of("family_total") or np.nan
+
+    if np.isfinite(perf):
+        parts.append(f"performance signal ranked {int(perf)} of {int(families)}" if np.isfinite(families) else f"performance signal ranked {int(perf)}")
+        if perf == 1:
+            parts.append("strongest current benchmark/performance component in this snapshot")
+    if np.isfinite(velocity):
+        if velocity <= 2:
+            parts.append("top release-velocity signal")
+        elif velocity >= max(3.0, (families or 0) - 1):
+            parts.append("release-velocity signal near the bottom of the panel")
+    if np.isfinite(openness) and openness <= 2:
+        parts.append("leading openness/ecosystem profile")
+    if np.isfinite(cost) and cost <= 2:
+        parts.append("strong cost-efficiency signal")
+    if not parts:
+        return "Interpret with caution; public signals are incomplete and component-dependent."
+    parts.append("derived from this snapshot's component ranks")
+    return "; ".join(parts) + "."
 
 
 def simple_kmeans(matrix: np.ndarray, k: int, iterations: int = 80) -> tuple[np.ndarray, np.ndarray]:
@@ -3264,7 +3417,13 @@ def build_labor_deep_dive(job_scores: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
     if "bls_employment" in work.columns:
         counts = work.groupby("job_family")["title"].transform("count").replace(0, np.nan)
         work["allocated_bls_employment"] = numeric(work["bls_employment"]) / counts
-    work["labor_weight"] = numeric(work["allocated_bls_employment"]).fillna(numeric(work["job_forecast"])).fillna(1).clip(lower=1)
+    # Statistical-audit contract: job-growth percentages are forecasts, never
+    # population weights.  Rows without allocated employment fall back to a
+    # neutral unit weight and carry an explicit provenance label instead of
+    # silently borrowing a growth rate as if it were headcount.
+    allocated = numeric(work["allocated_bls_employment"])
+    work["labor_weight"] = allocated.fillna(1.0).clip(lower=1.0)
+    work["labor_weight_provenance"] = np.where(allocated.notna(), "allocated_employment", "neutral_unit_weight")
     summary_rows = []
     for group_col in ["job_family", "dominant_outcome", "risk_label"]:
         grouped = work.groupby(group_col, dropna=False)
@@ -3304,6 +3463,9 @@ def build_labor_deep_dive(job_scores: pd.DataFrame) -> tuple[pd.DataFrame, pd.Da
     assignments = work[["occ_code", "title", "job_family", "labor_cluster_id", "dominant_outcome"]].merge(
         cluster_profiles[["labor_cluster_id", "cluster_label"]], on="labor_cluster_id", how="left"
     )
+    # Persist the weight provenance alongside the scores so weighted summaries
+    # stay auditable from the published CSV alone.
+    write_table(work, "job_exposure_scores")
     return (
         write_table(cluster_profiles, "labor_cluster_profiles"),
         write_table(market_summary, "labor_market_exposure_summary"),
@@ -3691,7 +3853,7 @@ def plot_analogy(analogies: pd.DataFrame) -> None:
     ax.set_title("Historical Technology Wave Similarity to Frontier AI")
     ax.set_xlabel("Cosine similarity index")
     ax.grid(axis="x", alpha=0.25)
-    add_note(ax, "This is a structured analogy index, not evidence of destiny. It frames where AI resembles prior technology waves and where it differs.")
+    add_note(ax, "Speculative analogy index built from author-assigned subjective priors, not measured data. It frames where AI may resemble prior waves; treat every number as an opinion made inspectable.")
     soften_axes(ax)
     finish_figure(fig, "historical_analogy_index.png")
 
@@ -4417,7 +4579,7 @@ def build_dashboard_key_findings(
             str(fast_domain["domain_label"]),
             f"{format_number(fast_domain['annual_frontier_point_gain_used'])} points/year used",
             "The domain panel normalizes coding, medicine, math, legal, finance, vision, search/document and agentic benchmark scores into one auditable long table before forecasting.",
-            "observed" if fast_domain["slope_source"] == "observed_domain_slope" else "scenario",
+            "observed" if fast_domain["slope_source"] == "median_within_benchmark_slope" else "scenario",
             "domain_improvement_velocity.csv",
             2,
         )
@@ -4924,7 +5086,7 @@ Reviewers often reason in terms of companies, but model families remain the clea
 
 ## Who Builds The Next Best Model?
 
-This table is not a prediction market. It is a Monte Carlo stress test over the scoring components: benchmark performance, release velocity, ecosystem pull, capability surface, cost and openness. `simulation_win_share` is the share of simulation draws won by each family, not a calibrated real-world probability. The corrected version separates **frontier-quality leadership** from **open-ecosystem upside**. The former asks who is most likely to make the raw best model; the latter asks who benefits if distribution and low cost matter more.
+This table is not a prediction market. It is a Monte Carlo stress test over the scoring components: benchmark performance, release velocity, ecosystem pull, capability surface, cost and openness. Scenario weights are derived from the published baseline weights through documented multipliers (see `LEADERSHIP_SCENARIO_MULTIPLIERS` in the source), so no weight in the simulation is a hand-typed vector. `simulation_win_share` is the share of simulation draws won by each family, not a calibrated real-world probability. The corrected version separates **frontier-quality leadership** from **open-ecosystem upside**. The former asks who is most likely to make the raw best model; the latter asks who benefits if distribution and low cost matter more.
 
 2-year simulated leaders:
 
@@ -5106,7 +5268,7 @@ Vendor cadence:
 
 ## Historical Analogy
 
-AI looks less like a single prior wave and more like an uncomfortable hybrid: spreadsheet-style task rebundling, internet-style diffusion, cloud-style API economics, and electricity-style long-run production redesign.
+AI looks less like a single prior wave and more like an uncomfortable hybrid: spreadsheet-style task rebundling, internet-style diffusion, cloud-style API economics, and electricity-style long-run production redesign. Every dimension score in this table is an author-assigned subjective prior (`input_basis=author_assigned_subjective_prior`), published for transparency rather than as evidence; the similarity score inherits that status.
 
 {markdown_table(analogies, ['wave', 'period', 'ai_similarity_score', 'interpretation'], 8)}
 
