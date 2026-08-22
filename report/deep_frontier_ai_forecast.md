@@ -1,6 +1,6 @@
 # Deep Frontier AI Analysis
 
-Reference date: **2026-05-15**. Generated at: **2026-07-12T19:42:51+00:00**.
+Reference date: **2026-05-15**. Generated at: **2026-08-21T11:07:27+00:00**.
 
 This report is deliberately data-heavy. It uses the local rich frontier-model dataset, the public Anthropic Economic Index release files for occupation exposure, and a new domain benchmark layer covering coding, medicine, terminal agents, finance, legal reasoning, math, science/reasoning, language, vision and search/document work. The goal is not to claim precision about the future; it is to make the assumptions inspectable enough that the forecast can be argued with.
 
@@ -10,15 +10,15 @@ This opening map is the fast path through the analysis. It turns the long report
 
 | section         | question                                                         | headline                                           | metric                        | evidence_level   | primary_artifact                        |
 |:----------------|:-----------------------------------------------------------------|:---------------------------------------------------|:------------------------------|:-----------------|:----------------------------------------|
-| Models          | Who leads the current frontier-family signal?                    | GPT                                                | 78.2 heuristic index          | observed         | company_frontier_scores.csv             |
-| Domains         | Which capability field is improving fastest in the public panel? | Agentic terminal work                              | 12.0 points/year used         | scenario         | domain_improvement_velocity.csv         |
+| Models          | Who leads the current frontier-family signal?                    | Qwen                                               | 81.4 heuristic index          | observed         | company_frontier_scores.csv             |
+| Domains         | Which capability field is improving fastest in the public panel? | Agentic terminal work                              | 12.0 points/year used         | observed         | domain_improvement_velocity.csv         |
 | Coverage        | How many capability domains have broad benchmark coverage?       | 1 broad domains                                    | 115,938 normalized rows       | observed         | domain_benchmark_catalog.csv            |
-| Evidence        | Where is model-level evidence strongest?                         | GPT                                                | 120 direct benchmark matches  | direct_match     | family_coverage_matrix.csv              |
-| Forecast        | Who wins the 10-year frontier-quality stress test?               | GPT                                                | 58.6% simulation share        | scenario         | company_next_frontier_probabilities.csv |
-| Open Ecosystem  | Who benefits if distribution, openness and cost matter more?     | Qwen                                               | 70.2% simulation share        | scenario         | company_next_frontier_probabilities.csv |
+| Evidence        | Where is model-level evidence strongest?                         | GPT                                                | 60 direct benchmark matches   | direct_match     | family_coverage_matrix.csv              |
+| Forecast        | Who wins the 10-year frontier-quality stress test?               | Qwen                                               | 49.2% simulation share        | scenario         | company_next_frontier_probabilities.csv |
+| Open Ecosystem  | Who benefits if distribution, openness and cost matter more?     | Qwen                                               | 81.8% simulation share        | scenario         | company_next_frontier_probabilities.csv |
 | Domain Forecast | Which field has the highest 2036 base-case frontier score?       | Software engineering                               | 97.4/100 forecast score       | scenario         | domain_capability_forecasts.csv         |
-| Open vs Closed  | Where is the open-vs-closed gap largest?                         | text to image                                      | 361.6 arena rating points     | observed         | open_closed_gap_by_category.csv         |
-| Economics       | Which directly matched model sits highest on price-performance?  | OpenAI: GPT-4.1 Nano                               | 92.2 direct index             | direct_match     | direct_model_price_performance.csv      |
+| Open vs Closed  | Where is the open-vs-closed gap largest?                         | text to image                                      | 236.2 arena rating points     | observed         | open_closed_gap_by_category.csv         |
+| Economics       | Which directly matched model sits highest on price-performance?  | Anthropic: Claude Opus 4.7                         | 88.3 direct index             | direct_match     | direct_model_price_performance.csv      |
 | Economics       | Is average message/task cost rising in the modeled workload mix? | 0.152 USD                                          | 577.1 index vs 2023           | scenario         | llm_message_cost_trends.csv             |
 | Fixed Task Cost | What happens to a thesis-quality fixed writing task?             | GPT                                                | 0.0002 USD in 2036            | scenario         | fixed_task_cost_curves.csv              |
 | Labor           | Which occupation has the highest near-term pressure index?       | Data Entry Keyers                                  | 60.2 disruption index         | observed         | job_exposure_scores.csv                 |
@@ -26,7 +26,7 @@ This opening map is the fast path through the analysis. It turns the long report
 | Workflows       | Which business domain should a reader inspect first?             | finance analysis                                   | 38.1 disruption index         | family_proxy     | business_domain_ai_pressure.csv         |
 | Execution       | Which family shows the most visible recent release velocity?     | GPT                                                | 66 releases in 365 days       | observed         | release_cadence_by_family.csv           |
 | Coverage        | How fresh is the visible source layer?                           | 2026-05-15                                         | 1,327,480 source rows tracked | observed         | source_coverage_diagnostics.csv         |
-| Uncertainty     | How many family ranks are stable under evidence-scaled stress?   | 5 stable rank bands                                | 11 families stress-tested     | scenario         | rank_stability_intervals.csv            |
+| Uncertainty     | How many family ranks are stable under evidence-scaled stress?   | 7 stable rank bands                                | 11 families stress-tested     | scenario         | rank_stability_intervals.csv            |
 | Risk            | What should a reviewer challenge first?                          | 3 high-severity assumptions                        | Named failure modes           | speculative      | claim_failure_modes.csv                 |
 
 ## How To Read This Report
@@ -45,7 +45,7 @@ Evidence badges used throughout the HTML view: `observed`, `direct_match`, `fami
 
 ## Executive Takeaways
 
-1. **Near-term frontier-family leadership is concentrated, but not one-dimensional.** The highest heuristic index in this run is **GPT** with a frontier momentum heuristic index of **78.2**. The strongest openness/cost/ecosystem signal is **Qwen**, which is not automatically the same thing as best closed frontier performance.
+1. **Near-term frontier-family leadership is concentrated, but not one-dimensional.** The highest heuristic index in this run is **Qwen** with a frontier momentum heuristic index of **81.4**. The strongest openness/cost/ecosystem signal is **Qwen**, which is not automatically the same thing as best closed frontier performance.
 2. **The next-winner question is a simulation sensitivity exercise.** The table changes component weights thousands of times and injects evidence noise. Its shares are not calibrated probabilities.
 3. **Open vs closed is category-specific.** Some LMArena categories show narrow gaps; others preserve a clear closed/API advantage. "Open source caught up" is too crude.
 4. **Field-level progress is uneven.** Coding, terminal-agent and language/document signals have denser coverage than legal and finance. The report extrapolates only domains with repeated observations of the same benchmark; other domains are marked `insufficient_history` and held flat.
@@ -76,16 +76,16 @@ Family coverage matrix:
 
 | model_family   | vendor    |   coverage_score |   direct_benchmark_match_count |   family_proxy_benchmark_count |   source_gap_count |
 |:---------------|:----------|-----------------:|-------------------------------:|-------------------------------:|-------------------:|
-| Gemini         | Google    |           100    |                             24 |                             32 |                  0 |
-| Claude         | Anthropic |           100    |                             48 |                             30 |                  0 |
-| Phi            | Microsoft |           100    |                              6 |                              8 |                  0 |
-| Grok           | xAI       |           100    |                              3 |                             24 |                  0 |
-| GPT            | OpenAI    |            99.5  |                            120 |                             61 |                  0 |
-| Mistral        | Mistral   |            99.33 |                             56 |                             23 |                  0 |
-| Qwen           | Alibaba   |            99.3  |                             83 |                             52 |                  0 |
-| DeepSeek       | DeepSeek  |            98.89 |                             25 |                             20 |                  0 |
-| Llama          | Meta      |            98.08 |                             81 |                             25 |                  0 |
-| Gemma          | Google    |            96.3  |                             15 |                             14 |                  0 |
+| Gemini         | Google    |           100    |                             12 |                             32 |                  0 |
+| Claude         | Anthropic |           100    |                             19 |                             30 |                  0 |
+| Phi            | Microsoft |           100    |                              4 |                              8 |                  0 |
+| GPT            | OpenAI    |            99.5  |                             60 |                             61 |                  0 |
+| Mistral        | Mistral   |            99.33 |                              9 |                             23 |                  0 |
+| Qwen           | Alibaba   |            99.3  |                             34 |                             52 |                  0 |
+| DeepSeek       | DeepSeek  |            98.89 |                             18 |                             20 |                  0 |
+| Llama          | Meta      |            98.08 |                             21 |                             25 |                  0 |
+| Gemma          | Google    |            96.3  |                             14 |                             14 |                  0 |
+| Grok           | xAI       |            88.89 |                              1 |                             24 |                  0 |
 | Command        | Command   |             0    |                              0 |                              0 |                  6 |
 
 ![Source coverage dashboard](../figures/deep_analysis/source_coverage_dashboard.png)
@@ -239,17 +239,17 @@ The index ranks model families and product lines, not legal companies. It blends
 
 |   rank | model_family   |   frontier_momentum_heuristic_index | sensitivity_label   |   performance_component |   release_velocity_component |   ecosystem_component |   cost_efficiency_component |   openness_component |
 |-------:|:---------------|------------------------------------:|:--------------------|------------------------:|-----------------------------:|----------------------:|----------------------------:|---------------------:|
-|      1 | GPT            |                               78.25 | stable_top_tier     |                 69.2487 |                    100       |               87.1657 |                     91.7046 |             41.4415  |
-|      2 | Qwen           |                               78.05 | stable_top_tier     |                 74.6117 |                     86.7888  |               80.9259 |                     94.6247 |             97.9167  |
-|      3 | Mistral        |                               59.62 | weight_sensitive    |                 60.7925 |                     35.7759  |               70.6138 |                    100      |             95.1064  |
-|      4 | Gemini         |                               59.26 | weight_sensitive    |                 77.0602 |                     49.903   |               60.3614 |                     80.9676 |              0       |
-|      5 | DeepSeek       |                               58.32 | weight_sensitive    |                 48.7632 |                     32.9634  |               78.004  |                     85.8923 |             92.2704  |
-|      6 | Claude         |                               57.97 | weight_sensitive    |                 82.4818 |                     35.8405  |               57.7862 |                     36.1209 |             55       |
-|      7 | Llama          |                               53.67 | weight_sensitive    |                 36.747  |                      2.8125  |               81.3439 |                    100      |             91.607   |
-|      8 | Gemma          |                               49.79 | weight_sensitive    |                 53.4005 |                      8.50216 |               65.6807 |                     96.1247 |             91.9149  |
-|      9 | Command        |                               45.08 | weight_sensitive    |                 50      |                     50       |               25      |                     50      |             41.6667  |
-|     10 | Phi            |                               38.95 | weight_sensitive    |                 37.6984 |                      0       |               48.871  |                     91.7046 |             83.1769  |
-|     11 | Grok           |                               38.62 | weight_sensitive    |                 65.0893 |                     23.4806  |               27.389  |                      0      |              1.84211 |
+|      1 | Qwen           |                               81.39 | stable_top_tier     |                 85.3886 |                     86.7888  |               80.9259 |                     94.6247 |             97.9167  |
+|      2 | GPT            |                               78.25 | stable_top_tier     |                 69.2487 |                    100       |               87.1657 |                     91.7046 |             41.4415  |
+|      3 | Mistral        |                               68.53 | stable_top_tier     |                 89.5289 |                     35.7759  |               70.6138 |                    100      |             95.1064  |
+|      4 | Gemini         |                               67.55 | weight_sensitive    |                 98.1347 |                     49.903   |               70.7228 |                     80.9676 |              0       |
+|      5 | DeepSeek       |                               64.33 | weight_sensitive    |                 68.1501 |                     32.9634  |               78.004  |                     85.8923 |             92.2704  |
+|      6 | Claude         |                               63.4  | weight_sensitive    |                100      |                     35.8405  |               57.7862 |                     36.1209 |             55       |
+|      7 | Llama          |                               62.14 | weight_sensitive    |                 64.0594 |                      2.8125  |               81.3439 |                    100      |             91.607   |
+|      8 | Gemma          |                               57.64 | weight_sensitive    |                 78.7283 |                      8.50216 |               65.6807 |                     96.1247 |             91.9149  |
+|      9 | Grok           |                               49.79 | weight_sensitive    |                100      |                     23.4806  |               27.389  |                      0      |              1.84211 |
+|     10 | Command        |                               40.83 | weight_sensitive    |                 50      |                     50       |                0      |                     50      |             41.6667  |
+|     11 | Phi            |                               37.32 | weight_sensitive    |                 32.4262 |                      0       |               48.871  |                     91.7046 |             83.1769  |
 
 ![Company frontier scores](../figures/deep_analysis/company_frontier_scores.png)
 
@@ -267,16 +267,16 @@ Reviewers often reason in terms of companies, but model families remain the clea
 
 |   rank | vendor    |   vendor_frontier_portfolio_score | flagship_family   |   family_count | portfolio_families   |   evidence_count |
 |-------:|:----------|----------------------------------:|:------------------|---------------:|:---------------------|-----------------:|
-|      1 | OpenAI    |                             78.25 | GPT               |              1 | GPT                  |             1083 |
-|      2 | Alibaba   |                             78.05 | Qwen              |              1 | Qwen                 |            12932 |
-|      3 | Mistral   |                             59.62 | Mistral           |              1 | Mistral              |             2394 |
-|      4 | DeepSeek  |                             58.32 | DeepSeek          |              1 | DeepSeek             |             1187 |
-|      5 | Anthropic |                             57.97 | Claude            |              1 | Claude               |              424 |
-|      6 | Google    |                             56.35 | Gemini            |              2 | Gemini,Gemma         |             2307 |
-|      7 | Meta      |                             53.68 | Llama             |              1 | Llama                |             8569 |
-|      8 | Command   |                             45.08 | Command           |              1 | Command              |                3 |
-|      9 | Microsoft |                             38.95 | Phi               |              1 | Phi                  |             1372 |
-|     10 | xAI       |                             38.63 | Grok              |              1 | Grok                 |               55 |
+|      1 | Alibaba   |                             81.39 | Qwen              |              1 | Qwen                 |            12932 |
+|      2 | OpenAI    |                             78.25 | GPT               |              1 | GPT                  |             1083 |
+|      3 | Mistral   |                             68.53 | Mistral           |              1 | Mistral              |             2394 |
+|      4 | Google    |                             64.51 | Gemini            |              2 | Gemini,Gemma         |             2307 |
+|      5 | DeepSeek  |                             64.33 | DeepSeek          |              1 | DeepSeek             |             1187 |
+|      6 | Anthropic |                             63.4  | Claude            |              1 | Claude               |              424 |
+|      7 | Meta      |                             62.14 | Llama             |              1 | Llama                |             8569 |
+|      8 | xAI       |                             49.79 | Grok              |              1 | Grok                 |               55 |
+|      9 | Command   |                             40.83 | Command           |              1 | Command              |                3 |
+|     10 | Microsoft |                             37.32 | Phi               |              1 | Phi                  |             1372 |
 
 ![Vendor frontier scores](../figures/deep_analysis/vendor_frontier_scores.png)
 
@@ -284,52 +284,52 @@ Reviewers often reason in terms of companies, but model families remain the clea
 
 ## Who Builds The Next Best Model?
 
-This table is not a prediction market. It is a Monte Carlo stress test over the scoring components: benchmark performance, release velocity, ecosystem pull, capability surface, cost and openness. `simulation_win_share` is the share of simulation draws won by each family, not a calibrated real-world probability. The corrected version separates **frontier-quality leadership** from **open-ecosystem upside**. The former asks who is most likely to make the raw best model; the latter asks who benefits if distribution and low cost matter more.
+This table is not a prediction market. It is a Monte Carlo stress test over the scoring components: benchmark performance, release velocity, ecosystem pull, capability surface, cost and openness. Scenario weights are derived from the published baseline weights through documented multipliers (see `LEADERSHIP_SCENARIO_MULTIPLIERS` in the source), so no weight in the simulation is a hand-typed vector. `simulation_win_share` is the share of simulation draws won by each family, not a calibrated real-world probability. The corrected version separates **frontier-quality leadership** from **open-ecosystem upside**. The former asks who is most likely to make the raw best model; the latter asks who benefits if distribution and low cost matter more.
 
 2-year simulated leaders:
 
 | model_family   | simulation_win_share   |   simulated_score_p10 |   simulated_score_p90 |
 |:---------------|:-----------------------|----------------------:|----------------------:|
-| GPT            | 77.6%                  |                 73.85 |                 81.7  |
-| Qwen           | 22.4%                  |                 70.51 |                 78.46 |
-| Mistral        | 0.0%                   |                 46.59 |                 55    |
-| Gemini         | 0.0%                   |                 57.91 |                 66.11 |
-| DeepSeek       | 0.0%                   |                 44.88 |                 52.81 |
-| Claude         | 0.0%                   |                 57.86 |                 66.27 |
-| Llama          | 0.0%                   |                 34.67 |                 43.91 |
-| Gemma          | 0.0%                   |                 34.28 |                 43.5  |
-| Command        | 0.0%                   |                 44.26 |                 51.65 |
-| Phi            | 0.0%                   |                 23.28 |                 31.95 |
+| Qwen           | 67.1%                  |                 75.61 |                 83.42 |
+| GPT            | 27.1%                  |                 73.1  |                 81.07 |
+| Gemini         | 4.6%                   |                 68.35 |                 77.65 |
+| Claude         | 1.2%                   |                 65.85 |                 75.35 |
+| Mistral        | 0.0%                   |                 61.71 |                 71.22 |
+| DeepSeek       | 0.0%                   |                 56.42 |                 64.66 |
+| Llama          | 0.0%                   |                 51.94 |                 61.23 |
+| Gemma          | 0.0%                   |                 49.19 |                 59.45 |
+| Grok           | 0.0%                   |                 58.57 |                 69.3  |
+| Command        | 0.0%                   |                 40.07 |                 48.28 |
 
 10-year simulated leaders, frontier-quality scenario:
 
 | model_family   | simulation_win_share   |   simulated_score_p10 |   simulated_score_p90 |
 |:---------------|:-----------------------|----------------------:|----------------------:|
-| GPT            | 58.6%                  |                 70.99 |                 82.47 |
-| Qwen           | 41.2%                  |                 69.61 |                 80.94 |
-| Claude         | 0.1%                   |                 54.44 |                 66.16 |
-| Gemini         | 0.1%                   |                 52.83 |                 64.78 |
-| Mistral        | 0.0%                   |                 47.67 |                 59.78 |
-| DeepSeek       | 0.0%                   |                 47.2  |                 58.95 |
-| Llama          | 0.0%                   |                 40.13 |                 52.59 |
-| Gemma          | 0.0%                   |                 36.67 |                 49.24 |
-| Command        | 0.0%                   |                 41.1  |                 52.46 |
-| Phi            | 0.0%                   |                 25.99 |                 38.3  |
+| Qwen           | 49.2%                  |                 73.38 |                 84.87 |
+| GPT            | 21.8%                  |                 70.28 |                 81.69 |
+| Gemini         | 15.7%                  |                 69.01 |                 81.46 |
+| Claude         | 10.8%                  |                 67.66 |                 80.21 |
+| Grok           | 2.1%                   |                 63.09 |                 76.35 |
+| Mistral        | 0.5%                   |                 60.52 |                 73.4  |
+| DeepSeek       | 0.0%                   |                 54.35 |                 65.9  |
+| Llama          | 0.0%                   |                 50.19 |                 62.38 |
+| Gemma          | 0.0%                   |                 48.44 |                 61.33 |
+| Command        | 0.0%                   |                 40.05 |                 51.45 |
 
 10-year simulated leaders, open-ecosystem-upside scenario:
 
 | model_family   | simulation_win_share   |   simulated_score_p10 |   simulated_score_p90 |
 |:---------------|:-----------------------|----------------------:|----------------------:|
-| Qwen           | 70.2%                  |                 74.56 |                 85.67 |
-| GPT            | 29.7%                  |                 70.94 |                 82.55 |
-| DeepSeek       | 0.1%                   |                 56.83 |                 68.62 |
-| Mistral        | 0.1%                   |                 57.29 |                 69.44 |
-| Llama          | 0.0%                   |                 52.72 |                 65.69 |
-| Gemini         | 0.0%                   |                 48.71 |                 61.04 |
-| Claude         | 0.0%                   |                 51.53 |                 62.88 |
-| Gemma          | 0.0%                   |                 48.19 |                 60.54 |
-| Command        | 0.0%                   |                 37.52 |                 48.51 |
-| Phi            | 0.0%                   |                 36.84 |                 49.38 |
+| Qwen           | 81.8%                  |                 79.24 |                 90.7  |
+| GPT            | 12.2%                  |                 71.96 |                 83.74 |
+| Mistral        | 3.9%                   |                 68.78 |                 81.21 |
+| Llama          | 1.4%                   |                 66.22 |                 78.89 |
+| DeepSeek       | 0.7%                   |                 65.89 |                 77.56 |
+| Gemini         | 0.0%                   |                 53.8  |                 66.97 |
+| Claude         | 0.0%                   |                 50.02 |                 61.89 |
+| Gemma          | 0.0%                   |                 60    |                 72.73 |
+| Grok           | 0.0%                   |                 25.13 |                 38.36 |
+| Command        | 0.0%                   |                 30.47 |                 42.31 |
 
 ![Next frontier probabilities](../figures/deep_analysis/company_next_frontier_probabilities.png)
 
@@ -339,15 +339,15 @@ The scenario matrix compresses the same simulation into a reviewer-friendly view
 
 ## Open vs Closed: Where Is The Gap?
 
-| category      |   closed_or_api | open_weight        | open_closed_best_gap   |   open_closed_gap_pct_of_closed | comparison_note                                                           |
-|:--------------|----------------:|:-------------------|:-----------------------|--------------------------------:|:--------------------------------------------------------------------------|
-| text_to_image |         1574.24 | 1212.6857458083412 | 361.56                 |                          0.2297 | Comparable open-weight and closed/API rows observed in selected snapshot. |
-| image_edit    |         1513.01 | 1272.2820948867309 | 240.73                 |                          0.1591 | Comparable open-weight and closed/API rows observed in selected snapshot. |
-| vision        |         1451.69 | 1341.839120952578  | 109.85                 |                          0.0757 | Comparable open-weight and closed/API rows observed in selected snapshot. |
-| webdev        |         1586.93 | 1491.3053126020395 | 95.62                  |                          0.0603 | Comparable open-weight and closed/API rows observed in selected snapshot. |
-| document      |         1527.83 | 1433.687985154499  | 94.14                  |                          0.0616 | Comparable open-weight and closed/API rows observed in selected snapshot. |
-| text          |         1619.78 | 1549.227871094854  | 70.55                  |                          0.0436 | Comparable open-weight and closed/API rows observed in selected snapshot. |
-| search        |         1255.86 | n/a                | n/a                    |                          0      | No comparable open-weight or closed/API row in selected snapshot.         |
+| category      |   closed_or_api | open_weight        | open_closed_best_gap   |   open_closed_gap_pct_of_closed | comparison_note                                                                               |
+|:--------------|----------------:|:-------------------|:-----------------------|--------------------------------:|:----------------------------------------------------------------------------------------------|
+| text_to_image |         1448.89 | 1212.6857458083412 | 236.21                 |                          0.163  | Open and closed best ratings compared within the category's most recent leaderboard snapshot. |
+| image_edit    |         1467.01 | 1271.7708337163551 | 195.24                 |                          0.1331 | Open and closed best ratings compared within the category's most recent leaderboard snapshot. |
+| document      |         1522.08 | 1424.048055004106  | 98.03                  |                          0.0644 | Open and closed best ratings compared within the category's most recent leaderboard snapshot. |
+| webdev        |         1580.75 | 1491.3053126020395 | 89.44                  |                          0.0566 | Open and closed best ratings compared within the category's most recent leaderboard snapshot. |
+| vision        |         1389.78 | 1337.7470108143043 | 52.04                  |                          0.0374 | Open and closed best ratings compared within the category's most recent leaderboard snapshot. |
+| text          |         1553.57 | 1533.1052905646015 | 20.47                  |                          0.0132 | Open and closed best ratings compared within the category's most recent leaderboard snapshot. |
+| search        |         1251.1  | n/a                | n/a                    |                          0      | No comparable open-weight or closed/API row in the category's most recent snapshot.           |
 
 ![Open closed gap by category](../figures/deep_analysis/open_closed_gap_by_category.png)
 
@@ -378,26 +378,27 @@ Match confidence audit:
 
 | match_confidence   |   rows |
 |:-------------------|-------:|
-| family_only        |    813 |
-| normalized_exact   |    504 |
+| alias_match        |    244 |
+| family_only        |    839 |
+| normalized_exact   |    234 |
 | unmatched          |     91 |
 
 Direct evidence price-performance rows:
 
 | canonical_model                | model_family   |   blended_price_usd_per_1m | direct_evidence_sources    |   direct_lmarena_rating | direct_lmarena_match_confidence   |   direct_price_performance_index | quality_proxy_level   |
 |:-------------------------------|:---------------|---------------------------:|:---------------------------|------------------------:|:----------------------------------|---------------------------------:|:----------------------|
-| OpenAI: GPT-4.1 Nano           | GPT            |                     0.295  | lmarena                    |                 1560.56 | normalized_exact                  |                            92.21 | direct_model_lmarena  |
-| OpenAI: GPT-4.1 Mini           | GPT            |                     1.18   | lmarena                    |                 1560.56 | normalized_exact                  |                            91.18 | direct_model_lmarena  |
-| OpenAI: o3 Mini High           | GPT            |                     3.245  | livebench,lmarena,swebench |                 1590.01 | normalized_exact                  |                            91.17 | direct_model_lmarena  |
-| OpenAI: o3 Mini                | GPT            |                     3.245  | livebench,lmarena,swebench |                 1590.01 | normalized_exact                  |                            91.17 | direct_model_lmarena  |
-| OpenAI: o3                     | GPT            |                     5.9    | livebench,lmarena,swebench |                 1590.01 | normalized_exact                  |                            90.21 | direct_model_lmarena  |
-| OpenAI: GPT-4.1                | GPT            |                     5.9    | lmarena                    |                 1560.56 | normalized_exact                  |                            88.9  | direct_model_lmarena  |
-| OpenAI: GPT-5.5                | GPT            |                    21.25   | lmarena                    |                 1567.64 | normalized_exact                  |                            87.52 | direct_model_lmarena  |
-| OpenAI: o3 Deep Research       | GPT            |                    29.5    | livebench,lmarena,swebench |                 1590.01 | normalized_exact                  |                            87.28 | direct_model_lmarena  |
-| Google: Gemini 3 Flash Preview | Gemini         |                     2.125  | lmarena                    |                 1535.16 | normalized_exact                  |                            87.13 | direct_model_lmarena  |
-| OpenAI: GPT-5.4 Nano           | GPT            |                     0.8825 | lmarena                    |                 1538.27 | normalized_exact                  |                            87.06 | direct_model_lmarena  |
-| Z.ai: GLM 5                    | Other          |                     1.458  | lmarena                    |                 1548.75 | normalized_exact                  |                            86.86 | direct_model_lmarena  |
-| MoonshotAI: Kimi K2.6          | Other          |                     2.524  | lmarena                    |                 1545.48 | normalized_exact                  |                            86.12 | direct_model_lmarena  |
+| Anthropic: Claude Opus 4.7     | Claude         |                   18       | lmarena                    |                 1586.93 | normalized_exact                  |                            88.3  | direct_model_lmarena  |
+| OpenAI: o3                     | GPT            |                    5.9     | lmarena                    |                 1590.01 | normalized_exact                  |                            87.81 | direct_model_lmarena  |
+| OpenAI: GPT-4.1                | GPT            |                    5.9     | lmarena                    |                 1560.56 | normalized_exact                  |                            87.72 | direct_model_lmarena  |
+| Google: Gemini 3.1 Pro Preview | Gemini         |                    8.5     | lmarena                    |                 1560.59 | normalized_exact                  |                            86.9  | direct_model_lmarena  |
+| Anthropic: Claude Opus 4.6     | Claude         |                   18       | lmarena                    |                 1575.66 | normalized_exact                  |                            86.89 | direct_model_lmarena  |
+| OpenAI: o1                     | GPT            |                   44.25    | livebench,lmarena,swebench |                 1619.78 | normalized_exact                  |                            86.68 | direct_model_lmarena  |
+| Google: Gemini 3 Flash Preview | Gemini         |                    2.125   | lmarena                    |                 1535.16 | normalized_exact                  |                            86.6  | direct_model_lmarena  |
+| Anthropic: Claude Sonnet 4.6   | Claude         |                   10.8     | lmarena                    |                 1558.12 | normalized_exact                  |                            85.93 | direct_model_lmarena  |
+| OpenAI: GPT-5.5                | GPT            |                   21.25    | lmarena                    |                 1567.64 | normalized_exact                  |                            85.59 | direct_model_lmarena  |
+| Qwen: Qwen3.5-Flash            | Qwen           |                    0.19175 | lmarena                    |                 1507.82 | normalized_exact                  |                            85.57 | direct_model_lmarena  |
+| Z.ai: GLM 5                    | Other          |                    1.458   | lmarena                    |                 1548.75 | normalized_exact                  |                            85.36 | direct_model_lmarena  |
+| DeepSeek: DeepSeek V4 Pro      | DeepSeek       |                    0.71775 | lmarena                    |                 1512.05 | normalized_exact                  |                            85.26 | direct_model_lmarena  |
 
 ![Direct vs proxy price performance](../figures/deep_analysis/direct_vs_proxy_price_performance.png)
 
@@ -465,15 +466,15 @@ The divergence table is the explicit version of the user's hypothesis: frontier 
 
 | scenario     |   target_year |   modeled_average_message_cost_usd |   message_cost_factor_vs_2026 |   median_fixed_task_cost_usd |   fixed_task_cost_factor_vs_2026 |   frontier_workload_complexity_multiplier |
 |:-------------|--------------:|-----------------------------------:|------------------------------:|-----------------------------:|---------------------------------:|------------------------------------------:|
-| conservative |          2028 |                           0.291059 |                        1.9117 |                     0.012147 |                          0.48588 |                                    1.9905 |
-| conservative |          2031 |                           0.383646 |                        2.5198 |                     0.003336 |                          0.13344 |                                    2.7877 |
-| conservative |          2036 |                           0.43726  |                        2.872  |                     0.000719 |                          0.02876 |                                    3.5149 |
-| base         |          2028 |                           0.414459 |                        2.7222 |                     0.006624 |                          0.26496 |                                    2.7222 |
-| base         |          2031 |                           0.661146 |                        4.3425 |                     0.000733 |                          0.02932 |                                    4.3425 |
-| base         |          2036 |                           0.780511 |                        5.1265 |                     0.000719 |                          0.02876 |                                    5.1265 |
-| aggressive   |          2028 |                           0.607352 |                        3.9892 |                     0.003726 |                          0.14904 |                                    3.5503 |
-| aggressive   |          2031 |                           1.1106   |                        7.2946 |                     0.000719 |                          0.02876 |                                    5.4509 |
-| aggressive   |          2036 |                           1.81779  |                       11.9394 |                     0.000719 |                          0.02876 |                                    6.6669 |
+| conservative |          2028 |                           0.282871 |                        1.8579 |                     0.012147 |                          0.48588 |                                    1.9345 |
+| conservative |          2031 |                           0.426584 |                        2.8018 |                     0.003336 |                          0.13344 |                                    3.0997 |
+| conservative |          2036 |                           0.541756 |                        3.5583 |                     0.000719 |                          0.02876 |                                    4.3549 |
+| base         |          2028 |                           0.397407 |                        2.6102 |                     0.006624 |                          0.26496 |                                    2.6102 |
+| base         |          2031 |                           0.706212 |                        4.6385 |                     0.000733 |                          0.02932 |                                    4.6385 |
+| base         |          2036 |                           0.866989 |                        5.6945 |                     0.000719 |                          0.02876 |                                    5.6945 |
+| aggressive   |          2028 |                           0.578613 |                        3.8004 |                     0.003726 |                          0.14904 |                                    3.3823 |
+| aggressive   |          2031 |                           1.20351  |                        7.9048 |                     0.000719 |                          0.02876 |                                    5.9069 |
+| aggressive   |          2036 |                           1.63674  |                       10.7503 |                     0.000719 |                          0.02876 |                                    6.0029 |
 
 ![Cost task message divergence](../figures/deep_analysis/cost_task_message_divergence.png)
 
@@ -551,8 +552,8 @@ Labor-weighted dominant outcome summary:
 | group                 |   occupation_count |   labor_weight_sum |   weighted_disruption_index |   weighted_replacement_feasibility |   weighted_augmentation_index |
 |:----------------------|-------------------:|-------------------:|----------------------------:|-----------------------------------:|------------------------------:|
 | replacement_candidate |                  3 |    22337.6         |                       59.66 |                              38.31 |                         61.4  |
-| mixed_redesign        |                364 |        2.96894e+06 |                       33.73 |                              14.76 |                         27.53 |
-| augmentation_first    |                389 |        4.21343e+06 |                       32.69 |                               9.76 |                         36.22 |
+| mixed_redesign        |                364 |        2.82005e+06 |                       33.24 |                              14.44 |                         26.84 |
+| augmentation_first    |                389 |        3.79978e+06 |                       32.62 |                               9.57 |                         36.23 |
 
 ![Labor clusters](../figures/deep_analysis/labor_cluster_profiles.png)
 
@@ -594,20 +595,20 @@ Workflow examples:
 
 Base scenario subset:
 
-|   target_year | metric                                          |   value | unit                                                   | method                                                                                                    |
-|--------------:|:------------------------------------------------|--------:|:-------------------------------------------------------|:----------------------------------------------------------------------------------------------------------|
-|          2028 | frontier_context_window_multiplier              |  6.23   | x current API catalog trend                            | capped scenario from OpenRouter upper-tail slope; raw=6.23x capped=False                                  |
-|          2028 | frontier_output_price_factor                    |  0.4365 | fraction of current low-price frontier API output cost | Explicit price-decline scenario; current-catalog release-cohort diagnostic=0.036, scenario_assumed=-0.180 |
-|          2028 | open_weight_lmarena_gap_remaining               | 53.6    | arena rating points                                    | current open vs closed LMArena gap with scenario-specific closure speed                                   |
-|          2028 | share_of_us_occupation_tasks_materially_touched |  0.104  | share of task-weighted occupation activity             | Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon                        |
-|          2031 | frontier_context_window_multiplier              | 64      | x current API catalog trend                            | capped scenario from OpenRouter upper-tail slope; raw=96.70x capped=True                                  |
-|          2031 | frontier_output_price_factor                    |  0.1259 | fraction of current low-price frontier API output cost | Explicit price-decline scenario; current-catalog release-cohort diagnostic=0.036, scenario_assumed=-0.180 |
-|          2031 | open_weight_lmarena_gap_remaining               | 28.2    | arena rating points                                    | current open vs closed LMArena gap with scenario-specific closure speed                                   |
-|          2031 | share_of_us_occupation_tasks_materially_touched |  0.183  | share of task-weighted occupation activity             | Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon                        |
-|          2036 | frontier_context_window_multiplier              | 64      | x current API catalog trend                            | capped scenario from OpenRouter upper-tail slope; raw=9351.33x capped=True                                |
-|          2036 | frontier_output_price_factor                    |  0.05   | fraction of current low-price frontier API output cost | Explicit price-decline scenario; current-catalog release-cohort diagnostic=0.036, scenario_assumed=-0.180 |
-|          2036 | open_weight_lmarena_gap_remaining               |  5.6    | arena rating points                                    | current open vs closed LMArena gap with scenario-specific closure speed                                   |
-|          2036 | share_of_us_occupation_tasks_materially_touched |  0.281  | share of task-weighted occupation activity             | Anthropic observed exposure plus O*NET task bottleneck pressure, scaled by horizon                        |
+|   target_year | metric                                          |   value | unit                                                   | method                                                                                                                                  |
+|--------------:|:------------------------------------------------|--------:|:-------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------|
+|          2028 | frontier_context_window_multiplier              |  6.23   | x current API catalog trend                            | capped scenario from OpenRouter upper-tail slope; raw=6.23x capped=False                                                                |
+|          2028 | frontier_output_price_factor                    |  0.4365 | fraction of current low-price frontier API output cost | Explicit price-decline scenario; current-catalog release-cohort diagnostic=0.036, scenario_assumed=-0.180                               |
+|          2028 | open_weight_lmarena_gap_remaining               | 36.2    | arena rating points                                    | current open vs closed LMArena gap with scenario-specific closure speed                                                                 |
+|          2028 | share_of_us_occupation_tasks_materially_touched |  0.09   | share of task-weighted occupation activity             | Explicit scenario task-contact assumption (0.09 at 2y), capped by observed p90 substitution pressure; not a transition-model estimate.  |
+|          2031 | frontier_context_window_multiplier              | 64      | x current API catalog trend                            | capped scenario from OpenRouter upper-tail slope; raw=96.70x capped=True                                                                |
+|          2031 | frontier_output_price_factor                    |  0.1259 | fraction of current low-price frontier API output cost | Explicit price-decline scenario; current-catalog release-cohort diagnostic=0.036, scenario_assumed=-0.180                               |
+|          2031 | open_weight_lmarena_gap_remaining               | 19.1    | arena rating points                                    | current open vs closed LMArena gap with scenario-specific closure speed                                                                 |
+|          2031 | share_of_us_occupation_tasks_materially_touched |  0.22   | share of task-weighted occupation activity             | Explicit scenario task-contact assumption (0.22 at 5y), capped by observed p90 substitution pressure; not a transition-model estimate.  |
+|          2036 | frontier_context_window_multiplier              | 64      | x current API catalog trend                            | capped scenario from OpenRouter upper-tail slope; raw=9351.33x capped=True                                                              |
+|          2036 | frontier_output_price_factor                    |  0.05   | fraction of current low-price frontier API output cost | Explicit price-decline scenario; current-catalog release-cohort diagnostic=0.036, scenario_assumed=-0.180                               |
+|          2036 | open_weight_lmarena_gap_remaining               |  3.8    | arena rating points                                    | current open vs closed LMArena gap with scenario-specific closure speed                                                                 |
+|          2036 | share_of_us_occupation_tasks_materially_touched |  0.352  | share of task-weighted occupation activity             | Explicit scenario task-contact assumption (0.40 at 10y), capped by observed p90 substitution pressure; not a transition-model estimate. |
 
 The dashboard puts four scenario families on one page: context scale, output price, open-weight benchmark gap and task-share contact. The useful reading is not the exact number in 2036; it is which assumptions move together and which do not.
 
@@ -625,17 +626,17 @@ The uncertainty view stress-tests component weights and evidence depth. These in
 
 | model_family   |   current_rank |   score_p10 |   score_p50 |   score_p90 |   best_rank |   median_rank |   worst_rank | rank_stability_label   |
 |:---------------|---------------:|------------:|------------:|------------:|------------:|--------------:|-------------:|:-----------------------|
-| GPT            |              1 |       73.83 |       77.77 |       81.71 |           1 |             1 |            2 | stable                 |
-| Qwen           |              2 |       74.08 |       77.84 |       81.57 |           1 |             2 |            2 | stable                 |
-| Mistral        |              3 |       54.32 |       59.1  |       63.98 |           3 |             4 |            8 | moderate               |
-| Gemini         |              4 |       54.83 |       59.64 |       64.52 |           3 |             4 |            9 | moderate               |
-| Claude         |              6 |       53.63 |       57.97 |       62.46 |           3 |             5 |            8 | moderate               |
-| DeepSeek       |              5 |       54    |       58.27 |       62.73 |           3 |             5 |            8 | moderate               |
-| Llama          |              7 |       48.7  |       53.64 |       58.48 |           3 |             7 |            9 | moderate               |
-| Gemma          |              8 |       44.54 |       49.37 |       54.86 |           3 |             8 |           10 | stable                 |
-| Command        |              9 |       36.51 |       45.33 |       53.9  |           3 |             9 |           11 | moderate               |
-| Grok           |             11 |       34.4  |       39.06 |       44.38 |           7 |            10 |           11 | stable                 |
-| Phi            |             10 |       34.25 |       39.14 |       44.56 |           8 |            10 |           11 | stable                 |
+| Qwen           |              1 |       77.11 |       81.19 |       85.38 |           1 |             1 |            3 | stable                 |
+| GPT            |              2 |       73.99 |       77.91 |       81.33 |           1 |             2 |            5 | stable                 |
+| Gemini         |              4 |       62.7  |       67.5  |       71.75 |           2 |             4 |            8 | moderate               |
+| Mistral        |              3 |       63.23 |       68.03 |       73.01 |           2 |             4 |            7 | stable                 |
+| DeepSeek       |              5 |       60.27 |       64.19 |       68.58 |           2 |             5 |            9 | moderate               |
+| Llama          |              7 |       57.32 |       62.29 |       66.71 |           3 |             6 |            9 | moderate               |
+| Claude         |              6 |       58.39 |       62.7  |       66.93 |           2 |             6 |            8 | moderate               |
+| Gemma          |              8 |       52.21 |       57.5  |       63.15 |           4 |             8 |           10 | stable                 |
+| Grok           |              9 |       44.62 |       49.56 |       55.1  |           7 |             9 |           11 | stable                 |
+| Command        |             10 |       34.17 |       41.78 |       49.26 |           3 |            10 |           11 | stable                 |
+| Phi            |             11 |       32.83 |       37.52 |       42.48 |           9 |            11 |           11 | stable                 |
 
 ![Frontier rank uncertainty](../figures/deep_analysis/frontier_rank_uncertainty.png)
 
@@ -682,7 +683,7 @@ Vendor cadence:
 
 ## Historical Analogy
 
-AI looks less like a single prior wave and more like an uncomfortable hybrid: spreadsheet-style task rebundling, internet-style diffusion, cloud-style API economics, and electricity-style long-run production redesign.
+AI looks less like a single prior wave and more like an uncomfortable hybrid: spreadsheet-style task rebundling, internet-style diffusion, cloud-style API economics, and electricity-style long-run production redesign. Every dimension score in this table is an author-assigned subjective prior (`input_basis=author_assigned_subjective_prior`), published for transparency rather than as evidence; the similarity score inherits that status.
 
 | wave                | period    |   ai_similarity_score | interpretation                                                                                       |
 |:--------------------|:----------|----------------------:|:-----------------------------------------------------------------------------------------------------|
@@ -701,20 +702,20 @@ AI looks less like a single prior wave and more like an uncomfortable hybrid: sp
 
 | claim_id                                | claim                                                                                                                                                                       | evidence                                                                                                                  | confidence   | analysis_captured_at      |
 |:----------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------|:-------------|:--------------------------|
-| company-next-best-model                 | GPT has the strongest composite signal for near-term frontier leadership, but the top open-weight ecosystem score is not necessarily the same family.                       | Composite of LMArena, SWE-bench, OpenRouter, Epoch, Hugging Face, GitHub and OpenAlex indicators.                         | medium       | 2026-07-12T19:42:51+00:00 |
-| jobs-augmentation-not-total-replacement | The labor signal is broad task contact, not full-job deletion: high-exposure occupations still retain bottlenecks from trust, regulation, physical work and accountability. | Anthropic Economic Index occupation exposure joined to O*NET task text, task collaboration modes and wage/job metadata.   | medium-high  | 2026-07-12T19:42:51+00:00 |
-| open-source-catchup                     | Open-weight systems look structurally advantaged on ecosystem and cost but still need repeated frontier jumps to erase closed/API benchmark gaps.                           | OpenRouter price fields, Hugging Face downloads/files, LMArena access-class split and Epoch open-weight release metadata. | medium       | 2026-07-12T19:42:51+00:00 |
-| ten-year-forecast                       | The 10-year question is less whether AI touches most cognitive workflows and more whether institutions redesign jobs around verification, liability and human preference.   | Scenario table combines capability trend, price decline, observed task exposure and bottleneck scoring.                   | speculative  | 2026-07-12T19:42:51+00:00 |
+| company-next-best-model                 | Qwen has the strongest composite signal for near-term frontier leadership, but the top open-weight ecosystem score is not necessarily the same family.                      | Composite of LMArena, SWE-bench, OpenRouter, Epoch, Hugging Face, GitHub and OpenAlex indicators.                         | medium       | 2026-08-21T11:07:27+00:00 |
+| jobs-augmentation-not-total-replacement | The labor signal is broad task contact, not full-job deletion: high-exposure occupations still retain bottlenecks from trust, regulation, physical work and accountability. | Anthropic Economic Index occupation exposure joined to O*NET task text, task collaboration modes and wage/job metadata.   | medium-high  | 2026-08-21T11:07:27+00:00 |
+| open-source-catchup                     | Open-weight systems look structurally advantaged on ecosystem and cost but still need repeated frontier jumps to erase closed/API benchmark gaps.                           | OpenRouter price fields, Hugging Face downloads/files, LMArena access-class split and Epoch open-weight release metadata. | medium       | 2026-08-21T11:07:27+00:00 |
+| ten-year-forecast                       | The 10-year question is less whether AI touches most cognitive workflows and more whether institutions redesign jobs around verification, liability and human preference.   | Scenario table combines capability trend, price decline, observed task exposure and bottleneck scoring.                   | speculative  | 2026-08-21T11:07:27+00:00 |
 
 ## Counterintuitive Findings
 
-| finding                                                                               | evidence                                                                                                                                                        | why_it_is_interesting                                                                                                                    | artifact                                | analysis_captured_at      |
-|:--------------------------------------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------|:----------------------------------------|:--------------------------|
-| Raw frontier leadership and open-distribution upside are different questions.         | In the 10-year frontier-quality scenario, GPT leads (58.6% of simulation draws); in the open-ecosystem-upside scenario, Qwen leads (70.2% of simulation draws). | The previous single 10-year number was misleading because it mixed best-model simulation share with adoption economics.                  | company_next_frontier_probabilities.csv | 2026-07-12T19:42:51+00:00 |
-| The open-vs-closed gap is not one gap.                                                | The largest measured LMArena category gap is text_to_image at 361.6 rating points.                                                                              | Open-source catchup can be true in one domain and false in another; a single headline benchmark hides where closed labs still have moat. | open_closed_gap_by_category.csv         | 2026-07-12T19:42:51+00:00 |
-| Cheap models can sit on the efficient frontier without being the raw best model.      | Efficient frontier examples include OpenAI: gpt-oss-20b; inclusionAI: Ling-2.6-flash.                                                                           | Enterprise adoption often follows sufficient capability per dollar, not absolute leaderboard rank.                                       | price_performance_frontier.csv          | 2026-07-12T19:42:51+00:00 |
-| The top whole-job automation candidates are narrower than the top task-exposure jobs. | The highest replacement-feasibility occupation is Market Research Analysts and Marketing Specialists with feasibility index 39.0.                               | A job can be heavily touched by AI but still mostly redesigned around human review rather than deleted.                                  | job_replacement_feasibility.csv         | 2026-07-12T19:42:51+00:00 |
-| Augmentation can be a larger labor-weighted mode than replacement.                    | Available labor-weight proxy: augmentation-first=4,213,430, replacement-candidate=22,338.                                                                       | This pushes the labor forecast toward workflow redesign, wage compression and productivity dispersion before mass full automation.       | labor_market_exposure_summary.csv       | 2026-07-12T19:42:51+00:00 |
+| finding                                                                               | evidence                                                                                                                                                         | why_it_is_interesting                                                                                                                    | artifact                                | analysis_captured_at      |
+|:--------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------|:----------------------------------------|:--------------------------|
+| Raw frontier leadership and open-distribution upside are different questions.         | In the 10-year frontier-quality scenario, Qwen leads (49.2% of simulation draws); in the open-ecosystem-upside scenario, Qwen leads (81.8% of simulation draws). | The previous single 10-year number was misleading because it mixed best-model simulation share with adoption economics.                  | company_next_frontier_probabilities.csv | 2026-08-21T11:07:27+00:00 |
+| The open-vs-closed gap is not one gap.                                                | The largest measured LMArena category gap is text_to_image at 236.2 rating points.                                                                               | Open-source catchup can be true in one domain and false in another; a single headline benchmark hides where closed labs still have moat. | open_closed_gap_by_category.csv         | 2026-08-21T11:07:27+00:00 |
+| Cheap models can sit on the efficient frontier without being the raw best model.      | Efficient frontier examples include OpenAI: gpt-oss-20b; inclusionAI: Ling-2.6-flash.                                                                            | Enterprise adoption often follows sufficient capability per dollar, not absolute leaderboard rank.                                       | price_performance_frontier.csv          | 2026-08-21T11:07:27+00:00 |
+| The top whole-job automation candidates are narrower than the top task-exposure jobs. | The highest replacement-feasibility occupation is Market Research Analysts and Marketing Specialists with feasibility index 39.0.                                | A job can be heavily touched by AI but still mostly redesigned around human review rather than deleted.                                  | job_replacement_feasibility.csv         | 2026-08-21T11:07:27+00:00 |
+| Augmentation can be a larger labor-weighted mode than replacement.                    | Available labor-weight proxy: augmentation-first=3,799,776, replacement-candidate=22,338.                                                                        | This pushes the labor forecast toward workflow redesign, wage compression and productivity dispersion before mass full automation.       | labor_market_exposure_summary.csv       | 2026-08-21T11:07:27+00:00 |
 
 ## Where This Analysis Is Weak
 
@@ -733,16 +734,16 @@ Under-observed family audit:
 | model_family   | vendor    |   direct_benchmark_match_count |   coverage_score | underobserved   | underobserved_reasons                                                    |
 |:---------------|:----------|-------------------------------:|-----------------:|:----------------|:-------------------------------------------------------------------------|
 | Command        | Command   |                              0 |             0    | True            | few_direct_model_matches,low_source_coverage,below_median_evidence_depth |
-| GPT            | OpenAI    |                            120 |            99.5  | True            | below_median_evidence_depth                                              |
-| Gemini         | Google    |                             24 |           100    | True            | below_median_evidence_depth                                              |
-| Claude         | Anthropic |                             48 |           100    | True            | below_median_evidence_depth                                              |
-| Grok           | xAI       |                              3 |           100    | True            | below_median_evidence_depth                                              |
-| Gemma          | Google    |                             15 |            96.3  | False           | none                                                                     |
-| Llama          | Meta      |                             81 |            98.08 | False           | none                                                                     |
-| DeepSeek       | DeepSeek  |                             25 |            98.89 | False           | none                                                                     |
-| Qwen           | Alibaba   |                             83 |            99.3  | False           | none                                                                     |
-| Mistral        | Mistral   |                             56 |            99.33 | False           | none                                                                     |
-| Phi            | Microsoft |                              6 |           100    | False           | none                                                                     |
+| Grok           | xAI       |                              1 |            88.89 | True            | few_direct_model_matches,below_median_evidence_depth                     |
+| GPT            | OpenAI    |                             60 |            99.5  | True            | below_median_evidence_depth                                              |
+| Gemini         | Google    |                             12 |           100    | True            | below_median_evidence_depth                                              |
+| Claude         | Anthropic |                             19 |           100    | True            | below_median_evidence_depth                                              |
+| Gemma          | Google    |                             14 |            96.3  | False           | none                                                                     |
+| Llama          | Meta      |                             21 |            98.08 | False           | none                                                                     |
+| DeepSeek       | DeepSeek  |                             18 |            98.89 | False           | none                                                                     |
+| Qwen           | Alibaba   |                             34 |            99.3  | False           | none                                                                     |
+| Mistral        | Mistral   |                              9 |            99.33 | False           | none                                                                     |
+| Phi            | Microsoft |                              4 |           100    | False           | none                                                                     |
 
 ## Method Notes
 

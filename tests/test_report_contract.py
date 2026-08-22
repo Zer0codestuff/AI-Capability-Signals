@@ -64,22 +64,21 @@ class ReportContractTests(unittest.TestCase):
             self.skipTest("deep HTML report has not been written")
         text = report.read_text(encoding="utf-8")
         for marker in [
-            "class='report-shell'",
-            "class='report-sidebar'",
+            "class='topbar'",
+            "class='topnav'",
+            "id='progress-bar'",
             "class='hero'",
-            "class='hero-layout'",
-            "class='meta-grid'",
+            "class='kicker'",
+            "class='meta-chips'",
+            "class='badge-legend'",
             "class='analysis-dashboard'",
             "class='dashboard-tiles'",
-            "class='dashboard-lanes'",
+            "class='dashboard-links'",
             "data-table-filter",
             "class='figure-panel'",
-            "class='table-wrap'",
+            "class='table-card'",
             "data-sortable='true'",
             "data-lightbox='figure'",
-            "class='sticky-summary'",
-            "class='evidence-badges'",
-            "class='methodology-block'",
             "Download table index",
             "assets/report.js",
             "assets/report.css",
@@ -87,7 +86,7 @@ class ReportContractTests(unittest.TestCase):
         ]:
             self.assertIn(marker, text)
         self.assertGreaterEqual(text.count("class='figure-panel'"), 15)
-        self.assertGreaterEqual(text.count("class='table-wrap'"), 10)
+        self.assertGreaterEqual(text.count("class='table-card'"), 10)
         self.assertIn("domain benchmark velocity", text)
         self.assertNotIn("win_probability", text)
         self.assertTrue((ROOT / "report" / "assets" / "report.js").exists())
