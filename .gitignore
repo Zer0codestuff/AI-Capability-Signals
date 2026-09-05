@@ -8,7 +8,6 @@ __pycache__/
 .uv-cache/
 .ipynb_checkpoints/
 .DS_Store
-AGENTS.md
 CLAUDE.md
 GEMINI.md
 .agents/
@@ -27,3 +26,9 @@ data/analysis/*.parquet
 
 *.tmp
 *.part
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+artifacts/
+data/snapshots/

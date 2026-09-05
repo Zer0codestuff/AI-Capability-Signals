@@ -1,72 +1,92 @@
 # AI Capability Signals
 
-Reproducible, uncertainty-quantified analysis of public frontier AI capability, price and disclosure signals.
+A guided, interactive data story about what AI can do, what it costs to use, and what might come next.
 
-Published report: [report/frontier_signals.html](report/frontier_signals.html)
+The site separates published measurements, calculations, and conditional scenarios. It does not invent specifications for GPT-7, GPT-8, or GPT-9.
 
-## What changed in 2.0
+## Run locally
 
-Version 1 produced 49 analytical tables, multi-year forecasts, leadership "probabilities" and labour-replacement rankings. An audit of that version — kept at [`docs/audit_of_previous_version.md`](docs/audit_of_previous_version.md) — found that many of those outputs were not statistically defensible: composite indices of incomparable metrics, Monte Carlo procedures that resampled neither data nor models, a current price catalogue treated as a historical series, seven CSV tables that were hardcoded prose, and tests that validated schemas rather than estimators.
-
-Version 2 answers fewer questions, and only ones the public data can support. Every published number is either a direct measurement from a named source field, or the output of a named estimator with an uncertainty interval whose construction is stated. Claims the data cannot support are recorded as refusals rather than estimated.
-
-## Questions this project answers
-
-1. **Disclosure.** Do open-weight releases disclose more than closed-weight releases? (difference of proportions, BH-corrected)
-2. **Compute scaling.** How fast does disclosed training compute grow, and does a fitted trend forecast better than assuming no change? (HC3 OLS + Theil–Sen, rolling-origin backtest)
-3. **Price structure.** What does a given measured quality level cost in the current catalogue, and how wide is the price spread at fixed quality? (Pareto frontier, matched-quality bands; quality and price from the same record)
-4. **Benchmark agreement.** Do public benchmarks agree about model ordering strongly enough to justify a composite score? (Kendall τ with model-level bootstrap; answer: no)
-5. **Open-weight lag.** How far behind is the open-weight arena frontier, and how long does catch-up take? (within-regime gap trend; Kaplan–Meier lag with right censoring)
-6. **Usage composition.** What does observed Claude usage look like by occupation, and do the consumer and API surfaces agree? (paired contrast; not employment impact)
-7. **Calendar control.** Do release dates cluster on weekday/month/quarter after multiple-comparison correction? (year-preserving permutation null + BH)
-
-## Questions this project refuses
-
-The refusals ledger (`data/analysis/refusals.csv`) is a first-class output. Typical refusals:
-
-- a single composite capability score (benchmarks do not agree enough)
-- a historical price trend (the catalogue is a cross-section)
-- a date when open weights will match the closed frontier (trend ≠ crossing forecast)
-- current SWE-bench Verified SOTA (the public directory is stale)
-- job replacement / disruption rankings (usage composition is not employment impact)
-- release counts for recent years (Epoch curation is right-censored)
-
-## Reproduce
+Node.js 22.12+ or 24 and npm are required for the website. The committed data bundle is enough to run it.
 
 ```bash
-uv sync
-uv run aicap                     # full refresh from public sources
-uv run aicap --from-interim      # re-analyse cached frames
-uv run python -m unittest discover -s tests -v
+npm ci
+npm run dev
 ```
 
-Offline / CI:
+Open the local address printed by Vite. The server binds to loopback, not the public network.
 
 ```bash
-uv run aicap --offline --from-interim --skip-report
+npm run build
+npm run preview
 ```
+
+The production output is `dist/`. It is a static site, supports subdirectory hosting, and needs no backend or browser API credentials. No deployment is configured by this rebuild.
+
+## The story
+
+1. **Progress:** human task durations at 50% or 80% success, using METR Time Horizon 1.1 only. Explore models and their published intervals.
+2. **Cost:** current list prices for declared token workloads versus separate Artificial Analysis indices supplied by OpenRouter. Explore the price frontier, budget, and catalogue.
+3. **Scale:** total and active parameters for four illustrative releases. Missing values stay missing.
+4. **Futures:** flat, slower, and historical-pace task-horizon scenarios, plus an explicitly assumed token-price scenario. These are not calibrated predictions.
+
+The interface is dark, with one accent color. Charts use accessible SVG, keyboard selection, model selectors, and alternative data tables. Details are in native expandable sections. Fonts are self-hosted; there is no analytics or third-party browser request.
+
+## Refresh the evidence
+
+Install [uv](https://docs.astral.sh/uv/) and then:
+
+```bash
+uv sync --frozen
+npm run data:refresh
+```
+
+This downloads METR, OpenRouter, and Epoch AI, validates the source schemas, and replaces `public/data/story.json` only after successful analysis. It records source URLs, retrieval times, SHA-256 hashes, exclusions, intervals, and trend checks.
+
+Exact gzip-compressed source snapshots are retained locally in `data/snapshots/`, outside Git. Rebuild without network access:
+
+```bash
+npm run data:offline
+```
+
+This verifies each cached source hash and preserves its retrieval time. A fresh clone has the published JSON but not the raw snapshots, so offline *rebuilding* first needs a successful online refresh. Historical snapshots are deliberately retained for provenance and never automatically deleted. Manage disk retention only after deciding which past runs you need.
+
+## Validate
+
+```bash
+npm run lint
+npm test
+npm run data:test
+npm run build
+```
+
+Tests cover known-answer estimators, strict past-date backtests, benchmark-version isolation, source coverage, intervals, parameter missingness, cost tiers, workload limits, Pareto selection, and scenario math. CI validates the committed snapshot without depending on live upstream availability. Raw-hash checks skip on fresh clones without local snapshots.
 
 ## Layout
 
-```
-src/aicap/
-  sources/     validated ingestion with schema contracts
-  analysis/    one module per question; refusals when unsupported
-  report/      rendering only — no computation
-  stats.py     estimators covered by tests/test_stats.py
-  identity.py  strict model matcher; no family-best fallback
-data/
-  raw/         content-addressed source snapshots (gitignored)
-  interim/     parsed frames (gitignored)
-  analysis/    published tables (versioned)
-report/        Markdown + HTML report
-docs/          methodology, data dictionary, audit of v1
+```text
+pipeline/           Python ingestion, policies, and calculations
+src/components/     Story chapters and SVG charts
+src/lib/            Shared pure calculations and viewport hook
+public/data/        Published evidence bundle
+tests/              Python data and estimator tests
+docs/               Methodology, sources, and validation notes
+archive/v2/         Original technical report, preserved intact
 ```
 
-## Method in one paragraph
+## Current data and limits
 
-Reference date = freshest source horizon (lagging sources trigger per-analysis refusals). Intervals are Wilson (proportions), HC3 (OLS), Theil–Sen (robust slopes), and percentile bootstraps that resample the unit of analysis. Multiple comparisons inside a pre-registered family are Benjamini–Hochberg corrected. Forecasts require beating a last-value baseline out of sample; published interval widths come from measured backtest errors. See [`docs/methodology.md`](docs/methodology.md).
+The 5 September 2026 snapshot includes 23 comparable METR measurements, 124 catalogue models with at least one usable benchmark and price, and four model-size examples. Individual price charts have fewer models because benchmark and workload coverage differ.
 
-## Licence
+METR's latest model in this snapshot was released on 7 April 2026. Downloading that dataset today does not make it a measurement of today's frontier. METR warns that task horizons above 16 hours are unreliable with the current suite.
 
-Code is MIT. Third-party source data keeps its original terms — see [`THIRD_PARTY_DATA.md`](THIRD_PARTY_DATA.md).
+OpenRouter does not expose the version or reasoning configuration of its embedded Artificial Analysis scores. Treat those charts as indicative catalogue comparisons, not a controlled experiment, universal intelligence scale, or historical capability series.
+
+The task-horizon trend does not beat a last-observation baseline in this snapshot's retrospective next-release check. The site reports that result and presents conditional paths instead of forecast probabilities.
+
+See [methodology](docs/methodology.md), [sources and terms](THIRD_PARTY_DATA.md), and [validation](docs/validation.md).
+
+## Previous version
+
+Version 2 is preserved under `archive/v2/` and in Git at `46b17f2`. It is not part of the new build, data pipeline, or tests. Its previously published conclusions have not been silently carried into the new site.
+
+Code is MIT licensed. Source data and fonts retain their respective terms.

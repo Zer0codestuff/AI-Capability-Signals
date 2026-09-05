@@ -1,46 +1,16 @@
 [project]
 name = "ai-capability-signals"
-version = "2.0.0"
-description = "Reproducible, uncertainty-quantified analysis of public frontier AI capability, price and disclosure signals."
-readme = "README.md"
+version = "3.0.0"
+description = "Traceable data for an accessible story about AI progress."
 requires-python = ">=3.11"
-license = { text = "MIT" }
-dependencies = [
-  "matplotlib>=3.8",
-  "numpy>=1.26",
-  "pandas>=2.2",
-  "pyarrow>=15.0",
-  "requests>=2.31",
-  "scipy>=1.11",
-  "tabulate>=0.9",
-]
+dependencies = ["PyYAML>=6.0.2,<7"]
 
-[project.optional-dependencies]
-dev = [
-  "ruff>=0.6",
-]
-
-[project.scripts]
-aicap = "aicap.cli:main"
-
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-package-dir = { "" = "src" }
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.package-data]
-aicap = ["report/report.css", "report/report.js"]
+[dependency-groups]
+dev = ["ruff>=0.12"]
 
 [tool.ruff]
-line-length = 110
+line-length = 100
 target-version = "py311"
-src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
-ignore = ["B008"]
+select = ["E", "F", "I", "UP", "B"]
