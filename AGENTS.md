@@ -26,7 +26,7 @@ Node 22.12+ or 24 is required. The committed JSON is enough to build/run the web
 ## Current status
 
 - Original repository cloned at `46b17f2`.
-- Rebuild branch: `rebuild/data-story`. Nothing has been published.
+- Rebuild branch: `rebuild/data-story`, published to GitHub on 5 September 2026 together with `main` at commit `71287c3`.
 - The user approved a guided story with explorable charts, equal emphasis on measured progress and future scenarios, and a dark minimal design with one accent color.
 - Source investigation confirmed that populated Epoch fields can be researcher estimates, not manufacturer disclosures. Artificial Analysis benchmark versions change over time. METR time horizons are human task durations at a specified success rate, not AI runtime or guaranteed autonomy.
 - The v3 local rebuild is complete. The 5 September 2026 snapshot has 23 same-version METR records, 124 models with at least one benchmark and usable price, and four illustrative size records. Three embedded TH 1.0 records are excluded.
@@ -53,7 +53,7 @@ Node 22.12+ or 24 is required. The committed JSON is enough to build/run the web
 - The descriptive task trend loses to the last-value baseline in the recorded retrospective check. Keep the conditional scenario framing.
 - Retain raw snapshots deliberately for provenance; do not automatically prune them. Formatted JSON is intentional for review.
 - Embedded desktop screenshots may tile at full resolution. A 1440 CSS-pixel viewport at device scale 0.4 produces a usable overview; mobile scale 1 works normally. Do not mistake the capture artifact for repeated application content.
-- Publication approved by the user but blocked on this machine: no Git author identity is configured (no `user.name` or `user.email` anywhere, no `~/.gitconfig`). Once the user sets it, commit the staged rebuild and push `rebuild/data-story`, then fast-forward `main`. Review source-specific terms before commercial or bulk redistribution.
+- Published on 5 September 2026 as commit `71287c3` on `rebuild/data-story`, fast-forwarded to `main`; GitHub Pages builds the site from `main`. Review source-specific terms before commercial or bulk redistribution.
 
 ## Do not
 
