@@ -1,6 +1,17 @@
 # Validation
 
-Local validation performed on 5 September 2026. Nothing has been pushed or deployed.
+Local validation performed on 5 September 2026, repeated for the UI rebuild on 6 September 2026.
+
+## 6 September 2026, UI rebuild
+
+| Check | Result |
+| --- | --- |
+| `npm run lint` | ESLint and Ruff pass |
+| `npm test` | 16 tests pass, including the three empty state render tests |
+| `npm run build` | TypeScript and Vite pass; 259 kB JS (80 kB gzipped), 37 kB CSS, Geist and Geist Mono subsets |
+| axe-core 4.10 WCAG 2 A/AA in the dev build | 0 violations; incomplete contrast checks are SVG text, select chevron images, the hero text gradient and elements under the fixed nav |
+
+Browser checks at 1440 px, 390 px and 320 px: no document level horizontal overflow; island nav active state follows the chapters; phone menu opens with the hamburger, closes with Escape and after choosing a chapter, and restores body scrolling; arrow keys move the chart selection and the readout follows; the 80% toggle shrinks the horizon; `#faq` as a direct hash lands with the nav clearance; `prefers-reduced-motion: reduce` shows all reveal blocks and tagline words immediately and removes transitions; the loading skeleton and the not found page render with the same tokens.
 
 ## Automated checks
 

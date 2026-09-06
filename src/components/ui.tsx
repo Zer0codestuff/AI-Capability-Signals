@@ -1,30 +1,47 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { ArrowUpRight, Plus } from '@phosphor-icons/react/dist/ssr'
 
-export function Arrow({ down = false }: { down?: boolean }) {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"
-    className={down ? 'arrow-down' : ''}>
-    <path d="M5 19 19 5M5 5h14v14" stroke="currentColor" strokeWidth="1.5" />
+export { ArrowUpRight, ArrowDown, ArrowRight, ArrowUp, ArrowCounterClockwise, DownloadSimple, Diamond }
+  from '@phosphor-icons/react/dist/ssr'
+
+export function Mark() {
+  return <svg width="20" height="20" viewBox="0 0 25 25" fill="none" aria-hidden="true">
+    <path d="M3 21V16M9 21V12M15 21V7M21 21V2" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
   </svg>
 }
 
-export function Mark() {
-  return <svg width="25" height="25" viewBox="0 0 25 25" fill="none" aria-hidden="true">
-    <path d="M3 21V16M9 21V12M15 21V7M21 21V2" stroke="currentColor" strokeWidth="2.5" />
-  </svg>
+/* Heavy fade up on first entry into the viewport. Content stays in the markup, only the
+   presentation is delayed, so server rendering and reduced motion keep everything visible. */
+export function Reveal({ children, className = '', as: Tag = 'div', delay = 0 }: {
+  children: ReactNode; className?: string; as?: 'div' | 'header' | 'section' | 'footer'; delay?: number
+}) {
+  const ref = useRef<HTMLElement>(null)
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    const node = ref.current
+    if (!node || typeof IntersectionObserver === 'undefined') { setShown(true); return }
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) { setShown(true); observer.disconnect() }
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+  return <Tag ref={ref as never} className={`reveal ${shown ? 'is-in' : ''} ${className}`}
+    style={delay ? { transitionDelay: `${delay}ms` } : undefined}>{children}</Tag>
 }
 
 export function SectionHead({ number, label, title, children }: {
   number: string; label: string; title: ReactNode; children: ReactNode
 }) {
-  return <header className="section-head">
-    <div className="eyebrow"><span className="chapter-number">{number}</span>{label}</div>
+  return <Reveal as="header" className="section-head">
+    <p className="eyebrow"><span className="chapter-number" aria-hidden="true">{number}</span>{label}</p>
     <div className="section-intro"><h2>{title}</h2><p>{children}</p></div>
-  </header>
+  </Reveal>
 }
 
 export function Evidence({ title = 'How to read this', children }: { title?: string; children: ReactNode }) {
   return <details className="evidence">
-    <summary>{title}<span aria-hidden="true">+</span></summary>
+    <summary><span>{title}</span><Plus size={18} weight="regular" aria-hidden="true" /></summary>
     <div className="evidence-body">{children}</div>
   </details>
 }
@@ -43,6 +60,10 @@ export function Segment<T extends string>({ value, options, onChange, label }: {
 
 export function SourceLine({ children, href, label }: { children: ReactNode; href: string; label: string }) {
   return <div className="source-line"><span>{children}</span>
-    <a href={href} target="_blank" rel="noreferrer">{label}<Arrow /></a>
+    <a href={href} target="_blank" rel="noreferrer">{label}<ArrowUpRight size={14} aria-hidden="true" /></a>
   </div>
+}
+
+export function Field({ label, children, className = '' }: { label: string; children: ReactNode; className?: string }) {
+  return <label className={`field ${className}`}><span>{label}</span>{children}</label>
 }

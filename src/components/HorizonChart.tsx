@@ -48,7 +48,7 @@ export default function HorizonChart({ models, reliability, selected, onSelect, 
       <text x={left - 14} y={y(tick) + 4} textAnchor="end">{duration(tick, true)}</text>
     </g>)}
     {window.years.map(year => <g key={year} className="grid-line">
-      <text x={x(time(`${year}-01-01`))} y={H - 16} textAnchor="middle">{year}</text>
+      <text x={x(time(`${year}-01-01`))} y={mobile && !compact ? H - 26 : H - 16} textAnchor="middle">{year}</text>
     </g>)}
     {!compact && maximum > reliableRange && <g className="chart-limit">
       <rect x={left} y={top} width={W - right - left} height={Math.max(0, y(reliableRange) - top)}
