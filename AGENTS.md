@@ -26,7 +26,7 @@ Node 22.12+ or 24 is required. The committed JSON is enough to build/run the web
 ## Current status
 
 - Original repository cloned at `46b17f2`.
-- Rebuild branch: `rebuild/data-story`, published to GitHub on 5 September 2026 together with `main` at commit `71287c3`.
+- Rebuild branch: `rebuild/data-story`, published to GitHub on 5 September 2026 together with `main` at commit `71287c3`. The 6 September UI restyle is `cd30752` on the same two branches.
 - The user approved a guided story with explorable charts, equal emphasis on measured progress and future scenarios, and a dark minimal design with one accent color.
 - Source investigation confirmed that populated Epoch fields can be researcher estimates, not manufacturer disclosures. Artificial Analysis benchmark versions change over time. METR time horizons are human task durations at a specified success rate, not AI runtime or guaranteed autonomy.
 - The v3 local rebuild is complete. The 5 September 2026 snapshot has 23 same-version METR records, 124 models with at least one benchmark and usable price, and four illustrative size records. Three embedded TH 1.0 records are excluded.
@@ -61,7 +61,7 @@ Node 22.12+ or 24 is required. The committed JSON is enough to build/run the web
 - Retain raw snapshots deliberately for provenance; do not automatically prune them. Formatted JSON is intentional for review.
 - Embedded desktop screenshots may tile at full resolution. A 1440 CSS-pixel viewport at device scale 0.4 produces a usable overview; mobile scale 1 works normally. Do not mistake the capture artifact for repeated application content. For legible phone captures, use CDP `Page.captureScreenshot` without a clip at device scale 2 and decode the saved base64 file.
 - The skill's "final CTA identical to the top" rule was adapted: the hero CTA scrolls into the evidence, the closing CTA downloads the data. An `og:image` raster is still missing; the closing FAQ schema is rendered client side.
-- Published on 5 September 2026 as commit `71287c3` on `rebuild/data-story`, fast-forwarded to `main`. The 6 September UI rebuild is published on the same two branches so GitHub Pages, which builds from `main`, picks it up. Review source-specific terms before commercial or bulk redistribution.
+- Published on 5 September 2026 as commit `71287c3` on `rebuild/data-story`, fast-forwarded to `main`. The 6 September UI restyle is `cd30752` on the same two branches so GitHub Pages, which builds from `main`, picks it up. Review source-specific terms before commercial or bulk redistribution.
 
 ## Do not
 
