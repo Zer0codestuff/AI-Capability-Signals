@@ -26,7 +26,7 @@ Node 22.12+ or 24, uv for Python.
 
 ## Current status (3 October 2026)
 
-- Version 4 is a full rewrite on branch `rebuild/v4`, committed locally and not pushed. `main` and the live site still hold version 3. Started in Antigravity (thread `49a22d68`), finished in Claude Code after the Antigravity quota ran out.
+- Version 4 is a full rewrite, published on 3 October 2026: `rebuild/v4` was pushed and fast forwarded into `main` at `c825e2c` with the user's approval, and the Pages source was switched to GitHub Actions. The first `publish.yml` run passed and the live site at https://gabrielemonni.me/AI-Capability-Signals/ loads all eleven charts with no console errors. Started in Antigravity (thread `49a22d68`), finished in Claude Code after the Antigravity quota ran out.
 - The user chose: all eight metric groups, English only, projections with uncertainty bands plus a historical check labelled "if the trend continues", keep the dark black and lime style, rewrite on a new branch with weekly automatic refresh, show the local result before publishing.
 - Data through 28 September 2026: 270 indexed models, 162 with a price, 3,614 models in the Epoch database.
 - Headline results: capability index +14.2 points a year; METR task length doubles every 4.1 months (METR publishes 129 days, this fit gives 125); training compute x4.6 a year; training cost x3 a year; GPT-4 level price down 682 times since March 2023; open models 7 months behind closed.
@@ -50,7 +50,8 @@ Node 22.12+ or 24, uv for Python.
 
 ## Known issues and next steps
 
-- To publish: commit `rebuild/v4`, merge to `main`, and switch the repository Pages source to "GitHub Actions" (Settings, Pages, or `gh api -X PUT repos/Zer0codestuff/AI-Capability-Signals/pages -f build_type=workflow`). Both need the user's approval.
+- The workflows use action versions built for Node.js 20 (`actions/checkout@v4`, `setup-node@v4`, `configure-pages@v5`, `upload-pages-artifact@v3`, `deploy-pages@v4`, `astral-sh/setup-uv@v6`). GitHub runs them on Node.js 24 with a deprecation warning. Bump them when newer majors are confirmed.
+- The weekly schedule (Mondays 06:17 UTC) has not fired yet. Check the first scheduled run.
 - Price coverage is 162 of 270 models. Retired models with no public keyless price record (for example Qwen 3.8 Max) are missing. Artificial Analysis would fill gaps but needs an API key.
 - METR's latest measured model is from April 2026, cluster data stops in July 2025, training cost estimates are sparse after 2023. The page says so in each chapter.
 - The parameter trend fails its backtest, so that chart has no projection. Expected, not a bug.
@@ -66,5 +67,5 @@ Node 22.12+ or 24, uv for Python.
 - Do not treat parameter count, compute or cost as intelligence.
 - Do not invent specifications, dates or scores for unreleased models.
 - Do not add a second y axis, cycle series colors, or add decorative colors.
-- Do not push, merge, deploy or change repository settings without approval.
+- Do not push large or risky changes, or change repository settings, without approval. Small scoped fixes can be committed and pushed directly.
 - Do not add bot or agent authorship to commits.
