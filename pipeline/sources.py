@@ -102,8 +102,7 @@ SOURCES: dict[str, Source] = {
             "https://www.llm-prices.com/historical-v1.json",
             "https://github.com/simonw/llm-prices",
             "No license declared, factual list prices, attributed",
-            "Vendor list prices kept by hand, including the price a model had before "
-            "a later price change.",
+            "Vendor list prices kept by hand, including the price a model had before a later price change.",
         ),
         Source(
             "models_dev",

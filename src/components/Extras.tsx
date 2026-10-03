@@ -9,7 +9,7 @@ type Disclosure = Story['chapters']['size']['bars']['disclosure']
 export function DisclosureBars({ rows }: { rows: Disclosure }) {
   return <Reveal className="card bars-card">
     <div className="chart-top">
-      <p className="chart-caption">Share of notable language models with a published figure, by release year</p>
+      <p className="chart-caption">Share of notable language models with a known figure, by release year</p>
       <ul className="legend">
         <li><i className="key-box" style={{ background: 'var(--accent)' }} />Size</li>
         <li><i className="key-box" style={{ background: 'var(--series-2)' }} />Training compute</li>

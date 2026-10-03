@@ -6,7 +6,7 @@ import random
 import unittest
 from datetime import date, timedelta
 
-from pipeline import prices, stats
+from pipeline import audit, prices, stats
 from pipeline.build import OUTPUT, lag, metr_name
 
 
@@ -86,7 +86,7 @@ class Matching(unittest.TestCase):
         observed = b"Model Name,Release Date,USD per 1M Tokens\nAlpha-1,2024-01-01,9\nAlpha-1,2023-01-01,12\n"
         attached = prices.attach(
             models,
-            epoch_files=[observed],
+            epoch_files=[(observed, True)],
             history={"prices": []},
             models_dev={
                 "openai": {"models": {"alpha-1": {"name": "Alpha 1", "cost": {"input": 1, "output": 1}}}}
@@ -106,7 +106,7 @@ class Matching(unittest.TestCase):
                 ]
             },
         )
-        self.assertEqual(attached["Alpha 1"], prices.Price(12.0, "epoch_prices", "observed"))
+        self.assertEqual(attached["Alpha 1"], prices.Price(12.0, "epoch_prices", "observed", "2023-01-01"))
         self.assertEqual(attached["Beta 2"], prices.Price(3.0, "openrouter", "list_current"))
         self.assertNotIn("Gamma 3", attached)
 
@@ -115,6 +115,37 @@ class Matching(unittest.TestCase):
         follower = [(date(2023, 6, 1), 90.0, "early"), (date(2024, 7, 1), 100.0, "F1")]
         result = lag(leader, follower, date(2025, 1, 1))
         self.assertEqual([(p["n"], round(p["v"])) for p in result], [("F1", 6), ("Today", 12)])
+
+
+class Guards(unittest.TestCase):
+    def test_only_vetted_rows_are_usable(self):
+        row = {"notable": True, "confidence": "Likely", "slip": False}
+        self.assertIsNone(audit.status(row, "params"))
+        self.assertEqual(audit.status({**row, "confidence": "Speculative"}, "params"), "speculative")
+        self.assertEqual(audit.status({**row, "confidence": ""}, "compute"), "unrated")
+        self.assertEqual(audit.status({**row, "notable": False}, "cost"), "unvetted")
+        self.assertEqual(audit.status({**row, "slip": True}, "params"), "unit")
+        self.assertIsNone(audit.status({**row, "slip": True}, "compute"))
+
+    def test_unit_slip_reads_the_note(self):
+        self.assertEqual(audit.unit_slip(2.1e9, 'Elon said it "will be the 2.1T model"'), 2.1e12)
+        self.assertIsNone(audit.unit_slip(2.8e12, "2.8T total, 104B active parameters"))
+        self.assertIsNone(audit.unit_slip(2e12, "a 288 billion active parameter model"))
+        self.assertIsNone(audit.unit_slip(1.75e11, "no size quoted"))
+
+    def test_a_recent_tenfold_leap_is_held_back_but_history_is_kept(self):
+        checks = audit.Audit()
+        points = [
+            (date(2012, 1, 1), 1.0, "old"),
+            (date(2013, 1, 1), 50.0, "old leap"),
+            (date(2025, 1, 1), 100.0, "steady"),
+            (date(2025, 6, 1), 5000.0, "suspect"),
+            (date(2025, 9, 1), 300.0, "next"),
+        ]
+        kept, held = audit.records(points, chart="test", today=date(2026, 1, 1), audit=checks)
+        self.assertEqual([name for _, _, name in kept], ["old", "old leap", "steady", "next"])
+        self.assertEqual(held, {"suspect"})
+        self.assertEqual(checks.flags[0]["name"], "suspect")
 
 
 class PublishedBundle(unittest.TestCase):
@@ -147,6 +178,17 @@ class PublishedBundle(unittest.TestCase):
                             self.assertTrue(step["lo"] <= step["v"] <= step["hi"])
                     else:
                         self.assertFalse(trend["projectable"])
+
+    def test_no_unvetted_value_reaches_a_record_or_a_trend(self):
+        for name in ("size", "compute", "cost"):
+            chart = next(iter(self.story["chapters"][name]["charts"].values()))
+            set_aside = {(p["n"], p["d"]) for p in chart["points"] if p.get("q")}
+            for entry in chart["series"][0]["points"]:
+                self.assertNotIn((entry["n"], entry["d"]), set_aside)
+            for entry in chart["points"]:
+                if entry.get("g") == "frontier":
+                    self.assertIsNone(entry.get("q"))
+            self.assertIn(self.story["chapters"][name]["facts"]["largest"]["c"], audit.RATED)
 
     def test_sources_are_traceable(self):
         self.assertGreaterEqual(len(self.story["sources"]), 6)

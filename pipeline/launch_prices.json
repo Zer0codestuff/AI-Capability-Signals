@@ -1,0 +1,16 @@
+[
+  {
+    "model": "Gemini 1.5 Pro (May 2024)",
+    "input": 3.5,
+    "output": 10.5,
+    "reason": "Google cut this model's price by 64% (input) and 52% (output) on 1 October 2024. The Epoch AI file holds the later price, so the launch price is restored.",
+    "url": "https://developers.googleblog.com/en/updated-production-ready-gemini-models-reduced-15-pro-pricing-increased-rate-limits-and-more/"
+  },
+  {
+    "model": "Gemini 1.5 Flash (May 2024)",
+    "input": 0.35,
+    "output": 1.05,
+    "reason": "Google cut this model's price by 78% (input) and 71% (output) on 12 August 2024, to $0.075 and $0.30. The Epoch AI file holds the later price, so the launch price is restored.",
+    "url": "https://developers.googleblog.com/en/gemini-15-flash-updates-google-ai-studio-gemini-api/"
+  }
+]

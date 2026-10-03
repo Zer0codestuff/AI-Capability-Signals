@@ -38,6 +38,14 @@ function groupColor(chart: ChartData, group: string | undefined) {
   return 'var(--dot)'
 }
 
+const SET_ASIDE: Record<string, string> = {
+  unvetted: 'outside the curated set',
+  speculative: 'speculative estimate',
+  unrated: 'no confidence rating',
+  unit: 'value and note disagree',
+  held: 'awaiting review',
+}
+
 function detail(unit: Unit, point: Point) {
   const lines: string[] = []
   if (point.lo !== undefined && point.hi !== undefined) {
@@ -45,7 +53,9 @@ function detail(unit: Unit, point: Point) {
   }
   if (point.p80 !== undefined) lines.push(`${amount(unit, point.p80)} at 80% success`)
   if (point.e !== undefined) lines.push(`Capability index ${point.e.toFixed(1)}`)
-  if (point.k) lines.push(point.k === 'observed' ? 'Price recorded at the time' : 'Vendor list price')
+  if (point.k) lines.push(point.k === 'observed' && point.s ? `Price recorded ${day(point.s, 'month')}` : 'Vendor list price')
+  if (point.q) lines.push(`Not used for records or the trend: ${SET_ASIDE[point.q] ?? point.q}`)
+  else if (point.c) lines.push(point.c === 'Confident' ? 'Confirmed value' : 'Estimate rated likely')
   if (point.m) lines.push(`Level first reached by ${point.m}`)
   return lines
 }

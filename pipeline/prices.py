@@ -3,16 +3,21 @@
 No single public dataset has launch prices for every model, so four sources are
 combined in a fixed order of trust. Each attached price keeps its provenance:
 
-1. ``observed``: a price Epoch AI recorded at the time (2021 to early 2025).
+0. A launch price restored by hand in ``launch_prices.json``, each with its source,
+   where a vendor is known to have cut the price after launch.
+1. ``observed``: a price Epoch AI recorded, with the day it was recorded (2021 to
+   early 2025).
 2. ``list_initial``: the vendor list price before a later documented price change.
 3. ``list_current``: today's first-party list price (models.dev, then llm-prices.com),
    used as the launch price.
 4. ``list_current`` via OpenRouter, only for closed models, where OpenRouter passes
    the vendor list price through.
 
-Today's third-party hosting prices of open-weight models are deliberately not used for
-the historical series: assigning a 2026 hosting price to a 2024 release would make the
-past look cheaper than it was.
+A hosting price of an open-weight model is placed on the timeline on the day it was
+recorded, never earlier: assigning a later hosting price to the release date would make
+the past look cheaper than it was. For the same reason today's third-party hosting
+prices are not used at all. Vendor list prices of closed models are assumed unchanged
+since launch unless a change is documented.
 
 Prices are USD per million tokens, blended 3:1 between input and output tokens.
 """
@@ -27,6 +32,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ALIASES = json.loads((Path(__file__).parent / "aliases.json").read_text())
+LAUNCH = json.loads((Path(__file__).parent / "launch_prices.json").read_text())
 
 # Words that describe packaging rather than a different model.
 NOISE = {"preview", "latest", "instruct", "chat", "beta", "it", "experimental", "exp"}
@@ -68,6 +74,8 @@ class Price:
     usd: float
     source: str
     kind: str
+    # Day the price was recorded, when the source says. None means "assumed since launch".
+    seen: str | None = None
 
 
 def blended(price_in: float, price_out: float) -> float:
@@ -90,17 +98,23 @@ def keys(name: str) -> list[str]:
     return [full] if full == base else [full, base]
 
 
-def _observed(epoch_files: list[bytes]) -> dict[str, tuple[str, float]]:
-    """Earliest Epoch observation per source model name."""
+def _observed(epoch_files: list[tuple[bytes, bool]]) -> dict[str, tuple[str, float]]:
+    """Earliest Epoch record per source model name, as (day recorded, price).
+
+    One file dates every row. The other was collected in one go from a price tracker, so
+    its prices are known to hold only from the collection day, taken as its latest date.
+    """
     earliest: dict[str, tuple[str, float]] = {}
-    for body in epoch_files:
-        for row in csv.DictReader(io.StringIO(body.decode("utf-8-sig"))):
+    for body, dated in epoch_files:
+        table = list(csv.DictReader(io.StringIO(body.decode("utf-8-sig"))))
+        collected = max((row["Release Date"].strip() for row in table), default="")
+        for row in table:
             name = row["Model Name"].strip()
             try:
                 usd = float(row["USD per 1M Tokens"])
             except ValueError:
                 continue
-            when = row["Release Date"].strip()
+            when = row["Release Date"].strip() if dated else collected
             if usd > 0 and (name not in earliest or when < earliest[name][0]):
                 earliest[name] = (when, usd)
     return earliest
@@ -171,7 +185,7 @@ def organisation_of(raw: str) -> str:
 def attach(
     models: list[dict],
     *,
-    epoch_files: list[bytes],
+    epoch_files: list[tuple[bytes, bool]],
     history: dict,
     models_dev: dict,
     openrouter: dict,
@@ -179,25 +193,31 @@ def attach(
     """Return a price for every ECI model that can be matched, keyed by model name."""
     observed_raw = _observed(epoch_files)
     names = {model["name"] for model in models}
-    observed: dict[str, float] = {}
+    observed: dict[str, tuple[str, float]] = {}
     index = {key: model["name"] for model in models for key in keys(model["name"])[:1]}
-    for source_name, (_, usd) in sorted(observed_raw.items(), key=lambda item: item[1][0]):
+    for source_name, record in sorted(observed_raw.items(), key=lambda item: item[1][0]):
         target = ALIASES.get(source_name)
         if target is None:
             target = index.get(normalise(source_name))
         if target in names:
-            observed.setdefault(target, usd)
+            observed.setdefault(target, record)
 
     vendor = _vendor_list(history)
     first_party = _first_party(models_dev)
     routed = _openrouter(openrouter)
 
+    launch = {entry["model"]: entry for entry in LAUNCH}
     result: dict[str, Price] = {}
     for model in models:
         name = model["name"]
         organisation = model["org"]
+        if name in launch:
+            entry = launch[name]
+            result[name] = Price(blended(entry["input"], entry["output"]), "vendor", "list_initial")
+            continue
         if name in observed:
-            result[name] = Price(observed[name], "epoch_prices", "observed")
+            seen, usd = observed[name]
+            result[name] = Price(usd, "epoch_prices", "observed", seen)
             continue
         candidates = keys(name)
         listed = next((vendor[key] for key in candidates if key in vendor), None)

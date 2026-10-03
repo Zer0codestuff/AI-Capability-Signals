@@ -70,7 +70,7 @@ export const UNIT_LABEL: Record<Unit, string> = {
   flop: 'Training compute, in operations (FLOP)',
   usd: 'Training cost, 2023 US dollars',
   usd_mtok: 'Price per million tokens',
-  ops_per_usd: 'Operations per second for each dollar',
+  ops_per_usd: 'Training operations per second for each dollar',
   h100e: 'Cluster size, in Nvidia H100 equivalents',
   months: 'Months behind',
 }

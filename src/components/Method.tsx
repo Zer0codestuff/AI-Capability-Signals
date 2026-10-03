@@ -1,13 +1,16 @@
 import type { Story } from '../types'
 import { Reveal, ArrowUpRight, DownloadSimple } from './ui'
-import { compact, day } from '../lib/format'
+import { compact, day, money } from '../lib/format'
 
 const STEPS = [
+  { title: 'Use vetted values only', text: 'A value counts only if Epoch AI rates it confident or likely and the model is in its curated set. Speculative figures, typing slips and unreviewed tenfold leaps are set aside and listed below.' },
   { title: 'Pick the frontier', text: 'A trend is fitted on the models that led at the time of their release: record setters, or the ten largest so far. Membership never depends on later releases.' },
   { title: 'Draw one straight line', text: 'For anything that grows by multiplication the line is fitted on a logarithmic scale, where a straight line means steady exponential change.' },
   { title: 'Ask if the pace changed', text: 'The data is split where two lines fit best and the two slopes are compared. The search is repeated on 2,000 resamples, and a change counts only if 95% of them agree.' },
   { title: 'Test it on the past', text: 'The same method is rerun on earlier dates and its one year projection is compared with what was really released. A projection is drawn only if it beat assuming no change.' },
 ]
+
+const shown = (value: number | string) => (typeof value === 'number' ? compact(value) : value)
 
 export default function Method({ story }: { story: Story }) {
   const { quality } = story
@@ -35,8 +38,13 @@ export default function Method({ story }: { story: Story }) {
         <li>{quality.database_models.toLocaleString('en-US')} models in the Epoch AI database, {quality.indexed_models} in
           the capability index, {quality.priced_models} matched to a price.</li>
         {quality.corrections.filter(item => item.applied).map(item =>
-          <li key={item.model}>Corrected {item.model}: {item.field.toLowerCase()} read {compact(item.from)} in the
-            source, used {compact(item.to)}. {item.reason}</li>)}
+          <li key={item.model}>Corrected {item.model}: {item.field.toLowerCase()} read {shown(item.from)} in the
+            source, used {shown(item.to)}. {item.reason}</li>)}
+        {quality.launch_prices.map(item =>
+          <li key={item.model}>Launch price restored for {item.model}: {money(item.input)} input and {money(item.output)} output
+            per million tokens. {item.reason} <a href={item.url} target="_blank" rel="noreferrer">Source</a></li>)}
+        {quality.flags.map(flag =>
+          <li key={flag.chart + flag.name}>{flag.name}: {flag.detail}.</li>)}
         <li>Rows dated after the download day are ignored.</li>
       </ul></div>
     </Reveal>

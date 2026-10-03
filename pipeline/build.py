@@ -12,13 +12,15 @@ import csv
 import io
 import json
 import math
+import re
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import yaml
 
-from . import prices, stats
+from . import audit, prices, stats
+from .audit import Audit
 from .sources import ROOT, SOURCES, Snapshot, unzip
 
 OUTPUT = ROOT / "public" / "data" / "signals.json"
@@ -26,9 +28,10 @@ CORRECTIONS = json.loads((Path(__file__).parent / "corrections.json").read_text(
 PROJECTION_YEARS = 2
 # GPT-4 is the first model in the index that was state of the art when it came out.
 ECI_START = date(2023, 3, 1)
+# (file, whether each row carries the day its price was recorded)
 EPOCH_PRICE_FILES = [
-    "epoch_ai_price_data_not_in_aa_with_benchmarks.csv",
-    "aa_data_with_math5.csv",
+    ("epoch_ai_price_data_not_in_aa_with_benchmarks.csv", True),
+    ("aa_data_with_math5.csv", False),
 ]
 METR_NAMES = {
     "gpt2": "GPT-2",
@@ -48,6 +51,13 @@ METR_NAMES = {
     "claude_4_1_opus": "Claude Opus 4.1",
     "claude_mythos_preview_early": "Claude Mythos Preview",
 }
+MONTHS = {
+    name: index + 1
+    for index, name in enumerate(
+        ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+    )
+}
+NAME_MONTH = re.compile(r"\((\w{3})\w*\.? (\d{4})\)")
 # A projection is drawn only when the fit has enough points and, in the backtest, did
 # better than assuming no further change.
 MIN_PROJECTION_POINTS = 10
@@ -84,6 +94,23 @@ def sig(value: float, digits: int = 4) -> float:
     if value == 0 or not math.isfinite(value):
         return 0.0
     return float(f"{value:.{digits}g}")
+
+
+def short(value: float) -> str:
+    """A large number in words a reader can check: 174T, 366M, 2.1B."""
+    for size, suffix in [(1e12, "T"), (1e9, "B"), (1e6, "M"), (1e3, "K")]:
+        if abs(value) >= size:
+            return f"{value / size:.3g}{suffix}"
+    return f"{value:.3g}"
+
+
+WHY = {
+    "unvetted": "comes from outside the curated set",
+    "speculative": "is a speculative estimate",
+    "unrated": "has no confidence rating",
+    "unit": "disagrees with its own note",
+    "held": "awaits review",
+}
 
 
 def months_between(start: date, end: date) -> float:
@@ -238,8 +265,8 @@ def load(snapshot: Snapshot) -> dict:
         "clusters": rows(get("epoch_clusters", "epoch_clusters")),
         "metr": yaml.safe_load(get("metr", "metr")),
         "price_files": [
-            get(f"epoch_prices/{name}", "epoch_prices", price_url.format(file=name))
-            for name in EPOCH_PRICE_FILES
+            (get(f"epoch_prices/{name}", "epoch_prices", price_url.format(file=name)), dated)
+            for name, dated in EPOCH_PRICE_FILES
         ],
         "llm_prices": json.loads(get("llm_prices", "llm_prices")),
         "models_dev": json.loads(get("models_dev", "models_dev")),
@@ -247,14 +274,19 @@ def load(snapshot: Snapshot) -> dict:
     }
 
 
-def apply_corrections(models: list[dict[str, str]]) -> list[dict]:
+def apply_corrections(raw: dict) -> list[dict]:
+    """Apply the documented fixes of source errors, each only while the error is still there."""
+    tables = {"epoch_models": raw["models"], "epoch_eci": raw["eci"]}
     report = []
     for correction in CORRECTIONS:
         applied = False
-        for row in models:
-            if row.get("Model") != correction["model"]:
+        for row in tables[correction["source"]]:
+            if row.get(correction["key"]) != correction["model"]:
                 continue
-            if number(row.get(correction["field"])) == correction["from"]:
+            current = row.get(correction["field"], "")
+            wrong = correction["from"]
+            same = number(current) == wrong if isinstance(wrong, (int, float)) else current[:10] == wrong
+            if same:
                 row[correction["field"]] = str(correction["to"])
                 applied = True
         report.append({**correction, "applied": applied})
@@ -452,47 +484,88 @@ def tasks(metr: dict, today: date) -> dict:
     }
 
 
-def language_models(models: list[dict[str, str]], today: date) -> list[dict]:
+def language_models(models: list[dict[str, str]], today: date, checks: Audit) -> list[dict]:
     result = []
     for row in models:
         when = day(row.get("Publication date"))
         if when is None or when > today:
             continue
-        result.append(
-            {
-                "name": row["Model"].strip(),
-                "org": prices.organisation_of(row.get("Organization", "")),
-                "d": when,
-                "language": "Language" in row.get("Domain", ""),
-                "notable": bool(row.get("Notability criteria", "").strip()),
-                "frontier": row.get("Frontier model", "") == "True",
-                "params": number(row.get("Parameters")),
-                "compute": number(row.get("Training compute (FLOP)")),
-                "cost": number(row.get("Training compute cost (2023 USD)")),
-                "confidence": row.get("Confidence", ""),
-                "open": row.get("Open model weights?", ""),
-            }
-        )
+        entry = {
+            "name": row["Model"].strip(),
+            "org": prices.organisation_of(row.get("Organization", "")),
+            "d": when,
+            "language": "Language" in row.get("Domain", ""),
+            "notable": bool(row.get("Notability criteria", "").strip()),
+            "params": number(row.get("Parameters")),
+            "compute": number(row.get("Training compute (FLOP)")),
+            "cost": number(row.get("Training compute cost (2023 USD)")),
+            "confidence": row.get("Confidence", "").strip(),
+            "slip": False,
+        }
+        if entry["params"]:
+            quoted = audit.unit_slip(entry["params"], row.get("Parameters notes", ""))
+            if quoted:
+                entry["slip"] = True
+                if entry["notable"]:
+                    checks.flag(
+                        "unit",
+                        "params",
+                        entry["name"],
+                        f"value {short(entry['params'])} but its note quotes {short(quoted)}, "
+                        "so it is not used",
+                    )
+        result.append(entry)
     return result
 
 
 def scale_chart(
     identifier: str,
     unit: str,
-    shown: list[dict],
-    fitted: list[dict],
+    rows_: list[dict],
     field: str,
     *,
+    fit_from: date,
+    show_from: date,
     today: date,
     seed: int,
+    checks: Audit,
     record_label: str,
     fitted_label: str,
-) -> dict:
-    fitted_names = {(m["name"], m["d"]) for m in fitted}
-    records = stats.running_records([(m["d"], m[field], m["name"]) for m in shown])
-    series = step_series("records", record_label, records)
+) -> tuple[dict, dict]:
+    """Chart of one database quantity. Only vetted rows set records or enter the trend."""
+    usable = [m for m in rows_ if audit.status(m, field) is None]
+    points = [(m["d"], m[field], m["name"]) for m in usable]
+    records, held = audit.records(points, chart=identifier, today=today, audit=checks)
+    usable = [m for m in usable if m["name"] not in held]
+    top = {(name, d) for d, _, name in stats.top_at_release([(m["d"], m[field], m["name"]) for m in usable])}
+    fitted = [m for m in usable if (m["name"], m["d"]) in top and m["d"] >= fit_from]
+    fitted_keys = {(m["name"], m["d"]) for m in fitted}
+    usable_keys = {(m["name"], m["d"]) for m in usable}
+    shown_usable = [m for m in usable if m["d"] >= show_from]
+    low, high = min(m[field] for m in shown_usable), max(m[field] for m in shown_usable)
+    shown = []
+    beyond = []
+    for m in rows_:
+        if m["d"] < show_from:
+            continue
+        if (m["name"], m["d"]) in usable_keys:
+            shown.append((m, None))
+        elif low <= m[field] <= high:
+            shown.append((m, "held" if m["name"] in held else audit.status(m, field)))
+        else:
+            beyond.append(m)
+    for m in sorted(beyond, key=lambda m: -m[field])[:5]:
+        if m[field] > high:
+            checks.flag(
+                "beyond",
+                identifier,
+                m["name"],
+                f"{short(m[field])} is above every vetted value and {WHY[audit.status(m, field) or 'held']}, "
+                "so it is not drawn",
+            )
+    series = step_series("records", record_label, [r for r in records if r[0] >= show_from])
     series["trend"] = trend_json([(m["d"], m[field]) for m in fitted], log=True, today=today, seed=seed)
-    return {
+    chart = {
         "id": identifier,
         "unit": unit,
         "scale": "log",
@@ -502,9 +575,11 @@ def scale_chart(
                 m[field],
                 m["name"],
                 m["org"],
-                "frontier" if (m["name"], m["d"]) in fitted_names else "other",
+                "frontier" if (m["name"], m["d"]) in fitted_keys else "other",
+                q=reason,
+                c=m["confidence"] or None,
             )
-            for m in shown
+            for m, reason in shown
         ],
         "groups": [
             {"id": "frontier", "label": fitted_label},
@@ -513,17 +588,38 @@ def scale_chart(
         "series": [series],
         "refs": [],
     }
+    confident = [m for m in shown_usable if m["confidence"] == "Confident"]
+    largest = max(shown_usable, key=lambda m: m[field])
+    largest_confident = max(confident, key=lambda m: m[field])
 
+    def named(m: dict) -> dict:
+        return {"n": m["name"], "v": sig(m[field]), "d": m["d"].isoformat(), "c": m["confidence"]}
 
-def size(models: list[dict], today: date) -> dict:
-    start = date(2017, 1, 1)
-    language = [m for m in models if m["language"] and m["params"] and m["d"] >= date(2012, 1, 1)]
-    notable = [m for m in language if m["notable"]]
-    top = {
-        (name, d) for d, _, name in stats.top_at_release([(m["d"], m["params"], m["name"]) for m in notable])
+    facts = {
+        "models": len(shown),
+        "vetted": len(shown_usable),
+        "set_aside": sum(1 for _, reason in shown if reason) + len(beyond),
+        "largest": named(largest),
+        "largest_confident": named(largest_confident),
     }
-    shown = [m for m in language if m["d"] >= start]
-    fitted = [m for m in notable if (m["name"], m["d"]) in top and m["d"] >= start]
+    return chart, facts
+
+
+def size(models: list[dict], today: date, checks: Audit) -> dict:
+    language = [m for m in models if m["language"] and m["params"] and m["d"] >= date(2012, 1, 1)]
+    chart, facts = scale_chart(
+        "params",
+        "params",
+        language,
+        "params",
+        fit_from=date(2017, 1, 1),
+        show_from=date(2017, 1, 1),
+        today=today,
+        seed=30,
+        checks=checks,
+        record_label="Largest vetted model",
+        fitted_label="Among the 10 largest when released",
+    )
     disclosure = []
     for year in range(2017, today.year + 1):
         cohort = [m for m in models if m["language"] and m["notable"] and m["d"].year == year]
@@ -536,98 +632,57 @@ def size(models: list[dict], today: date) -> dict:
                     "compute": round(sum(1 for m in cohort if m["compute"]) / len(cohort), 3),
                 }
             )
-    largest = max(shown, key=lambda m: m["params"])
-    recent = [m for m in shown if m["notable"] and m["d"] >= add_years(today, -1)]
-    largest_recent = max(recent, key=lambda m: m["params"]) if recent else largest
-    return {
-        "charts": {
-            "params": scale_chart(
-                "params",
-                "params",
-                shown,
-                fitted,
-                "params",
-                today=today,
-                seed=30,
-                record_label="Largest known model",
-                fitted_label="Among the 10 largest when released",
-            )
-        },
-        "bars": {"disclosure": disclosure},
-        "facts": {
-            "models": len(shown),
-            "largest": {"n": largest["name"], "v": sig(largest["params"]), "d": largest["d"].isoformat()},
-            "largest_recent": {
-                "n": largest_recent["name"],
-                "v": sig(largest_recent["params"]),
-                "d": largest_recent["d"].isoformat(),
-            },
-        },
-    }
+    return {"charts": {"params": chart}, "bars": {"disclosure": disclosure}, "facts": facts}
 
 
-def compute(models: list[dict], today: date) -> dict:
-    start = date(2010, 1, 1)
-    shown = [m for m in models if m["compute"] and m["d"] >= start]
-    fitted = [m for m in shown if m["frontier"]]
-    largest = max(shown, key=lambda m: m["compute"])
-    return {
-        "charts": {
-            "compute": scale_chart(
-                "compute",
-                "flop",
-                shown,
-                fitted,
-                "compute",
-                today=today,
-                seed=40,
-                record_label="Largest training run",
-                fitted_label="Among the 10 largest when released",
-            )
-        },
-        "facts": {
-            "models": len(shown),
-            "largest": {"n": largest["name"], "v": sig(largest["compute"]), "d": largest["d"].isoformat()},
-        },
-    }
+def compute(models: list[dict], today: date, checks: Audit) -> dict:
+    chart, facts = scale_chart(
+        "compute",
+        "flop",
+        [m for m in models if m["compute"]],
+        "compute",
+        fit_from=date(2010, 1, 1),
+        show_from=date(2010, 1, 1),
+        today=today,
+        seed=40,
+        checks=checks,
+        record_label="Largest training run",
+        fitted_label="Among the 10 largest when released",
+    )
+    return {"charts": {"compute": chart}, "facts": facts}
 
 
-def cost(models: list[dict], today: date) -> dict:
+def cost(models: list[dict], today: date, checks: Audit) -> dict:
     priced = [m for m in models if m["cost"] and m["d"] >= date(2012, 1, 1)]
-    top = {(name, d) for d, _, name in stats.top_at_release([(m["d"], m["cost"], m["name"]) for m in priced])}
-    fitted = [m for m in priced if (m["name"], m["d"]) in top and m["d"] >= date(2016, 1, 1)]
-    largest = max(priced, key=lambda m: m["cost"])
-    by_year = defaultdict(int)
-    for m in priced:
-        by_year[m["d"].year] += 1
-    return {
-        "charts": {
-            "cost": scale_chart(
-                "cost",
-                "usd",
-                priced,
-                fitted,
-                "cost",
-                today=today,
-                seed=50,
-                record_label="Most expensive training run",
-                fitted_label="Among the 10 most expensive when released",
-            )
-        },
-        "facts": {
-            "models": len(priced),
-            "largest": {"n": largest["name"], "v": sig(largest["cost"]), "d": largest["d"].isoformat()},
-            "estimates_last_year": by_year.get(today.year, 0) + by_year.get(today.year - 1, 0),
-        },
-    }
+    chart, facts = scale_chart(
+        "cost",
+        "usd",
+        priced,
+        "cost",
+        fit_from=date(2016, 1, 1),
+        show_from=date(2012, 1, 1),
+        today=today,
+        seed=50,
+        checks=checks,
+        record_label="Most expensive training run",
+        fitted_label="Among the 10 most expensive when released",
+    )
+    recent = [m for m in priced if audit.status(m, "cost") is None and m["d"] >= add_years(today, -2)]
+    facts["estimates_last_two_years"] = len(recent)
+    return {"charts": {"cost": chart}, "facts": facts}
 
 
-def price(models: list[dict], attached: dict[str, prices.Price], today: date) -> dict:
-    priced = [
-        dict(m, usd=attached[m["name"]].usd, kind=attached[m["name"]].kind)
-        for m in models
-        if m["name"] in attached
-    ]
+def price(models: list[dict], attached: dict[str, prices.Price], today: date, checks: Audit) -> dict:
+    priced = []
+    for m in models:
+        found = attached.get(m["name"])
+        if found is None:
+            continue
+        # A hosting price of an open model counts from the day it was recorded.
+        seen = day(found.seen) if found.seen else None
+        when = max(m["d"], seen) if seen and m["access"] != "closed" else m["d"]
+        priced.append(dict(m, d=when, released=m["d"], usd=found.usd, kind=found.kind, seen=found.seen))
+    priced.sort(key=lambda m: (m["d"], m["name"]))
     by_name = {m["name"]: m for m in models}
     series = []
     levels = []
@@ -640,7 +695,13 @@ def price(models: list[dict], attached: dict[str, prices.Price], today: date) ->
         if anchor is None:
             continue
         eligible = [m for m in priced if m["v"] >= anchor["v"] and m["d"] >= anchor["d"]]
-        records = stats.running_records([(m["d"], m["usd"], m["name"]) for m in eligible], lowest=True)
+        records, _ = audit.records(
+            [(m["d"], m["usd"], m["name"]) for m in eligible],
+            chart="price",
+            today=today,
+            audit=checks,
+            lowest=True,
+        )
         if len(records) < 2:
             continue
         entry = step_series(identifier, label, records)
@@ -681,7 +742,16 @@ def price(models: list[dict], attached: dict[str, prices.Price], today: date) ->
                 "unit": "usd_mtok",
                 "scale": "log",
                 "points": [
-                    point(m["d"], m["usd"], m["name"], m["org"], "other", e=sig(m["v"]), k=m["kind"])
+                    point(
+                        m["d"],
+                        m["usd"],
+                        m["name"],
+                        m["org"],
+                        "other",
+                        e=sig(m["v"]),
+                        k=m["kind"],
+                        s=m["seen"],
+                    )
                     for m in priced
                 ],
                 "groups": [{"id": "other", "label": "Models with a known price"}],
@@ -870,11 +940,21 @@ def race(models: list[dict], today: date) -> dict:
     }
 
 
-def hardware(chips: list[dict[str, str]], clusters: list[dict[str, str]], today: date) -> dict:
+TRAINING_FORMATS = [
+    "FP32 (single precision) performance (FLOP/s)",
+    "FP16 (half precision) performance (FLOP/s)",
+    "Tensor-FP16/BF16 performance (FLOP/s)",
+]
+
+
+def hardware(chips: list[dict[str, str]], clusters: list[dict[str, str]], today: date, checks: Audit) -> dict:
     priced = []
     for row in chips:
         when = day(row.get("Release date"))
-        speed, usd = number(row.get("ML OP/s")), number(row.get("Release price (USD)"))
+        # One yardstick for every chip: speed at the 32 or 16 bit formats used for training.
+        # The 8 and 4 bit formats newer chips add for running models would inflate the trend.
+        speed = max((number(row.get(column)) or 0.0) for column in TRAINING_FORMATS)
+        usd = number(row.get("Release price (USD)"))
         if when and speed and usd and date(2008, 1, 1) <= when <= today:
             priced.append(
                 {
@@ -885,9 +965,10 @@ def hardware(chips: list[dict[str, str]], clusters: list[dict[str, str]], today:
                 }
             )
     fitted = [m for m in priced if m["d"] >= date(2012, 1, 1)]
-    chip_series = step_series(
-        "records", "Best value so far", stats.running_records([(m["d"], m["v"], m["name"]) for m in priced])
+    chip_records, _ = audit.records(
+        [(m["d"], m["v"], m["name"]) for m in priced], chart="chips", today=today, audit=checks
     )
+    chip_series = step_series("records", "Best value so far", chip_records)
     chip_series["trend"] = trend_json([(m["d"], m["v"]) for m in fitted], log=True, today=today, seed=90)
 
     sites = []
@@ -908,15 +989,14 @@ def hardware(chips: list[dict[str, str]], clusters: list[dict[str, str]], today:
     shown = [m for m in sites if m["d"] >= date(2017, 1, 1)]
     top_sites = [m for m in shown if (m["name"], m["d"]) in top and m["d"] >= date(2019, 1, 1)]
     top_names = {(m["name"], m["d"]) for m in top_sites}
-    cluster_series = step_series(
-        "records",
-        "Largest cluster so far",
-        stats.running_records([(m["d"], m["v"], m["name"]) for m in shown]),
+    cluster_records, _ = audit.records(
+        [(m["d"], m["v"], m["name"]) for m in shown], chart="clusters", today=today, audit=checks
     )
+    cluster_series = step_series("records", "Largest cluster so far", cluster_records)
     cluster_series["trend"] = trend_json(
         [(m["d"], m["v"]) for m in top_sites], log=True, today=today, seed=95
     )
-    largest = max(shown, key=lambda m: m["v"])
+    largest = next(m for m in shown if m["name"] == cluster_records[-1][2])
     return {
         "charts": {
             "chips": {
@@ -981,8 +1061,13 @@ def explorer(models: list[dict], attached: dict[str, prices.Price], database: li
                 "e": sig(model["v"]),
                 "p": sig(priced.usd) if priced else None,
                 "pk": priced.kind if priced else None,
-                "params": sig(extra["params"]) if extra.get("params") else None,
-                "compute": sig(extra["compute"]) if extra.get("compute") else None,
+                # Unvetted or speculative values stay out of the table, like everywhere else.
+                "params": sig(extra["params"])
+                if extra.get("params") and audit.status(extra, "params") is None
+                else None,
+                "compute": sig(extra["compute"])
+                if extra.get("compute") and audit.status(extra, "compute") is None
+                else None,
             }
         )
     return table
@@ -995,9 +1080,16 @@ def build(snapshot: Snapshot) -> dict:
     raw = load(snapshot)
     retrieved = max(record["retrieved_at"] for record in snapshot.records.values())
     today = date.fromisoformat(retrieved[:10])
-    corrections = apply_corrections(raw["models"])
-    database = language_models(raw["models"], today)
+    checks = Audit()
+    corrections = apply_corrections(raw)
+    database = language_models(raw["models"], today, checks)
     models = eci_models(raw["eci"], today)
+    for model in models:
+        named = NAME_MONTH.search(model["name"])
+        if named and named.group(1).lower() in MONTHS:
+            stated = int(named.group(2)) * 12 + MONTHS[named.group(1).lower()]
+            if abs(stated - (model["d"].year * 12 + model["d"].month)) > 1:
+                checks.flag("date", "eci", model["name"], f"name and date {model['d']} disagree")
     attached = prices.attach(
         models,
         epoch_files=raw["price_files"],
@@ -1008,13 +1100,13 @@ def build(snapshot: Snapshot) -> dict:
     chapters = {
         "intelligence": intelligence(models, today),
         "tasks": tasks(raw["metr"], today),
-        "size": size(database, today),
-        "compute": compute(database, today),
-        "cost": cost(database, today),
-        "price": price(models, attached, today),
+        "size": size(database, today, checks),
+        "compute": compute(database, today, checks),
+        "cost": cost(database, today, checks),
+        "price": price(models, attached, today, checks),
         "openness": openness(models, today),
         "race": race(models, today),
-        "hardware": hardware(raw["hardware"], raw["clusters"], today),
+        "hardware": hardware(raw["hardware"], raw["clusters"], today, checks),
     }
     used = {record["source"] for record in snapshot.records.values()}
     sources = []
@@ -1044,6 +1136,8 @@ def build(snapshot: Snapshot) -> dict:
         "sources": sources,
         "quality": {
             "corrections": corrections,
+            "launch_prices": [entry for entry in prices.LAUNCH if entry["model"] in attached],
+            "flags": checks.flags,
             "database_models": len(database),
             "indexed_models": len(models),
             "priced_models": len(attached),

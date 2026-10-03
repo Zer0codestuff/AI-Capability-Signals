@@ -13,6 +13,12 @@ export interface Point {
   e?: number
   k?: string
   m?: string
+  /** Why a value is drawn but not used: unvetted, speculative, unrated, unit, held. */
+  q?: string
+  /** Epoch AI confidence rating. */
+  c?: string
+  /** Day a price was recorded. */
+  s?: string
 }
 
 export interface Interval { v: number; lo?: number; hi?: number }
@@ -57,7 +63,10 @@ export interface ChartData {
   refs: { v: number; label: string }[]
 }
 
-export interface Named { n: string; v: number; d: string; p80?: number | null }
+export interface Named { n: string; v: number; d: string; p80?: number | null; c?: string }
+export interface ScaleFacts { models: number; vetted: number; set_aside: number; largest: Named; largest_confident: Named }
+export interface Flag { kind: string; chart: string; name: string; detail: string }
+export interface LaunchPrice { model: string; input: number; output: number; reason: string; url: string }
 export interface LagFacts {
   now: number
   matched: string
@@ -87,7 +96,7 @@ export interface Source {
 }
 
 export interface Correction {
-  source: string; model: string; field: string; from: number; to: number; reason: string; applied: boolean
+  source: string; model: string; field: string; from: number | string; to: number | string; reason: string; applied: boolean
 }
 
 export interface Story {
@@ -104,10 +113,10 @@ export interface Story {
     size: {
       charts: { params: ChartData }
       bars: { disclosure: { label: string; n: number; params: number; compute: number }[] }
-      facts: { models: number; largest: Named; largest_recent: Named }
+      facts: ScaleFacts
     }
-    compute: { charts: { compute: ChartData }; facts: { models: number; largest: Named } }
-    cost: { charts: { cost: ChartData }; facts: { models: number; largest: Named; estimates_last_year: number } }
+    compute: { charts: { compute: ChartData }; facts: ScaleFacts }
+    cost: { charts: { cost: ChartData }; facts: ScaleFacts & { estimates_last_two_years: number } }
     price: {
       charts: { price: ChartData }
       facts: {
@@ -131,5 +140,5 @@ export interface Story {
   }
   explorer: ExplorerRow[]
   sources: Source[]
-  quality: { corrections: Correction[]; database_models: number; indexed_models: number; priced_models: number }
+  quality: { corrections: Correction[]; launch_prices: LaunchPrice[]; flags: Flag[]; database_models: number; indexed_models: number; priced_models: number }
 }

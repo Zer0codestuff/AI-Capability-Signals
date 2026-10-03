@@ -5,6 +5,16 @@
     "field": "Parameters",
     "from": 2100000000.0,
     "to": 2100000000000.0,
-    "reason": "The source note quotes 2.1T (trillion) parameters but the value field holds 2.1 billion. The correction applies only while the source still holds the mistyped value."
+    "reason": "The source note quotes 2.1T (trillion) parameters but the value field holds 2.1 billion. The correction applies only while the source still holds the mistyped value.",
+    "key": "Model"
+  },
+  {
+    "source": "epoch_eci",
+    "key": "Model",
+    "model": "GPT-4 Turbo (Nov 2023)",
+    "field": "date",
+    "from": "2024-01-25",
+    "to": "2023-11-06",
+    "reason": "The index dates this November 2023 model to January 2024. The Epoch AI models database and OpenAI's launch give 6 November 2023. The correction applies only while the source still holds the later date."
   }
 ]

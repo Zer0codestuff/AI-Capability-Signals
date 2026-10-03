@@ -51,12 +51,15 @@ The pipeline replaces `public/data/signals.json` only after every chapter is com
 
 The same procedure runs on every metric (`pipeline/stats.py`):
 
-1. **Pick the frontier.** A trend is fitted on the models that led at the time of release: record setters, or the ten largest so far. Membership never depends on later releases.
+0. **Use vetted values only** (`pipeline/audit.py`). A value from the Epoch AI models database can set a record, enter a trend or be quoted only if the model is in the curated notable set and the row is rated Confident or Likely. Speculative and unrated rows are background dots. A parameter count whose own note quotes the same number in another unit is set aside. A recent value that beats the previous record more than tenfold is held back until someone adds it to `pipeline/reviewed.json` with a reason. Everything set aside is listed on the page.
+1. **Pick the frontier.** A trend is fitted on the vetted models that led at the time of release: record setters, or the ten largest so far. Membership never depends on later releases.
 2. **Fit one straight line.** Ordinary least squares, on log10 of the value for anything that grows by multiplication, so a straight line means steady exponential change.
 3. **Ask if the pace changed.** Find the split date where two lines fit best and compare the slopes. The search for the split is repeated on 2,000 bootstrap resamples, and a change counts only if 95% of them agree on its direction. The recent part must cover at least two years. If the pace changed, the projection uses the recent part.
 4. **Backtest.** Rerun the whole procedure on earlier cutoff dates and compare its projection with the models released 6 to 18 months later. A projection (80% band) is drawn only if the method beat assuming no change and the fit has at least 10 points.
 
-Prices (`pipeline/prices.py`) are attached to index models in a fixed order of trust: a price Epoch AI recorded at the time, the vendor list price before a documented change, today's first party list price, then OpenRouter's pass through price for closed models. Today's third party hosting prices of open models are never projected into the past.
+Prices (`pipeline/prices.py`) are attached to index models in a fixed order of trust: a launch price restored by hand with its source (`pipeline/launch_prices.json`), a price Epoch AI recorded, the vendor list price before a documented change, today's first party list price, then OpenRouter's pass through price for closed models. A hosting price of an open model counts from the day it was recorded, never from the model's release, and today's third party hosting prices are not used.
+
+Chip value uses one yardstick for every chip: the fastest of its 32 and 16 bit speeds, the formats used for training. The 8 and 4 bit formats newer chips add for running models are left out, because mixing them in makes progress look faster than it is.
 
 Known source errors are fixed through `pipeline/corrections.json`, each with a reason, and reported on the page. A correction applies only while the source still holds the wrong value.
 

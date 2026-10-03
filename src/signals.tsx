@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import type { SignalCopy } from './components/Signal'
-import type { Story, Trend } from './types'
+import type { Flag, ScaleFacts, Story, Trend } from './types'
 import { amount, compact, day, digits, doubling, duration, factor, money, pace, percent, power, span } from './lib/format'
 
 const EPOCH_MODELS = 'https://epoch.ai/data/ai-models'
@@ -21,6 +21,22 @@ function shapeSentence(trend: Trend, noun: string) {
   }
 }
 
+/** The largest vetted value, saying plainly whether it is confirmed or an estimate. */
+function sizeRecord(facts: ScaleFacts, show: (value: number) => string, noun: string) {
+  const top = facts.largest
+  const sure = facts.largest_confident
+  if (top.c === 'Confident') return `The largest ${noun} on record is ${top.n} (${day(top.d, 'year')}): ${show(top.v)}, confirmed by its maker.`
+  return `The largest ${noun} is ${top.n} (${day(top.d, 'year')}): ${show(top.v)}, an outside estimate that Epoch AI rates likely. `
+    + `The largest figure confirmed by a maker is ${sure.n} (${day(sure.d, 'year')}): ${show(sure.v)}.`
+}
+
+function vettedNote(facts: ScaleFacts, chart: string, flags: Flag[]) {
+  const beyond = flags.filter(flag => flag.chart === chart && flag.kind === 'beyond').map(flag => flag.name)
+  return `Only values Epoch AI rates confident or likely, for models in its curated set, set records or enter the trend: ${facts.vetted} of ${facts.models}. `
+    + 'The rest are grey dots.'
+    + (beyond.length ? ` Figures above every vetted value are not drawn at all (${beyond.join(', ')}): they are speculative, or describe what a system could handle rather than a model that was trained.` : '')
+}
+
 function fitMethod(trend: Trend, what: string) {
   return <>
     <p>The trend line is an ordinary least squares fit on {what}: {trend.window.n} points
@@ -34,6 +50,7 @@ function fitMethod(trend: Trend, what: string) {
 }
 
 export function signals(story: Story): Record<string, SignalCopy> {
+  const flags = story.quality.flags
   const c = story.chapters
   const eci = c.intelligence.charts.eci.series[0].trend!
   const horizon = c.tasks.charts.horizon.series[0].trend!
@@ -44,6 +61,7 @@ export function signals(story: Story): Record<string, SignalCopy> {
   const clusters = c.hardware.charts.clusters.series[0].trend!
   const levels = c.price.facts.levels
   const gpt4 = levels[0]
+  const restored = story.quality.launch_prices
   const best = c.price.charts.price.series.find(series => series.id === 'best')?.points ?? []
   const disclosure = c.size.bars.disclosure
   const lastYear = disclosure[disclosure.length - 1]
@@ -124,8 +142,11 @@ export function signals(story: Story): Record<string, SignalCopy> {
       ],
       caveats: [
         `A price was found for ${c.price.facts.priced} of ${c.price.facts.indexed} models. Retired models with no public price record are missing, so a cheaper option may have existed at some dates.`,
-        `${c.price.facts.kinds.observed ?? 0} prices were recorded at the time by Epoch AI. For the others, today's vendor list price stands in for the launch price.`,
-        'Today\'s hosting prices of open models are not projected into the past. That would make earlier years look cheaper than they were.',
+        `${c.price.facts.kinds.observed ?? 0} prices were recorded by Epoch AI. For the others, today's vendor list price stands in for the launch price.`,
+        'A hosting price of an open model counts from the day it was recorded, not from the release of the model. Otherwise earlier years would look cheaper than they were.',
+        restored.length
+          ? `Vendors sometimes cut a price after launch. ${restored.length} known cuts (${restored.map(item => item.model).join(', ')}) are restored to the launch price. An unknown cut would make a step appear too early.`
+          : 'Vendors sometimes cut a price after launch. An unknown cut would make a step appear too early.',
         'Some vendors charge more for long prompts. The lowest tier is used.',
         'No projection is drawn: each line has too few steps to test a trend on its own past.',
       ],
@@ -150,27 +171,25 @@ export function signals(story: Story): Record<string, SignalCopy> {
       id: 'size',
       eyebrow: 'Model size',
       question: 'Are models getting bigger?',
-      answer: <>Yes, but size stopped being the headline. Labs now publish the size of
+      answer: <>Yes, but size stopped being the headline. A size is known for
         only {strong(percent(lastYear.params))} of notable models, down from {percent(peak.params)} in {peak.label}.</>,
       means: [
         <>Parameters are the adjustable numbers inside a model, a rough measure of its size. More parameters
           allow more knowledge, and cost more to train and to run.</>,
         <>Among the largest language models, size grew about {factor(params.whole.rate.v)} a year since 2017.
-          The largest recent model with a published estimate is {c.size.facts.largest_recent.n},
-          with {compact(c.size.facts.largest_recent.v)} parameters.</>,
-        <>The record of {compact(c.size.facts.largest.v)} belongs to {c.size.facts.largest.n} ({day(c.size.facts.largest.d, 'year')}),
-          a sparse research system that switches on a small part of itself for each input. Size and ability are
-          different things.</>,
+          {' '}{sizeRecord(c.size.facts, v => `${compact(v)} parameters`, 'size')}</>,
+        <>Most of the largest models are sparse: they hold trillions of parameters but switch on a small part
+          for each input. Size and ability are different things.</>,
       ],
       caveats: [
         params.projectable
           ? 'The projection assumes labs keep publishing sizes, which fewer of them do each year.'
           : 'No projection is drawn. Tested on its own past, this trend did worse than assuming no change.',
-        'Closed labs rarely publish parameter counts. Recent values for their models are estimates or leaks.',
-        'Sparse models count parameters that are mostly idle, so they overstate size compared with dense models.',
+        vettedNote(c.size.facts, 'params', flags),
+        'Closed labs rarely publish parameter counts. Values for their models are estimates, and say so when you hover them.',
       ],
-      method: fitMethod(params, 'notable language models that ranked among the ten largest at the time of their release, since 2017'),
-      source: { label: 'Epoch AI models database', href: EPOCH_MODELS, note: `${c.size.facts.models.toLocaleString('en-US')} language models with a known size` },
+      method: fitMethod(params, 'vetted language models that ranked among the ten largest at the time of their release, since 2017'),
+      source: { label: 'Epoch AI models database', href: EPOCH_MODELS, note: `${c.size.facts.vetted} vetted values among ${c.size.facts.models.toLocaleString('en-US')} language models` },
     },
 
     compute: {
@@ -182,41 +201,42 @@ export function signals(story: Story): Record<string, SignalCopy> {
       means: [
         <>Training compute counts the arithmetic operations performed while a model learns. It is the best
           public measure of how much effort went into building it.</>,
-        <>The largest known run is {c.compute.facts.largest.n} ({day(c.compute.facts.largest.d, 'year')}),
-          about {power(c.compute.facts.largest.v)} operations.
+        <>{sizeRecord(c.compute.facts, v => `about ${power(v)} operations`, 'training run')}
           {' '}{shapeSentence(flop, 'amount of compute')}</>,
         <>A steady multiplication for sixteen years is what exponential growth looks like. It is also far
           faster than chips improve, so most of it comes from spending more and building bigger clusters.</>,
       ],
       caveats: [
         'Most recent values are estimates by Epoch AI researchers, not company disclosures.',
+        vettedNote(c.compute.facts, 'compute', flags),
         `Only ${percent(lastYear.compute)} of notable ${lastYear.label} language models have a compute estimate, so the recent frontier is thinly covered.`,
         'More compute does not guarantee a better model. It measures input, not result.',
       ],
-      method: fitMethod(flop, 'the models Epoch AI flags as frontier, meaning among the ten largest training runs at the time of release, since 2010'),
-      source: { label: 'Epoch AI models database', href: EPOCH_MODELS, note: `${c.compute.facts.models.toLocaleString('en-US')} models with a compute estimate` },
+      method: fitMethod(flop, 'vetted models that ranked among the ten largest training runs at the time of release, since 2010'),
+      source: { label: 'Epoch AI models database', href: EPOCH_MODELS, note: `${c.compute.facts.vetted} vetted values among ${c.compute.facts.models.toLocaleString('en-US')} models` },
     },
 
     cost: {
       id: 'training-cost',
       eyebrow: 'Training cost',
       question: 'What does it cost to train a top model?',
-      answer: <>About {strong(`${digits(cost.rate.v, 2)} times more every year`)}. The most expensive known run
-        cost {strong(amount('usd', c.cost.facts.largest.v))}.</>,
+      answer: <>About {strong(`${digits(cost.rate.v, 2)} times more every year`)}. The most expensive run with a
+        vetted estimate cost {strong(amount('usd', c.cost.facts.largest.v))}.</>,
       means: [
         <>This is the price of the computing used in the final training run, in 2023 dollars. It leaves out
           salaries, failed experiments, data and everything else a lab spends.</>,
-        <>The record is {c.cost.facts.largest.n} ({day(c.cost.facts.largest.d, 'year')}). Cost rises more slowly
+        <>{sizeRecord(c.cost.facts, v => amount('usd', v), 'training run')} Cost rises more slowly
           than compute because each dollar buys more computing every year.</>,
         <>{shapeSentence(cost, 'cost')} At this pace the bill {doubling(cost)}.</>,
       ],
       caveats: [
-        `Estimates are sparse for recent models: ${c.cost.facts.estimates_last_year} in the last two years. The latest is from ${day(cost.window.to, 'month')}.`,
+        `Estimates are sparse for recent models: ${c.cost.facts.estimates_last_two_years} vetted ones in the last two years. The latest is from ${day(cost.window.to, 'month')}.`,
+        vettedNote(c.cost.facts, 'cost', flags),
         'Every value is an estimate built from hardware, duration and cloud prices. None is an audited figure.',
         'The full cost of developing a model is several times the cost of its final run.',
       ],
-      method: fitMethod(cost, 'models that ranked among the ten most expensive at the time of release, since 2016'),
-      source: { label: 'Epoch AI models database', href: EPOCH_MODELS, note: `${c.cost.facts.models} models with a cost estimate` },
+      method: fitMethod(cost, 'vetted models that ranked among the ten most expensive at the time of release, since 2016'),
+      source: { label: 'Epoch AI models database', href: EPOCH_MODELS, note: `${c.cost.facts.vetted} vetted values among ${c.cost.facts.models} cost estimates` },
     },
 
     chips: {
@@ -226,16 +246,19 @@ export function signals(story: Story): Record<string, SignalCopy> {
       answer: <>Yes, about {strong(`${digits(chips.rate.v, 2)} times more computing per dollar`)} each year.
         Value for money {doubling(chips)}.</>,
       means: [
-        <>Each dot is an AI chip at its launch price. The value is how many operations per second one dollar
-          of hardware performs, at the number format best suited to AI work.</>,
+        <>Each dot is a chip at its launch price. The value is how many operations per second one dollar of
+          hardware performs, at the 32 or 16 bit precision used to train models.</>,
         <>{shapeSentence(chips, 'value for money')} Compare this with training compute, which
           grows {digits(flop.rate.v, 2)} times a year: better chips explain only a small part of it.</>,
+        <>Gaming cards hold the records because they are cheap. Data center chips cost more per operation,
+          but pack far more computing and memory into one machine.</>,
       ],
       caveats: [
+        'Every chip is measured the same way. The 8 and 4 bit formats that newer chips add for running models are left out, because counting them would make progress look faster than it is.',
         `Only ${c.hardware.facts.chips} chips have a public launch price. Many data center chips are sold at negotiated prices.`,
         'Launch price ignores electricity, cooling and networking, which are a large share of real cost.',
       ],
-      method: fitMethod(chips, 'every AI chip with a known launch price since 2012'),
+      method: fitMethod(chips, 'every chip with a known launch price since 2012, using the fastest of its 32 and 16 bit speeds'),
       source: { label: 'Epoch AI hardware database', href: 'https://epoch.ai/data/machine-learning-hardware', note: `${c.hardware.facts.chips} chips with a launch price` },
     },
 

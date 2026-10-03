@@ -1,0 +1,8 @@
+[
+  {
+    "chart": "price",
+    "name": "GPT-4o mini",
+    "reason": "Real launch price. OpenAI released GPT-4o mini on 18 July 2024 at $0.15 per million input tokens and $0.60 per million output tokens, and Epoch AI's price file records the same blended $0.26.",
+    "url": "https://openai.com/index/gpt-4o-mini-advancing-cost-efficient-intelligence/"
+  }
+]
