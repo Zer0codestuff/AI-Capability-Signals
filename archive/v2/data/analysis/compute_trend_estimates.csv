@@ -1,9 +1,0 @@
-specification,estimator,n,log10_flop_per_year,ci_low,ci_high,doubling_time_months,doubling_time_months_low,doubling_time_months_high,r_squared,description
-frontier_p90_by_year,ols_hc3,13,0.535666,0.474299,0.597033,6.743684,6.050522,7.616214,0.962774,Annual 90th percentile of log10 disclosed training compute.
-frontier_p90_by_year,theil_sen,13,0.517738,0.464067,0.602392,6.977196,5.996697,7.784139,,Annual 90th percentile of log10 disclosed training compute.
-frontier_max_by_year,ols_hc3,13,0.635875,0.528083,0.743667,5.680928,4.857499,6.840512,0.958099,Annual maximum of log10 disclosed training compute.
-frontier_max_by_year,theil_sen,13,0.63964,0.511744,0.728187,5.647485,4.960756,7.05892,,Annual maximum of log10 disclosed training compute.
-all_disclosed_models,ols_hc3,1124,0.554794,0.51554,0.594049,6.511171,6.080916,7.006948,0.388995,"Every model with disclosed compute, one observation per model."
-all_disclosed_models,theil_sen,1124,0.574119,0.530559,0.617581,6.292009,5.84921,6.808597,,"Every model with disclosed compute, one observation per model."
-epoch_frontier_flagged_models,ols_hc3,74,0.65278,0.621707,0.683853,5.533807,5.282363,5.810385,0.957303,Models the source curator flags as frontier systems.
-epoch_frontier_flagged_models,theil_sen,74,0.661969,0.629017,0.693926,5.456993,5.205684,5.742863,,Models the source curator flags as frontier systems.

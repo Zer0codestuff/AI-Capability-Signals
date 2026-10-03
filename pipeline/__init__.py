@@ -1,1 +1,1 @@
-"""Source ingestion and auditable calculations for the data story."""
+"""Data pipeline for AI Capability Signals."""

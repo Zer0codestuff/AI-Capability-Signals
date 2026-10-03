@@ -1,4 +1,0 @@
-horizon_years,folds,mae_log10,rmse_log10,baseline_mae_log10,skill_ratio_vs_last_value,beats_baseline,error_quantile_low,error_quantile_high,baseline,note
-1,7,0.365346,0.603382,0.622291,0.587098,True,-0.255446,1.331889,last observed frontier value carried forward,Errors are in log10 FLOP. A skill ratio below 1 means the fitted trend forecasts better out of sample than assuming no change.
-2,6,0.202818,0.283188,1.167287,0.173752,True,-0.166287,0.561697,last observed frontier value carried forward,Errors are in log10 FLOP. A skill ratio below 1 means the fitted trend forecasts better out of sample than assuming no change.
-3,5,0.315061,0.49396,1.720409,0.183131,True,-0.128298,0.983956,last observed frontier value carried forward,Errors are in log10 FLOP. A skill ratio below 1 means the fitted trend forecasts better out of sample than assuming no change.

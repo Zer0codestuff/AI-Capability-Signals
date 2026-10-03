@@ -1,6 +1,0 @@
-source_id,latest_observation,date_semantics,rows,days_behind_reference,is_freshest
-swebench_verified,2025-12-15,submission directory date,134,224,False
-anthropic_economic_index,2026-06-01,usage period end date,2844,56,False
-epoch_models,2026-07-24,model publication date (curated; recent years right-censored),3572,3,False
-openrouter_models,2026-07-27,"catalogue listing created timestamp (cross-section, not a price history)",341,0,True
-lmarena_leaderboard,2026-07-27,leaderboard publication date,1894027,0,True

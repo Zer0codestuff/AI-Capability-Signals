@@ -1,34 +1,19 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
 .venv/
 __pycache__/
 *.pyc
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
 .ruff_cache/
-.uv-cache/
-.ipynb_checkpoints/
+
+# Raw source downloads are reproducible from pipeline/sources.py. Their SHA-256 hashes are
+# published in public/data/signals.json, so the bytes do not need to be in git.
+data/snapshots/
+
 .DS_Store
 CLAUDE.md
 GEMINI.md
 .agents/
 .codex/
-
-# Raw source snapshots and intermediate frames are reproducible from the source registry and
-# are far too large to version. Their SHA-256 digests are recorded in report/run_manifest.json,
-# so a reviewer can verify that a rerun saw identical inputs without the bytes being in git.
-data/raw/
-data/interim/
-data/sample/
-
-# Published analysis tables are versioned so findings can be reviewed without a full rerun.
-# The exclusions below are tables that are large by nature.
-data/analysis/*.parquet
-
-*.tmp
-*.part
-node_modules/
-dist/
-coverage/
-*.tsbuildinfo
-artifacts/
-data/snapshots/

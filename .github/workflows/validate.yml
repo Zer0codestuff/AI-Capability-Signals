@@ -1,7 +1,8 @@
-name: Validate data story
+name: Validate
 
 on:
   push:
+    branches-ignore: [main]
   pull_request:
 
 permissions:

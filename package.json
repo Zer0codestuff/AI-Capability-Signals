@@ -1,7 +1,7 @@
 {
   "name": "ai-capability-signals",
   "private": true,
-  "version": "3.0.0",
+  "version": "4.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -9,9 +9,9 @@
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "data:refresh": "uv run python -m pipeline.refresh",
-    "data:offline": "uv run python -m pipeline.refresh --offline",
-    "data:test": "uv run python -m unittest discover -s tests -v",
+    "data:refresh": "uv run python -m pipeline.build",
+    "data:offline": "uv run python -m pipeline.build --offline",
+    "data:test": "uv run python -m unittest discover -s tests",
     "lint": "eslint src && uv run ruff check pipeline tests"
   },
   "dependencies": {

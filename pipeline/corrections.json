@@ -1,0 +1,10 @@
+[
+  {
+    "source": "epoch_models",
+    "model": "Grok 4.7",
+    "field": "Parameters",
+    "from": 2100000000.0,
+    "to": 2100000000000.0,
+    "reason": "The source note quotes 2.1T (trillion) parameters but the value field holds 2.1 billion. The correction applies only while the source still holds the mistyped value."
+  }
+]

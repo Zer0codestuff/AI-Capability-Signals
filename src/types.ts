@@ -1,73 +1,135 @@
-export type Reliability = 'p50' | 'p80'
-export type Score = 'intelligence' | 'coding' | 'agentic'
-export type Interval = { estimate: number; ci_low: number; ci_high: number }
-export type Horizon = {
+export type Unit =
+  | 'eci' | 'minutes' | 'params' | 'flop' | 'usd' | 'usd_mtok' | 'ops_per_usd' | 'h100e' | 'months'
+
+export interface Point {
+  d: string
+  v: number
+  n: string
+  o?: string
+  g?: string
+  lo?: number
+  hi?: number
+  p80?: number
+  e?: number
+  k?: string
+  m?: string
+}
+
+export interface Interval { v: number; lo?: number; hi?: number }
+export interface LineStats { n: number; rate: Interval; r2: number; doubling?: Interval }
+export type Verdict = 'speeding_up' | 'slowing_down' | 'steady' | 'unknown'
+
+export interface Backtest {
+  cutoffs: number
+  tests: number
+  typical_error: number
+  bias: number
+  naive_error: number
+  coverage: number
+  log: boolean
+}
+
+export interface Milestone { id: string; label: string; v: number; d: string; lo: string; hi: string }
+export interface BandStep { d: string; v: number; lo: number; hi: number }
+
+export interface Trend extends LineStats {
+  log: boolean
+  window: { from: string; to: string; n: number }
+  basis: 'full' | 'recent'
+  whole: LineStats
+  line: { d: string; v: number }[]
+  shape: { verdict: Verdict; split?: string; early?: LineStats; late?: LineStats }
+  backtest: Backtest | null
+  projectable: boolean
+  band: BandStep[]
+  milestones: Milestone[]
+}
+
+export interface Series { id: string; label: string; kind: 'step' | 'line' | 'points'; points: Point[]; trend?: Trend | null }
+
+export interface ChartData {
   id: string
-  name: string
-  release_date: string
-  p50: Interval
-  p80: Interval
-  scaffolds: (string | null)[]
+  unit: Unit
+  scale: 'log' | 'linear'
+  points: Point[]
+  groups: { id: string; label: string }[]
+  series: Series[]
+  refs: { v: number; label: string }[]
 }
-export type Model = {
-  id: string
-  name: string
-  provider: string
-  input: number
-  output: number
-  tiers: { minimum: number; input: number | null; output: number | null }[]
-  context: number
-  max_output: number | null
-  scores: Record<Score, number | null>
-  weights_link: string | null
-  url: string
+
+export interface Named { n: string; v: number; d: string; p80?: number | null }
+export interface LagFacts {
+  now: number
+  matched: string
+  recent_average: number | null
+  earlier_average: number | null
+  latest_record: Point | null
 }
-export type Trend = {
-  doubling_days: number
-  robust_doubling_days: number
-  n: number
-  start: string
-  end: string
-  anchor_id: string
-  anchor_date: string
-  anchor_minutes: number
-  model_ids: string[]
-  backtest: { n: number; mae_log2: number | null; baseline_mae_log2: number | null; skill_ratio: number | null }
+
+export interface PriceLevel {
+  id: string; label: string; reference: string; eci: number
+  first: Named; last: Named; fold: number; records: number
 }
-export type Source = {
-  id: string
-  name: string
-  url: string
-  page: string
-  description: string
-  sha256: string
-  retrieved_at: string
+
+export interface BoardRow {
+  org: string; country: string; n: string; v: number; d: string; access: string
+  days_on_top: number; records: number
 }
-export type Size = {
-  name: string
-  epoch_name: string
-  release_date: string
-  total_billions: number | null
-  active_billions: number | null
-  notes: string
-  confidence: string
-  url: string
-  status: string
+
+export interface ExplorerRow {
+  n: string; o: string; c: string; a: string; d: string; e: number
+  p: number | null; pk: string | null; params: number | null; compute: number | null
 }
-export type StoryData = {
-  schema_version: number
-  as_of: string
-  sources: Source[]
-  horizons: Horizon[]
-  benchmark: { version: string; reliable_range_minutes: number; excluded_versions: Record<string, number> }
-  prices: Model[]
-  price_coverage: {
-    catalogue_rows: number
-    included: number
-    excluded: Record<string, number>
-    benchmark_version: null
-    benchmark_note: string
+
+export interface Source {
+  id: string; name: string; publisher: string; page: string; license: string; description: string
+  retrieved_at: string; files: { url: string; sha256: string; bytes: number }[]
+}
+
+export interface Correction {
+  source: string; model: string; field: string; from: number; to: number; reason: string; applied: boolean
+}
+
+export interface Story {
+  version: number
+  generated_on: string
+  projection_until: string
+  data_through: string
+  chapters: {
+    intelligence: { charts: { eci: ChartData }; facts: { models: number; first: Named; last: Named; records: number } }
+    tasks: {
+      charts: { horizon: ChartData }
+      facts: { measured: number; first: Named; last: Named; published_doubling_days: number | null; reliable_limit_minutes: number }
+    }
+    size: {
+      charts: { params: ChartData }
+      bars: { disclosure: { label: string; n: number; params: number; compute: number }[] }
+      facts: { models: number; largest: Named; largest_recent: Named }
+    }
+    compute: { charts: { compute: ChartData }; facts: { models: number; largest: Named } }
+    cost: { charts: { cost: ChartData }; facts: { models: number; largest: Named; estimates_last_year: number } }
+    price: {
+      charts: { price: ChartData }
+      facts: {
+        priced: number; indexed: number; levels: PriceLevel[]; kinds: Record<string, number>
+        best_first: Named | null; best_last: Named | null
+      }
+    }
+    openness: {
+      charts: { access: ChartData; access_lag: ChartData }
+      facts: { lag: LagFacts; closed: Named; open: Named; counts: Record<string, number> }
+    }
+    race: {
+      charts: { country: ChartData; country_lag: ChartData }
+      board: BoardRow[]
+      facts: { lag: LagFacts; us: Named; china: Named; days_tracked: number; counts: Record<string, number> }
+    }
+    hardware: {
+      charts: { chips: ChartData; clusters: ChartData }
+      facts: { chips: number; clusters: number; largest: Named; clusters_through: string }
+    }
   }
-  sizes: Size[]
-  trends: Record<Reliability, Trend>
+  explorer: ExplorerRow[]
+  sources: Source[]
+  quality: { corrections: Correction[]; database_models: number; indexed_models: number; priced_models: number }
 }

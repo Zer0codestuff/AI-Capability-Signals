@@ -1,6 +1,0 @@
-quality_threshold,eligible_models,cheapest_model_id,cheapest_model_vendor,cheapest_model_weights,cheapest_model_quality,cheapest_blended_usd_per_call,premium_vs_cheapest,highest_quality_model_id,status
-20,69,openai/gpt-oss-120b,OpenAI,open_weights,23.8,0.000281,142.348754,anthropic/claude-opus-5,estimated
-30,53,tencent/hy3-preview,Tencent,open_weights,41.2,0.000399,100.250627,anthropic/claude-opus-5,estimated
-40,30,tencent/hy3-preview,Tencent,open_weights,41.2,0.000399,100.250627,anthropic/claude-opus-5,estimated
-50,16,openai/gpt-5.6-luna,OpenAI,closed_weights,51.2,0.0045,8.888889,anthropic/claude-opus-5,estimated
-55,6,openai/gpt-5.6-terra,OpenAI,closed_weights,55.0,0.01125,3.555556,anthropic/claude-opus-5,estimated
